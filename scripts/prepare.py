@@ -226,6 +226,7 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None) -> list[dic
     manifest = pkg / "items.json"
     out = read_json(manifest, {"items": []})["items"]
     start = max([x["n"] for x in out], default=0)
+    ranked = ranked[:max(0, max_n - len(out))]            # --max is per day: a second run only tops the package up
     for i, ((fit, hits, odds), j) in enumerate(ranked, start + 1):
         track = tracks[j["track"]]
         d = pkg / f"{i:02d}_{safe(j.get('company') or 'company')}_{safe(j['title'])}"
@@ -280,7 +281,7 @@ def write_index(pkg: Path, items: list[dict[str, Any]], slug: str) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("slug"); ap.add_argument("--max", type=int, default=15)
+    ap.add_argument("slug"); ap.add_argument("--max", type=int, default=15, help="jobs per day (a later run the same day only tops up)")
     ap.add_argument("--requeue", nargs="*", default=[], help="tracker keys previously skipped to prepare anyway")
     a = ap.parse_args()
     items = prepare(a.slug, a.max, a.requeue)
