@@ -1,0 +1,77 @@
+{
+  "name": "Sam Taylor",
+  "source_dir": "",
+  "docs_language": "en-AU",
+  "ui_language": "en",
+  "contact": {
+    "email": "sam.taylor@example.com",
+    "phone": "0400 000 000",
+    "linkedin": "linkedin.com/in/example",
+    "location_on_cv": "Brisbane, QLD",
+    "address_for_forms_only": "1 Example St, Brisbane QLD 4000"
+  },
+  "rules": {
+    "truthfulness": "Never invent experience, qualifications, software, projects, dates or figures. If evidence is missing, it is a gap: say so.",
+    "never_mention": [
+      "visa",
+      "sponsor",
+      "sponsorship",
+      "subclass",
+      "work rights",
+      "working rights",
+      "permanent resident",
+      "citizenship"
+    ],
+    "never_include": [
+      "university group assignment"
+    ],
+    "figures": "Every figure in a CV or cover letter must exist in facts.json (`job facts verify`)."
+  },
+  "sensitive_only_if_asked": {
+    "_note": "Used ONLY to answer a form field that explicitly asks. Never in CVs, letters or free-text fields.",
+    "has_right_to_work": true,
+    "current_visa": "",
+    "future_visa": "",
+    "work_hour_restriction": "",
+    "requires_sponsorship_now": false,
+    "requires_sponsorship_future": false,
+    "citizen_or_pr": true
+  },
+  "preferences": {
+    "salary_expectation": "95000",
+    "availability": "Two weeks' notice",
+    "employment_types": [
+      "Full time",
+      "Contract"
+    ],
+    "locations_in_priority": [
+      "Brisbane",
+      "South East Queensland"
+    ],
+    "fifo": "No",
+    "relocation": false,
+    "fieldwork_travel": true
+  },
+  "eeo": {
+    "gender": "",
+    "aboriginal_or_tsi": "",
+    "disability": ""
+  },
+  "languages": [
+    "English (native)"
+  ],
+  "certificates": [
+    "Provide First Aid (HLTAID011)"
+  ],
+  "driver_licence": "Queensland C class (manual)",
+  "referees": [
+    {
+      "name": "Available upon request"
+    }
+  ],
+  "experience": [],
+  "education": [],
+  "publications": [],
+  "story_bank": [],
+  "_note": "FICTIONAL example candidate. Shows how a filled folder looks; replace it with `job new <slug> --name ...`."
+}

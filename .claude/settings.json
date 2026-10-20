@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 scripts/*)",
+      "Bash(bin/job *)",
+      "Bash(./bin/job *)",
+      "Bash(job *)",
+      "Bash(python3 -m unittest *)",
+      "Read(./candidates/**)",
+      "Read(./templates/**)",
+      "Read(./learn/**)"
+    ],
+    "deny": [
+      "Read(./.env)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/status.py\" --context",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Grep|Glob|Write|Edit|MultiEdit|NotebookEdit|mcp__claude-in-chrome__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/hooks/gate.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

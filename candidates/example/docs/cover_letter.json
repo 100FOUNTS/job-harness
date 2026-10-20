@@ -1,0 +1,26 @@
+{
+  "_instrucciones": "Master template. {{ }} parts are filled per job. One page, Australian English, no invented facts.",
+  "sender": [
+    "Sam Taylor",
+    "Brisbane, QLD",
+    "0400 000 000",
+    "sam.taylor@example.com",
+    "linkedin.com/in/example"
+  ],
+  "date": "{{date}}",
+  "recipient": [
+    "{{recipient_name_or_Hiring Manager}}",
+    "{{company}}"
+  ],
+  "salutation": "Dear {{Ms/Mr Surname | Hiring Manager}}",
+  "re": "Re: {{position}}",
+  "paragraphs": {
+    "purpose": "I am writing to apply for the {{position}} role at {{company}}, as advertised on {{source}}. As a Water Resources Engineer with more than three years of experience in flood modelling and stormwater design, I would welcome the opportunity to contribute to {{team_or_projects}}.",
+    "why_company": "{{One or two specific sentences about the organisation, linked to what the candidate offers.}}",
+    "technical": "At Example Consulting I have delivered flood studies across 40 sites, building TUFLOW and HEC-RAS models and writing the reports that support development approvals.",
+    "closing": "I would welcome the chance to discuss how I could support your team. Thank you for your time and consideration."
+  },
+  "sign_off": "Yours sincerely",
+  "name": "Sam Taylor",
+  "enclosure": "Enclosure: Resume"
+}

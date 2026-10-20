@@ -1,0 +1,60 @@
+{
+  "name": "",
+  "source_dir": "",
+  "docs_language": "en-AU",
+  "ui_language": "en",
+  "contact": {
+    "email": "",
+    "phone": "",
+    "linkedin": "",
+    "location_on_cv": "City, STATE",
+    "address_for_forms_only": ""
+  },
+  "rules": {
+    "truthfulness": "Never invent experience, qualifications, software, projects, dates or figures. If evidence is missing, it is a gap: say so.",
+    "never_mention": [
+      "visa",
+      "sponsor",
+      "sponsorship",
+      "subclass",
+      "work rights",
+      "working rights",
+      "permanent resident",
+      "citizenship"
+    ],
+    "never_include": [],
+    "figures": "Every figure in a CV or cover letter must exist in facts.json (`job facts verify`)."
+  },
+  "sensitive_only_if_asked": {
+    "_note": "Used ONLY to answer a form field that explicitly asks. Never in CVs, letters or free-text fields.",
+    "has_right_to_work": null,
+    "current_visa": "",
+    "future_visa": "",
+    "work_hour_restriction": "",
+    "requires_sponsorship_now": null,
+    "requires_sponsorship_future": null,
+    "citizen_or_pr": null
+  },
+  "preferences": {
+    "salary_expectation": "",
+    "availability": "",
+    "employment_types": [],
+    "locations_in_priority": [],
+    "fifo": "",
+    "relocation": null,
+    "fieldwork_travel": null
+  },
+  "eeo": {
+    "gender": "",
+    "aboriginal_or_tsi": "",
+    "disability": ""
+  },
+  "languages": [],
+  "certificates": [],
+  "driver_licence": "",
+  "referees": [],
+  "experience": [],
+  "education": [],
+  "publications": [],
+  "story_bank": []
+}

@@ -1,0 +1,21 @@
+# Candidate data is personal: only the fictional example is published
+candidates/*
+!candidates/example/
+candidates/example/state.json
+candidates/example/tracker.json
+candidates/example/approvals/
+candidates/example/data/
+candidates/example/docs/master/
+candidates/example/logs/
+candidates/example/pending_questions.json
+
+# Browser profile for scripted applying (holds session cookies)
+.browser/
+
+node_modules/
+__pycache__/
+*.pyc
+*.log
+.env
+STOP
+.DS_Store

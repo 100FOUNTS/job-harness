@@ -1,0 +1,27 @@
+{
+  "_note": "FICTIONAL example. Every figure a CV or letter may use, with its source.",
+  "claims": [
+    {
+      "id": "flood-sites",
+      "value": "40",
+      "text": "Flood studies delivered across 40 sites",
+      "source": "example",
+      "status": "approved",
+      "date": "2026-01-01"
+    },
+    {
+      "id": "salary",
+      "value": "95000",
+      "text": "Salary expectation",
+      "source": "intake",
+      "status": "approved",
+      "date": "2026-01-01"
+    }
+  ],
+  "allow": [
+    "4000",
+    "3+",
+    "0400",
+    "000"
+  ]
+}

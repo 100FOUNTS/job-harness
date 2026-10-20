@@ -1,0 +1,51 @@
+{
+  "_note": "Tracks in priority order. title_include assigns the track (description_include as a fallback for generic titles); keywords and the ranking block drive the daily order. Edit with care: it is part of the go-live seal.",
+  "max_age_days": 3,
+  "locations_include": [],
+  "exclude_title": [
+    "senior",
+    "principal",
+    "lead",
+    "manager",
+    "head",
+    "director",
+    "chief",
+    "superintendent"
+  ],
+  "exclude_text": [
+    "australian citizen",
+    "australian citizenship",
+    "citizenship is required",
+    "permanent resident",
+    "permanent residency",
+    "baseline clearance",
+    "nv1",
+    "nv2",
+    "security clearance"
+  ],
+  "tracks": [
+    {
+      "id": "main",
+      "cv": "docs/cv_main.json",
+      "letter": "docs/cover_letter.json",
+      "title_include": [],
+      "searches": [],
+      "primary": true,
+      "cv_pdf": "docs/master/<Name>_Resume.pdf",
+      "keywords": {
+        "core": [],
+        "support": []
+      },
+      "letter_focus_fallback": "",
+      "letter_strengths": ""
+    }
+  ],
+  "ranking": {
+    "off_field": [],
+    "missing_credentials": [],
+    "licence_required": "",
+    "preferred_locations": [],
+    "secondary_locations": [],
+    "senior_salary_from_k": 150
+  }
+}

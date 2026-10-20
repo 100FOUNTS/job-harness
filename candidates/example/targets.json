@@ -1,0 +1,105 @@
+{
+  "_note": "FICTIONAL example. Tracks in priority order. title_include assigns the track (description_include as a fallback for generic titles); keywords and the ranking block drive the daily order. Part of the go-live seal.",
+  "max_age_days": 3,
+  "locations_include": [
+    "QLD",
+    "Queensland",
+    "Brisbane",
+    "Remote"
+  ],
+  "exclude_title": [
+    "manager",
+    "head",
+    "director",
+    "chief",
+    "partner"
+  ],
+  "exclude_text": [
+    "australian citizen only",
+    "baseline clearance",
+    "nv1",
+    "nv2"
+  ],
+  "max_years_required": 6,
+  "tracks": [
+    {
+      "id": "water",
+      "primary": true,
+      "cv": "docs/cv_main.json",
+      "letter": "docs/cover_letter.json",
+      "cv_pdf": "docs/master/Sam_Taylor_Resume.pdf",
+      "title_include": [
+        "water resources",
+        "hydrolog",
+        "stormwater",
+        "flood",
+        "catchment",
+        "drainage",
+        "water engineer"
+      ],
+      "searches": [
+        {
+          "platform": "seek",
+          "keywords": "water resources engineer",
+          "where": "Brisbane QLD"
+        },
+        {
+          "platform": "seek",
+          "keywords": "hydrologist",
+          "where": "Queensland QLD"
+        },
+        {
+          "platform": "linkedin",
+          "keywords": "Water Resources Engineer",
+          "location": "Queensland, Australia"
+        }
+      ],
+      "keywords": {
+        "core": [
+          "flood modelling",
+          "hydrolog",
+          "stormwater",
+          "tuflow",
+          "hec-ras",
+          "drainage design",
+          "catchment"
+        ],
+        "support": [
+          "gis",
+          "qgis",
+          "python",
+          "reporting",
+          "stakeholder",
+          "civil 3d",
+          "water quality"
+        ]
+      },
+      "letter_focus_fallback": "water resources engineering",
+      "letter_strengths": "sound modelling practice, clear technical reporting and a collaborative approach"
+    }
+  ],
+  "ranking": {
+    "off_field": [
+      "structural",
+      "electrical",
+      "mechanical",
+      "geotechnical",
+      "surveyor",
+      "architect"
+    ],
+    "missing_credentials": [
+      "rpeq",
+      "cpeng",
+      "chartered"
+    ],
+    "licence_required": "",
+    "preferred_locations": [
+      "Brisbane"
+    ],
+    "secondary_locations": [
+      "Gold Coast",
+      "Sunshine Coast"
+    ],
+    "senior_salary_from_k": 160
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "_note": "Answers for common application questions. match = words that identify the question. Anything not covered here → manual-review, never guessed.",
+  "answers": [
+    {"match": ["right to work", "legally entitled", "authorised to work", "authorized to work", "work rights"], "answer": null, "sensitive": true},
+    {"match": ["require sponsorship", "need sponsorship", "visa sponsorship"], "answer": null, "sensitive": true, "_note": "now vs future: see intake.sensitive_only_if_asked"},
+    {"match": ["visa", "subclass"], "answer": null, "sensitive": true},
+    {"match": ["salary", "remuneration", "expected pay"], "answer": null},
+    {"match": ["notice period", "start date", "available to start", "availability"], "answer": null},
+    {"match": ["years of experience", "how many years"], "answer": null},
+    {"match": ["driver", "licence", "license"], "answer": null},
+    {"match": ["police", "criminal record check"], "answer": null},
+    {"match": ["drug", "alcohol", "medical"], "answer": null},
+    {"match": ["relocate", "relocation"], "answer": null},
+    {"match": ["fifo", "fly-in", "dido", "roster"], "answer": null},
+    {"match": ["travel", "fieldwork", "field work"], "answer": null},
+    {"match": ["gender"], "answer": null},
+    {"match": ["aboriginal", "torres strait"], "answer": null},
+    {"match": ["disability"], "answer": null},
+    {"match": ["how did you hear", "where did you find"], "answer": "the platform where the job was found"}
+  ]
+}

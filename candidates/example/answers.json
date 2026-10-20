@@ -1,0 +1,131 @@
+{
+  "_note": "Answers for common application questions. match = words that identify the question. Anything not covered here → manual-review, never guessed.",
+  "answers": [
+    {
+      "match": [
+        "right to work",
+        "legally entitled",
+        "authorised to work",
+        "authorized to work",
+        "work rights"
+      ],
+      "answer": "Yes",
+      "sensitive": true
+    },
+    {
+      "match": [
+        "require sponsorship",
+        "need sponsorship",
+        "visa sponsorship"
+      ],
+      "answer": "No",
+      "sensitive": true,
+      "_note": "now vs future: see intake.sensitive_only_if_asked"
+    },
+    {
+      "match": [
+        "visa",
+        "subclass"
+      ],
+      "answer": null,
+      "sensitive": true
+    },
+    {
+      "match": [
+        "salary",
+        "remuneration",
+        "expected pay"
+      ],
+      "answer": "95000"
+    },
+    {
+      "match": [
+        "notice period",
+        "start date",
+        "available to start",
+        "availability"
+      ],
+      "answer": "Two weeks"
+    },
+    {
+      "match": [
+        "years of experience",
+        "how many years"
+      ],
+      "answer": null
+    },
+    {
+      "match": [
+        "driver",
+        "licence",
+        "license"
+      ],
+      "answer": "Yes"
+    },
+    {
+      "match": [
+        "police",
+        "criminal record check"
+      ],
+      "answer": "Willing to undertake"
+    },
+    {
+      "match": [
+        "drug",
+        "alcohol",
+        "medical"
+      ],
+      "answer": "Willing to undertake"
+    },
+    {
+      "match": [
+        "relocate",
+        "relocation"
+      ],
+      "answer": "No"
+    },
+    {
+      "match": [
+        "fifo",
+        "fly-in",
+        "dido",
+        "roster"
+      ],
+      "answer": "No"
+    },
+    {
+      "match": [
+        "travel",
+        "fieldwork",
+        "field work"
+      ],
+      "answer": "Yes"
+    },
+    {
+      "match": [
+        "gender"
+      ],
+      "answer": null
+    },
+    {
+      "match": [
+        "aboriginal",
+        "torres strait"
+      ],
+      "answer": null
+    },
+    {
+      "match": [
+        "disability"
+      ],
+      "answer": null
+    },
+    {
+      "match": [
+        "how did you hear",
+        "where did you find"
+      ],
+      "answer": "the platform where the job was found"
+    }
+  ]
+}

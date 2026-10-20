@@ -1,0 +1,52 @@
+{
+  "name": "Sam Taylor",
+  "title": "Water Resources Engineer",
+  "contact": "Brisbane, QLD | 0400 000 000 | sam.taylor@example.com | linkedin.com/in/example",
+  "summary": "Water Resources Engineer with 3+ years of experience in flood modelling, stormwater design and catchment studies for councils and developers. Clear technical writer and steady field worker.",
+  "skills": [
+    [
+      "Modelling",
+      "TUFLOW, HEC-RAS, DRAINS, flood modelling, hydrology"
+    ],
+    [
+      "Design",
+      "Stormwater and drainage design, Civil 3D"
+    ],
+    [
+      "Data",
+      "QGIS, Python, water quality data"
+    ]
+  ],
+  "experience": [
+    {
+      "role": "Water Resources Engineer",
+      "org": "Example Consulting, Brisbane",
+      "dates": "Feb 2023 – Present",
+      "bullets": [
+        "Delivered flood studies across 40 sites for local councils and private developers.",
+        "Built TUFLOW and HEC-RAS models and wrote the technical reports for approvals."
+      ]
+    },
+    {
+      "role": "Graduate Civil Engineer",
+      "org": "Sample Engineering, Brisbane",
+      "dates": "Jan 2022 – Jan 2023",
+      "bullets": [
+        "Designed stormwater networks in DRAINS and Civil 3D under senior review."
+      ]
+    }
+  ],
+  "other_employment": [],
+  "education": [
+    [
+      "Bachelor of Engineering (Civil)",
+      "Example University, 2021"
+    ]
+  ],
+  "publications": [],
+  "certificates": [
+    "Provide First Aid (HLTAID011)"
+  ],
+  "languages": "English (native)",
+  "referees": "Available upon request"
+}

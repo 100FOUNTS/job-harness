@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""job — single entry point to the job-harness.
+
+  job status [slug] [--json]                   where every candidate is, and the exact next step
+  job doctor                                   what this machine can run
+  job new <slug> --name "..."                  create a candidate
+  job discover <slug>                          new jobs from the saved searches (no browser, no LLM)
+  job triage <slug>                            deterministic pre-filter → shortlist.json
+  job prepare <slug> [--max 15]                ranked top jobs → CV + filled cover letter + daily package (no LLM)
+  job cleanup <slug> [--days 15]               old packages: keep the summary, remove the documents
+  job apply <slug> [--dry] | job apply <slug> login seek   scripted SEEK Quick Apply (modes easy/full)
+  job answer <slug> --question "..." [--options "A|B"] | job answer <slug> pending   answer engine
+  job docs <slug> build <json> --kind cv|letter [--out DIR] [--name N]   docx + pdf + lint + facts
+  job lint <slug> <file> [--kind cv|letter]    ATS/rules check of a document
+  job facts <slug> show|add|verify ...         claims registry (no invented figures)
+  job track <slug> add|set|list|quota|csv      application tracker
+  job report <slug> [--notify]                 daily summary
+  job state <slug> show|stage|mode|limits ...  bookkeeping (mode live needs a signed go-live)
+  job ask <slug> add|list|close ...            open questions for the candidate
+  job gate request|list|verify|reject <slug> ...
+  job review <slug> <id>                       what you are about to sign
+  job sign <slug> <id>                         human signature (your terminal, typed confirmation)
+  job schedule install|uninstall|status <slug> [--hour 9 --minute 0]
+  job learn log|list ...                       harness memory
+  job test                                     test suite
+
+Install on your PATH:  ln -s "$PWD/bin/job" ~/.local/bin/job
+"""
+import os
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+S = ROOT / "scripts"
+DIRECT = {"status": "status.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
+          "triage": "triage.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
+          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py"}
+
+
+def run(script, args):
+    os.execv(sys.executable, [sys.executable, str(S / script), *args])  # same terminal: human signatures need it
+
+
+def main():
+    argv = sys.argv[1:]
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__); return
+    cmd, rest = argv[0], argv[1:]
+    if cmd in DIRECT:
+        run(DIRECT[cmd], rest)
+    elif cmd == "ask" and rest:
+        run("state.py", [rest[0], "ask", *rest[1:]])
+    elif cmd == "gate" and len(rest) >= 2:
+        run("gates.py", [rest[1], rest[0], *rest[2:]])
+    elif cmd in ("review", "sign") and len(rest) >= 2:
+        run("gates.py", [rest[0], cmd, *rest[1:]])
+    elif cmd == "test":
+        os.chdir(ROOT)
+        os.execv(sys.executable, [sys.executable, "-m", "unittest", "discover", "tests", *rest])
+    else:
+        sys.exit(f"Unknown command: {' '.join(argv)}\nRun `job help`.")
+
+
+if __name__ == "__main__":
+    main()
