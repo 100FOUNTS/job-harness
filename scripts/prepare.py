@@ -172,7 +172,7 @@ def notes_for(job: dict[str, Any], hits: list[str], odds: dict[str, Any] | None 
     yrs = min_years_required(text)
     if yrs:
         watch.append(L["years_long"].format(n=yrs))
-    if re.search(r"residen(t|cy)|citizen|security clearance", text, re.I):
+    if re.search(r"permanent residen|residency|citizen|security clearance", text, re.I):   # not "our residents"
         watch.append(L["residency"])
     if re.search(r"\b(senior|principal|lead)\b", job["title"], re.I):
         watch.append(L["senior_title"])
