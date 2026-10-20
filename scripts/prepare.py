@@ -36,7 +36,7 @@ LEVEL_ADJ = [
     (r"\b(team leader|lead)\b", -25, "lead"),
     (r"\bspecialist\b", -5, "specialist"),
 ]
-WATCH = ("off_field", "no_credential", "no_licence", "senior_salary", "lead", "secondary_location")
+WATCH = ("off_field", "no_credential", "no_licence", "senior_salary", "lead")
 # What the person reads in the daily package. intake.ui_language picks the set (default en).
 LABELS = {
     "en": {"entry": "entry-level role", "officer": "officer/coordinator level", "senior": "senior", "principal": "principal",
@@ -121,8 +121,8 @@ def score(job: dict[str, Any], targets: dict[str, Any], slug: str = "") -> tuple
     loc = job.get("location", "")
     if (r := words_rx(rk.get("preferred_locations", []))) and re.search(r + r"\b", loc, re.I):
         prob += 6
-    elif (r := words_rx(rk.get("secondary_locations", []))) and re.search(r + r"\b", loc):
-        prob -= 4; why.append("secondary_location")
+    elif (r := words_rx(rk.get("secondary_locations", []))) and re.search(r + r"\b", loc, re.I):
+        prob += 3                                          # second choice: behind preferred, ahead of anywhere else
     m = re.findall(r"\$?\s?(\d{2,3})(?:,000|k)", job.get("salary", "") or "", re.I)
     if m and min(int(x) for x in m) >= rk.get("senior_salary_from_k", 150):   # a range is judged by its floor
         prob -= 10; why.append("senior_salary")
