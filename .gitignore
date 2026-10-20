@@ -8,6 +8,7 @@ candidates/example/data/
 candidates/example/docs/master/
 candidates/example/logs/
 candidates/example/pending_questions.json
+candidates/example/barred.json
 
 # Browser profile for scripted applying (holds session cookies)
 .browser/
@@ -17,5 +18,7 @@ __pycache__/
 *.pyc
 *.log
 .env
+# Owner-only settings (language of the package, package folder, who signs go-live)
+.claude/settings.local.json
 STOP
 .DS_Store

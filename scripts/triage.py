@@ -74,10 +74,14 @@ def judge(job: dict[str, Any], targets: dict[str, Any]) -> tuple[str | None, str
     return track, "ok"
 
 
+GENERIC_ORG = {"the", "of", "and", "shire", "city", "town", "department", "dept", "council", "government", "group", "pty", "ltd"}
+
+
 def dedupe_key(title: str, company: str) -> str:
     """Same ad posted on both platforms or twice by the same employer: normalised title + first company word."""
     head = re.split(r"\s+[-–|]\s+", title)[0]           # "Contaminated Land Consultants - Scientist to ..." variants
-    return re.sub(r"[^a-z]+", " ", head.lower()).strip() + "|" + (re.findall(r"[a-z]+", company.lower()) or [""])[0]
+    words = [w for w in re.findall(r"[a-z]+", company.lower()) if w not in GENERIC_ORG]
+    return re.sub(r"[^a-z]+", " ", head.lower()).strip() + "|" + (words or [""])[0]
 
 
 def by_description_possible(title: str, targets: dict[str, Any]) -> bool:
@@ -114,8 +118,12 @@ def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
                          "reason": why if not track else "over shortlist cap"})
     # The same ad on the other platform can be shorter (SEEK often drops the eligibility paragraph LinkedIn keeps):
     # a twin excluded for a requirement takes its shortlisted copy with it.
-    barred = {dedupe_key(r["title"] or "", r["company"] or ""): r["reason"] for r in rejected
-              if r["reason"].startswith("requirement excluded")}
+    # Remembered across days: the readable twin may not be readable tomorrow (LinkedIn 429).
+    barred_file = cand_dir(slug) / "barred.json"
+    barred = read_json(barred_file, {})
+    barred.update({dedupe_key(r["title"] or "", r["company"] or ""): r["reason"] for r in rejected
+                   if r["reason"].startswith("requirement excluded")})
+    save_json(barred_file, barred)
     for j in [j for j in short if dedupe_key(j.get("title", ""), j.get("company", "")) in barred]:
         short.remove(j)
         rejected.append({"key": j["key"], "title": j.get("title"), "company": j.get("company"),

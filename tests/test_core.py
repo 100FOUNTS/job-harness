@@ -213,3 +213,12 @@ class TestRanking(unittest.TestCase):
         self.assertIsNone(assign_track("Fire Planning Officer", self.T["tracks"], "fire behaviour and burns"))
         t = {"exclude_title": ["director"], "tracks": [{"id": "env", "title_include": ["contaminated"]}]}
         self.assertEqual(judge({"title": "Contaminated Land - Scientist to Associate Director"}, t)[0], "env")
+
+
+class TestPrivacy(unittest.TestCase):
+    def test_only_the_fictional_candidate_is_tracked(self):
+        r = subprocess.run(["git", "ls-files", "candidates", ".browser"], cwd=ROOT, capture_output=True, text=True)
+        if r.returncode:                                   # not a git checkout: nothing can be published from here
+            self.skipTest("not a git repository")
+        leaked = [f for f in r.stdout.split() if not f.startswith("candidates/example/")]
+        self.assertEqual(leaked, [], "personal candidate data is tracked by git")

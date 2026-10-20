@@ -21,6 +21,13 @@ def plist_path(slug: str) -> Path:
     return Path.home() / f"Library/LaunchAgents/{LABEL.format(slug=slug)}.plist"
 
 
+def env_xml() -> str:
+    """PATH plus the JOB_* settings of the shell that installs the schedule (e.g. JOB_PACKAGE_DIR), so the
+    unattended run behaves like the owner's terminal."""
+    env = {"PATH": os.environ.get("PATH", "")} | {k: v for k, v in os.environ.items() if k.startswith("JOB_")}
+    return "".join(f"<key>{k}</key><string>{v}</string>" for k, v in sorted(env.items()))
+
+
 def plist(slug: str, hour: int, minute: int, runner: str = "prepare") -> str:
     script = ROOT / ("scripts/run_prepare.sh" if runner == "prepare" else "scripts/run_daily.sh")
     return f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -31,7 +38,7 @@ def plist(slug: str, hour: int, minute: int, runner: str = "prepare") -> str:
   <key>StartCalendarInterval</key><dict><key>Hour</key><integer>{hour}</integer><key>Minute</key><integer>{minute}</integer></dict>
   <key>StandardOutPath</key><string>{cand_dir(slug)}/logs/launchd.out</string>
   <key>StandardErrorPath</key><string>{cand_dir(slug)}/logs/launchd.err</string>
-  <key>EnvironmentVariables</key><dict><key>PATH</key><string>{os.environ.get('PATH', '')}</string></dict>
+  <key>EnvironmentVariables</key><dict>{env_xml()}</dict>
 </dict></plist>
 """
 

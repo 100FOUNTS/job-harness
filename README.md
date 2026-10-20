@@ -50,6 +50,13 @@ Everything about a person lives in `candidates/<slug>/`; the code has nothing ab
 | `docs/` | One CV JSON per track + a cover letter template → `job docs` builds docx + PDF |
 | `state.json`, `tracker.json`, `approvals/` | Bookkeeping, changed only through `job` commands |
 
+## Your own setup (stays out of git)
+Candidate folders other than `example/`, the browser profile and `.claude/settings.local.json` are git-ignored, and `job test` fails if a personal candidate file is ever tracked. Owner preferences go in `.claude/settings.local.json` (read by Claude Code) and in the shell that runs `job schedule install` (copied into the launchd job):
+```json
+{ "env": { "JOB_PACKAGE_DIR": "/Users/you/Applications-packages", "JOB_HUMAN_SIGN": "go-live" } }
+```
+`JOB_PACKAGE_DIR` moves the daily packages; `JOB_HUMAN_SIGN=""` lets the agent sign every approval after your explicit OK in the chat (default: go-live needs your own signature). The package language is per candidate (`intake.ui_language`).
+
 ## Modes
 | Mode | What happens | Submits? |
 |---|---|---|
