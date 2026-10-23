@@ -1,13 +1,28 @@
 # job-harness
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-22c55e.svg)](LICENSE)
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776ab.svg)
+![Claude Code](https://img.shields.io/badge/built%20for-Claude%20Code-d97757.svg)
+
 A **Claude Code** harness for job searching in **Australia** (SEEK and LinkedIn). It takes a candidate from "here is my CV folder" to a ranked daily package of jobs, each with a CV and a cover letter that only use facts the person approved.
+
+<p align="center">
+  <a href="https://100founts.github.io/job-harness/daily-run.html">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/daily-run-dark.png">
+      <img src="docs/assets/daily-run-light.png" alt="The daily run: launchd starts the scripts at 09:00; Discover reads new ads from SEEK and LinkedIn; Triage applies the person's filters with the full ad text; Rank + prepare scores fit and odds; Document checks verify figures and rules; the Daily package goes to the person, who applies. Only in easy mode, a signed and intact go-live seal lets SEEK Quick Apply submit." width="900">
+    </picture>
+  </a>
+  <br>
+  <sub><a href="https://100founts.github.io/job-harness/daily-run.html">Open the interactive diagram</a> (every box links to the code it describes) · made with <a href="https://github.com/tt-a1i/archify">Archify</a> · source: <a href="docs/daily-run.archify.json"><code>docs/daily-run.archify.json</code></a></sub>
+</p>
 
 Every day at 9:00 it:
 1. **discovers** new jobs from the person's saved searches (SEEK's search JSON and LinkedIn's public guest pages: no browser, no login, no LLM),
 2. **filters** them by the person's rules (target titles, seniority, years asked, citizenship/clearance requirements, location),
 3. **ranks** them by **fit** (the person's keywords found in the ad) plus **odds** (title level, years asked, fields they are not in, credentials or licences they lack, preferred places),
 4. **prepares** up to 15: CV + cover letter (docx and PDF), each checked for invented figures and rule breaks,
-5. writes a **daily package** (`~/job-packages/<slug>/<date>/`) with a summary per job: what it is, why it fits, odds, what to watch, how to apply.
+5. writes a **daily package** (`~/job-packages/<slug>/<date>/`) with a summary per job: what it is, why it fits, odds, what to watch, how to apply ([see a sample](docs/sample-package.md)).
 
 The person opens each link, clicks Apply and uploads the two PDFs. Nothing is submitted for them unless they choose a submitting mode (see *Modes*).
 
@@ -20,7 +35,7 @@ The person opens each link, clicks Apply and uploads the two PDFs. Nothing is su
 
 ## Quick start
 ```bash
-git clone <this repo> job-harness && cd job-harness
+git clone https://github.com/100FOUNTS/job-harness.git && cd job-harness
 ln -s "$PWD/bin/job" ~/.local/bin/job     # optional: `job` on your PATH
 job doctor && job test
 claude                                    # open Claude Code here (the hooks only load inside this folder)
@@ -89,6 +104,7 @@ templates/candidate/         blank candidate files
 templates/docs/              docx (Arial) and PDF (pdfkit, Helvetica) generators
 apply/                       SEEK Quick Apply (Playwright)
 candidates/example/          fictional example candidate
+docs/                        architecture diagram (interactive HTML + Archify source) and a sample package
 ```
 
 ## Honest limits

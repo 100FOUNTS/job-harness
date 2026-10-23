@@ -1,0 +1,407 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "job-harness: the daily run",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "daily/daily-run.html",
+    "repository": {
+      "url": "https://github.com/100FOUNTS/job-harness.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "b13bf2adb1d2a9527e1d1961cb06af29c598440f"
+    },
+    "legend": {
+      "entries": {
+        "backend": {
+          "label": "Script step"
+        },
+        "security": {
+          "label": "Check or gate"
+        },
+        "messagebus": {
+          "label": "Submits (opt-in)"
+        },
+        "database": {
+          "label": "Files on disk"
+        },
+        "cloud": {
+          "label": "Job boards"
+        },
+        "external": {
+          "label": "Person"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "boards",
+      "label": "Job boards (public, no login)"
+    },
+    {
+      "id": "person",
+      "label": "Candidate"
+    },
+    {
+      "id": "daily",
+      "label": "Daily run · scripts only, no LLM"
+    },
+    {
+      "id": "gates",
+      "label": "Opt-in submitting (easy mode)",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "find",
+      "label": "Find",
+      "fromCol": 0,
+      "toCol": 2
+    },
+    {
+      "id": "prepare",
+      "label": "Rank + check",
+      "fromCol": 3,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "apply",
+      "label": "Apply",
+      "fromCol": 5,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "launchd",
+    "discover",
+    "triage",
+    "rank",
+    "doccheck",
+    "package",
+    "applies"
+  ],
+  "nodes": [
+    {
+      "id": "boards_api",
+      "lane": "boards",
+      "col": 1,
+      "type": "cloud",
+      "label": "SEEK + LinkedIn",
+      "sublabel": "search JSON · guest pages",
+      "sources": [
+        {
+          "path": "scripts/discover.py",
+          "line": 25,
+          "end_line": 26,
+          "label": "search endpoints"
+        },
+        {
+          "path": "scripts/discover.py",
+          "line": 74,
+          "end_line": 96,
+          "label": "full ad text"
+        }
+      ]
+    },
+    {
+      "id": "folder",
+      "lane": "person",
+      "col": 0,
+      "type": "database",
+      "label": "Candidate folder",
+      "sublabel": "rules · searches · facts",
+      "tag": "built by /job-onboard",
+      "sources": [
+        {
+          "path": "templates/candidate/targets.json",
+          "label": "searches + ranking"
+        },
+        {
+          "path": "templates/candidate/intake.json",
+          "label": "rules"
+        }
+      ]
+    },
+    {
+      "id": "applies",
+      "lane": "person",
+      "col": 5,
+      "type": "external",
+      "label": "Person applies",
+      "sublabel": "opens link, uploads PDFs",
+      "sources": [
+        {
+          "path": "scripts/prepare.py",
+          "line": 165,
+          "end_line": 185,
+          "label": "how to apply note"
+        }
+      ]
+    },
+    {
+      "id": "launchd",
+      "lane": "daily",
+      "col": 0,
+      "type": "backend",
+      "label": "launchd 09:00",
+      "sublabel": "run_prepare.sh",
+      "tag": "STOP file = off",
+      "sources": [
+        {
+          "path": "scripts/run_prepare.sh",
+          "line": 1,
+          "end_line": 23
+        },
+        {
+          "path": "scripts/schedule.py",
+          "line": 31,
+          "end_line": 43,
+          "label": "launchd plist"
+        }
+      ]
+    },
+    {
+      "id": "discover",
+      "lane": "daily",
+      "col": 1,
+      "type": "backend",
+      "label": "Discover",
+      "sublabel": "new ads only",
+      "sources": [
+        {
+          "path": "scripts/discover.py",
+          "line": 99,
+          "end_line": 122
+        }
+      ]
+    },
+    {
+      "id": "triage",
+      "lane": "daily",
+      "col": 2,
+      "type": "backend",
+      "label": "Triage",
+      "sublabel": "person's filters",
+      "tag": "shortlist ≤ 40",
+      "sources": [
+        {
+          "path": "scripts/triage.py",
+          "line": 55,
+          "end_line": 74,
+          "label": "filters"
+        },
+        {
+          "path": "scripts/triage.py",
+          "line": 96,
+          "end_line": 133,
+          "label": "shortlist + twin ads"
+        }
+      ]
+    },
+    {
+      "id": "rank",
+      "lane": "daily",
+      "col": 3,
+      "type": "backend",
+      "label": "Rank + prepare",
+      "sublabel": "fit + odds score",
+      "tag": "≤ 15 per day",
+      "sources": [
+        {
+          "path": "scripts/prepare.py",
+          "line": 93,
+          "end_line": 136,
+          "label": "score"
+        },
+        {
+          "path": "scripts/prepare.py",
+          "line": 204,
+          "end_line": 254,
+          "label": "documents"
+        }
+      ]
+    },
+    {
+      "id": "package",
+      "lane": "daily",
+      "col": 5,
+      "type": "database",
+      "label": "Daily package",
+      "sublabel": "summary + CV + letter",
+      "sources": [
+        {
+          "path": "scripts/prepare.py",
+          "line": 257,
+          "end_line": 279,
+          "label": "index page"
+        },
+        {
+          "path": "scripts/cleanup.py",
+          "line": 14,
+          "end_line": 25,
+          "label": "15-day cleanup"
+        }
+      ]
+    },
+    {
+      "id": "doccheck",
+      "lane": "daily",
+      "col": 4,
+      "type": "security",
+      "label": "Document checks",
+      "sublabel": "facts verify + lint",
+      "tag": "fail → manual review",
+      "sources": [
+        {
+          "path": "scripts/docs.py",
+          "line": 33,
+          "end_line": 47
+        },
+        {
+          "path": "scripts/facts.py",
+          "line": 68,
+          "end_line": 80,
+          "label": "no invented figures"
+        },
+        {
+          "path": "scripts/lint.py",
+          "line": 35,
+          "end_line": 70,
+          "label": "rules + format"
+        }
+      ]
+    },
+    {
+      "id": "golive",
+      "lane": "gates",
+      "col": 5,
+      "type": "security",
+      "label": "Go-live seal",
+      "sublabel": "signed + sha256 intact",
+      "sources": [
+        {
+          "path": "scripts/gates.py",
+          "line": 59,
+          "end_line": 71
+        }
+      ]
+    },
+    {
+      "id": "quickapply",
+      "lane": "gates",
+      "col": 4,
+      "type": "messagebus",
+      "label": "SEEK Quick Apply",
+      "sublabel": "easy mode only",
+      "tag": "quotas · 4–12 min gaps",
+      "sources": [
+        {
+          "path": "scripts/apply.py",
+          "line": 38,
+          "end_line": 65
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "folder-launchd",
+      "from": "folder",
+      "to": "launchd",
+      "label": "rules + searches",
+      "variant": "default"
+    },
+    {
+      "id": "launchd-discover",
+      "from": "launchd",
+      "to": "discover",
+      "variant": "default"
+    },
+    {
+      "id": "boards-discover",
+      "from": "boards_api",
+      "to": "discover",
+      "label": "new ads",
+      "variant": "default"
+    },
+    {
+      "id": "discover-triage",
+      "from": "discover",
+      "to": "triage",
+      "variant": "default"
+    },
+    {
+      "id": "boards-triage",
+      "from": "boards_api",
+      "to": "triage",
+      "label": "full ad",
+      "variant": "dashed"
+    },
+    {
+      "id": "triage-rank",
+      "from": "triage",
+      "to": "rank",
+      "variant": "emphasis"
+    },
+    {
+      "id": "rank-check",
+      "from": "rank",
+      "to": "doccheck",
+      "label": "CV + letter",
+      "variant": "emphasis"
+    },
+    {
+      "id": "check-package",
+      "from": "doccheck",
+      "to": "package",
+      "label": "ok / review",
+      "variant": "emphasis"
+    },
+    {
+      "id": "package-person",
+      "from": "package",
+      "to": "applies",
+      "label": "one link each",
+      "variant": "emphasis"
+    },
+    {
+      "id": "package-golive",
+      "from": "package",
+      "to": "golive",
+      "label": "easy mode",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "golive-apply",
+      "from": "golive",
+      "to": "quickapply",
+      "label": "intact",
+      "variant": "security",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Before day one",
+      "items": [
+        "/job-onboard in Claude Code builds the candidate folder: intake, profile gaps, tracks, master CV and letter, profile fixes, alerts",
+        "Every change to rules, facts, answers or master documents breaks the go-live seal until the person signs again"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Always on",
+      "items": [
+        "hooks/gate.py stops the agent from signing for the person, editing bookkeeping, reading secrets, deleting data or submitting outside live mode",
+        "tracker.json prevents duplicates and enforces per-platform, per-day and per-week limits"
+      ]
+    }
+  ]
+}

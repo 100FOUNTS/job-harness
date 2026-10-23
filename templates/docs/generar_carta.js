@@ -1,5 +1,5 @@
-// Genera una cover letter de una página (formato de carta formal australiana) desde un JSON.
-// Uso: node generar_carta.js <entrada.json> <salida.docx>
+// One-page cover letter (Australian formal letter layout) from a JSON file.
+// Usage: node generar_carta.js <input.json> <output.docx>
 const fs = require("fs");
 const { Document, Packer, Paragraph, TextRun, AlignmentType } = require("docx");
 

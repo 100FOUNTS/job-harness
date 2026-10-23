@@ -1,5 +1,5 @@
-// Genera un CV compatible con ATS (una columna, sin tablas, sin encabezado/pie) desde un JSON.
-// Uso: node generar_cv.js <entrada.json> <salida.docx>
+// ATS-safe CV (one column, no tables, no header/footer) from a JSON file.
+// Usage: node generar_cv.js <input.json> <output.docx>
 const fs = require("fs");
 const {
   Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle,
@@ -11,9 +11,9 @@ const cv = JSON.parse(fs.readFileSync(input, "utf8"));
 
 const FONT = "Arial";
 const SIZE = 20; // 10 pt
-const LINE = 276; // interlineado 1.15
+const LINE = 276; // 1.15 line spacing
 
-// Pages ignora el espaciado "antes" del párrafo: los espacios se hacen con párrafos vacíos de altura fija.
+// Pages ignores "space before" on paragraphs: gaps are fixed-height empty paragraphs instead.
 const spacer = (pt) => new Paragraph({
   spacing: { before: 0, after: 0, line: pt * 20, lineRule: "exact" },
   children: [new TextRun({ text: "", size: 2 })],
@@ -38,7 +38,7 @@ const bullet = (text) => new Paragraph({
   children: [new TextRun({ text, size: SIZE, font: FONT })],
 });
 
-// Cargo en negrita; empresa y fechas en la línea siguiente (sin tabulaciones: se leen igual en Word, Pages y ATS).
+// Role in bold; employer and dates on the next line (no tab stops: reads the same in Word, Pages and ATS).
 const entry = (e, i) => {
   const out = [
     ...(i > 0 ? [spacer(7)] : []),
