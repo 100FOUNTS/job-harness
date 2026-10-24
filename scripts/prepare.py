@@ -136,6 +136,42 @@ def score(job: dict[str, Any], targets: dict[str, Any], slug: str = "") -> tuple
     return total, core + support, {"prob": label, "why": why}           # codes; LABELS turns them into words
 
 
+STOP = {"and", "or", "the", "with", "for", "from", "into", "that", "this", "your", "our", "their", "across", "within"}
+
+
+def focus_phrases(hits: list[str], job: dict[str, Any], track: dict[str, Any], role: str, n: int = 3) -> list[str]:
+    """The ad's own wording for the track's core keywords it mentions: "GIS", "hydrology" (from the stem "hydrolog"),
+    "spatial information" (an adjective takes the ad's next word, or is dropped). Words in the role title are skipped."""
+    core = set(track.get("keywords", {}).get("core", hits))
+    text = " ".join([job.get("title", ""), job.get("teaser", ""), " ".join(job.get("bullets", [])), job.get("description", "")])
+    out: list[str] = []
+    for h in [h for h in hits if h in core]:
+        m = re.search(rf"\b{re.escape(h)}\b", text, re.I) or re.search(rf"\b{re.escape(h)}[\w-]*", text, re.I)
+        if not m:
+            continue
+        phrase = m.group()
+        tail = phrase[len(h):].lower()
+        if tail in ("s", "es"):                           # "audits", "compliances": the keyword itself reads better
+            phrase = phrase[:len(h)]
+        elif re.fullmatch(r"(or|er)s?", tail):            # "auditors" is a person, not a skill
+            continue
+        if " " not in phrase and re.search(r"(al|ic|ed)$", phrase, re.I):     # adjective: needs its noun
+            nxt = re.match(r"\s+([A-Za-z][\w-]{3,})", text[m.end():])
+            if not nxt or nxt.group(1).lower() in STOP:
+                continue
+            phrase += " " + nxt.group(1)
+        acronym = any(re.search(r"[A-Z]", w[1:]) for w in phrase.split())
+        if not acronym or (phrase.isupper() and len(phrase.replace(" ", "")) > 5):
+            phrase = phrase.lower()                       # keep GIS, ArcGIS, ISO 14001; not "Environmental Management"
+        low = phrase.lower()
+        if low in role.lower() or any(low in o.lower() or o.lower() in low for o in out):
+            continue
+        out.append(phrase)
+        if len(out) == n:
+            break
+    return out
+
+
 def fill_letter(tpl: dict[str, Any], job: dict[str, Any], hits: list[str], track: dict[str, Any] | None = None) -> dict[str, Any]:
     l = json.loads(json.dumps(tpl))
     l.pop("_instrucciones", None)
@@ -143,10 +179,10 @@ def fill_letter(tpl: dict[str, Any], job: dict[str, Any], hits: list[str], track
     company = job.get("company") or "your organisation"
     # "(12 Month Fixed Term)", "- 6 month contract": contract notes are not part of the role, and their numbers
     # would fail the facts check
-    role = re.sub(r"\s*[\(\[][^)\]]*[\)\]]", "", job["title"])
+    role = re.sub(r"\s*[\(\[][^)\]]*[\)\]]", "", job["title"].split(" | ")[0])   # "Role | Site | 8/6 Roster"
     role = re.sub(r"\s*[-–|]\s*\d+\s*(month|mth|year|yr|week)\w*.*$", "", role, flags=re.I).strip() or job["title"]
     source = "SEEK" if job["platform"] == "seek" else "LinkedIn"
-    focus = ", ".join(h for h in hits[:3] if len(h) > 2) or track.get("letter_focus_fallback", "this kind of work")
+    focus = focus_phrases(hits, job, track, role)
     strengths = track.get("letter_strengths", "practical experience, careful documentation and a reliable approach")
     l["date"] = date.today().strftime("%-d %B %Y")
     l["recipient"] = ["Hiring Manager", company, job.get("location", "")]
@@ -157,8 +193,13 @@ def fill_letter(tpl: dict[str, Any], job: dict[str, Any], hits: list[str], track
     for k, v in list(p.items()):
         p[k] = (v.replace("{{position}}", role).replace("{{company}}", company).replace("{{source}}", source)
                  .replace("{{team_or_projects}}", "your team"))
-    p["why_company"] = (f"The {role} role at {company}, with its focus on {focus}, matches the work I have done and "
-                        f"want to keep doing. I would bring {strengths}.")
+    if focus:
+        joined = focus[0] if len(focus) == 1 else ", ".join(focus[:-1]) + " and " + focus[-1]
+        lead = f"The {role} role at {company}, with its focus on {joined}, matches the work I have done and want to keep doing."
+    else:
+        lead = (f"The {role} role at {company} is the kind of {track.get('letter_focus_fallback', 'work')} "
+                f"I have done and want to keep doing.")
+    p["why_company"] = f"{lead} I would bring {strengths}."
     return l
 
 

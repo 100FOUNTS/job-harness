@@ -207,6 +207,19 @@ class TestRanking(unittest.TestCase):
         self.assertEqual(dedupe_key("Environmental Technician (12 Month)", "Yara International"),
                          dedupe_key("Environmental Technician (12 Month)", "Yara Pilbara Fertilisers"))
 
+    def test_letter_uses_the_ads_wording_not_raw_keywords(self):
+        # A letter once said "with its focus on gis, spatial" and "with its focus on compliance, mining, audit"
+        from prepare import fill_letter
+        track = {"keywords": {"core": ["gis", "spatial", "hydrolog", "audit", "compliance"], "support": ["field"]},
+                 "letter_focus_fallback": "spatial work"}
+        tpl = {"paragraphs": {"why_company": ""}}
+        job = {"title": "Land Officer | Bentley | 8/6 Roster", "company": "Example Power", "platform": "seek",
+               "description": "Use GIS to interpret spatial and land information. Hydrology studies. Work with auditors. Field work."}
+        why = fill_letter(tpl, job, ["gis", "spatial", "hydrolog", "audit", "field"], track)["paragraphs"]["why_company"]
+        self.assertIn("The Land Officer role at Example Power, with its focus on GIS and hydrology, matches", why)
+        none = fill_letter(tpl, job | {"description": ""}, [], track)["paragraphs"]["why_company"]
+        self.assertIn("is the kind of spatial work I have done", none)
+
     def test_track_by_description_and_seniority_range(self):
         from triage import assign_track, judge
         self.assertEqual(assign_track("Fire Planning Officer", self.T["tracks"], "GIS mapping, ArcGIS and spatial data"), "gis")
