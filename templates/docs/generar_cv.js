@@ -38,6 +38,16 @@ const bullet = (text) => new Paragraph({
   children: [new TextRun({ text, size: SIZE, font: FONT })],
 });
 
+// "Label: text" with the label in bold (skills, one-line projects).
+const leadBullet = ([k, v]) => new Paragraph({
+  numbering: { reference: "bullets", level: 0 },
+  spacing: { after: 70, line: LINE },
+  children: [
+    new TextRun({ text: `${k}: `, bold: true, size: SIZE, font: FONT }),
+    new TextRun({ text: v, size: SIZE, font: FONT }),
+  ],
+});
+
 // Role in bold; employer and dates on the next line (no tab stops: reads the same in Word, Pages and ATS).
 const entry = (e, i) => {
   const out = [
@@ -74,21 +84,14 @@ const children = [
   body(cv.summary, { alignment: AlignmentType.JUSTIFIED }),
 
   ...heading("Key Skills"),
-  ...cv.skills.map(([k, v]) => new Paragraph({
-    numbering: { reference: "bullets", level: 0 },
-    spacing: { after: 70, line: LINE },
-    children: [
-      new TextRun({ text: `${k}: `, bold: true, size: SIZE, font: FONT }),
-      new TextRun({ text: v, size: SIZE, font: FONT }),
-    ],
-  })),
+  ...cv.skills.map(leadBullet),
 
   ...heading("Work Experience"),
   ...cv.experience.flatMap(entry),
 ];
 
 if (cv.entrepreneurship?.length) children.push(...heading("Entrepreneurship"), ...cv.entrepreneurship.flatMap(entry));
-if (cv.projects?.length) children.push(...heading("Projects"), ...cv.projects.flatMap(entry));
+if (cv.projects?.length) children.push(...heading("Projects"), ...cv.projects.flatMap((p, i) => (typeof p === "string" ? [bullet(p)] : Array.isArray(p) ? [leadBullet(p)] : entry(p, i))));
 if (cv.other_employment?.length) children.push(...heading("Other Employment"), ...cv.other_employment.flatMap(entry));
 
 children.push(...heading("Education and Qualifications"));
@@ -101,7 +104,6 @@ cv.education.forEach(([q, inst, year], i) => children.push(...(i > 0 ? [spacer(5
 })));
 
 if (cv.publications?.length) children.push(...heading("Publications"), ...cv.publications.map(bullet));
-if (cv.projects?.length) children.push(...heading("Projects"), ...cv.projects.flatMap(entry));
 const extra = (label, text) => new Paragraph({
   spacing: { after: 60, line: LINE },
   children: [
