@@ -242,6 +242,17 @@ class TestRanking(unittest.TestCase):
         self.assertEqual(judge({"title": "Contaminated Land - Scientist to Associate Director"}, t)[0], "env")
 
 
+class TestAtsParse(unittest.TestCase):
+    def test_parser_view_of_a_cv(self):
+        from lint import ats_issues
+        good = ("SAM TAYLOR\nBrisbane, QLD | 0400 000 000 | sam@example.com\nPROFESSIONAL SUMMARY\nEngineer.\n"
+                "KEY SKILLS\nPython\nWORK EXPERIENCE\nEngineer\nDemo Co | Mar 2019 – Present\nEDUCATION AND QUALIFICATIONS\nBEng\n")
+        self.assertEqual(ats_issues(good), [])
+        bad = ats_issues("SAM TAYLOR\nPROFILE\nEngineer 03/2019 to now, quali\ufb01ed\nPROFILE\n")
+        for problem in ("no email", "no phone", "'experience' heading", "'education' heading", "numeric dates", "garbage"):
+            self.assertTrue(any(problem in i for i in bad), problem)
+
+
 class TestPrivacy(unittest.TestCase):
     def test_only_the_fictional_candidate_is_tracked(self):
         r = subprocess.run(["git", "ls-files", "candidates", ".browser"], cwd=ROOT, capture_output=True, text=True)
