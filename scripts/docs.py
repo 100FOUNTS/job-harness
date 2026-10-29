@@ -32,7 +32,7 @@ def export_pdf(src: Path, kind: str, pdf: Path) -> Path | None:
 
 def build(slug: str, src: Path, kind: str, out: Path | None, name: str | None) -> dict:
     src = (src if src.is_absolute() else cand_dir(slug) / src).resolve()
-    out = (out or src.parent).resolve()          # the generator runs in templates/docs: paths must be absolute
+    out = (src.parent if out is None else out if out.is_absolute() else cand_dir(slug) / out).resolve()  # same base as src; the generator runs in templates/docs: paths must be absolute
     out.mkdir(parents=True, exist_ok=True)
     docx = out / f"{name or src.stem}.docx"
     r = subprocess.run(["node", str(GEN[kind]), str(src), str(docx)], capture_output=True, text=True,

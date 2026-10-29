@@ -219,6 +219,11 @@ class TestRanking(unittest.TestCase):
         self.assertIn("The Land Officer role at Example Power, with its focus on GIS and hydrology, matches", why)
         none = fill_letter(tpl, job | {"description": ""}, [], track)["paragraphs"]["why_company"]
         self.assertIn("is the kind of spatial work I have done", none)
+        # Tech names keep their own spelling even when the ad writes "java, typescript"
+        sw = {"keywords": {"core": ["java", "typescript"]}, "keyword_display": {"java": "Java", "typescript": "TypeScript"}}
+        why = fill_letter(tpl, {"title": "Developer", "company": "Demo", "platform": "seek",
+                                "description": "Skills: java, typescript."}, ["java", "typescript"], sw)["paragraphs"]["why_company"]
+        self.assertIn("with its focus on Java and TypeScript, matches", why)
 
     def test_track_by_description_and_seniority_range(self):
         from triage import assign_track, judge

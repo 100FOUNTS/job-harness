@@ -143,6 +143,7 @@ def focus_phrases(hits: list[str], job: dict[str, Any], track: dict[str, Any], r
     """The ad's own wording for the track's core keywords it mentions: "GIS", "hydrology" (from the stem "hydrolog"),
     "spatial information" (an adjective takes the ad's next word, or is dropped). Words in the role title are skipped."""
     core = set(track.get("keywords", {}).get("core", hits))
+    display = {k.lower(): v for k, v in track.get("keyword_display", {}).items()}
     text = " ".join([job.get("title", ""), job.get("teaser", ""), " ".join(job.get("bullets", [])), job.get("description", "")])
     out: list[str] = []
     for h in [h for h in hits if h in core]:
@@ -161,7 +162,9 @@ def focus_phrases(hits: list[str], job: dict[str, Any], track: dict[str, Any], r
                 continue
             phrase += " " + nxt.group(1)
         acronym = any(re.search(r"[A-Z]", w[1:]) for w in phrase.split())
-        if not acronym or (phrase.isupper() and len(phrase.replace(" ", "")) > 5):
+        if phrase.lower() in display:                     # names the ad may write in any case: Java, TypeScript
+            phrase = display[phrase.lower()]
+        elif not acronym or (phrase.isupper() and len(phrase.replace(" ", "")) > 5):
             phrase = phrase.lower()                       # keep GIS, ArcGIS, ISO 14001; not "Environmental Management"
         low = phrase.lower()
         if low in role.lower() or any(low in o.lower() or o.lower() in low for o in out):
