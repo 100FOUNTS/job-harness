@@ -186,6 +186,15 @@ class TestAnswerEngine(Base):
                                 ["Less than 1 year", "1 year", "2 years"])["answer"], "1 year")   # 1.3 → floor
         self.assertIsNone(decide("ana", "Will you require visa sponsorship?", "radio", ["Yes", "No"])["answer"])  # sensitive
 
+    def test_years_cap_and_own_salary(self):
+        from answer import decide
+        p = self.d / "intake.json"
+        i = json.loads(p.read_text()) if p.exists() else {}
+        p.write_text(json.dumps(i | {"preferences": {"years_experience_claimed": 1, "salary_expectation": "AUD 90,000 + super"}}))
+        yrs = decide("ana", "How many years of experience as an environmental engineer?", "text", [])
+        self.assertEqual((yrs["answer"], yrs["source"]), ("1", "rule:years-from-cv (1.0)"))   # 1.3 from the CV → cap 1
+        self.assertEqual(decide("ana", "What is your expected annual base salary?", "text", [])["answer"], "90000")  # not another person's
+
 
 class TestRanking(unittest.TestCase):
     T = {"tracks": [{"id": "env", "keywords": {"core": ["monitoring", "sampling", "compliance", "approvals"], "support": []}},

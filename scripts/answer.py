@@ -128,6 +128,9 @@ def decide(slug: str, q: str, typ: str, options: list[str]) -> dict[str, Any]:
     if YEARS.search(q):                       # computed from the CV, never a generic number
         kw = re.search(r"(?:as an?|in|with|of) ([a-z][a-z /&-]{2,40}?)(?:\?|$| role| position| work)", q.lower())
         yrs = experience_years(slug, kw.group(1) if kw else "")
+        cap = read_json(cand_dir(slug) / "intake.json", {}).get("preferences", {}).get("years_experience_claimed")
+        if cap is not None:                   # never more than the CV and profiles claim (e.g. "5+")
+            yrs = min(yrs, float(cap))
         ans = floor_option(options, yrs) if options else str(int(yrs))      # never round experience up
         if options and yrs < 1:
             ans = pick(options, "Less than 1", "None", "0") or ans
@@ -141,8 +144,12 @@ def decide(slug: str, q: str, typ: str, options: list[str]) -> dict[str, Any]:
         return {"answer": None, "source": "sensitive-not-in-answers", "confidence": "none"}
     ql = q.lower()
     if "salary" in ql or "remuneration" in ql:
-        ans = closest_option(options, 85000) if options else "85000"
-        return {"answer": ans, "source": "rule:salary", "confidence": "medium"}
+        m = re.search(r"\d[\d,]*(?:\.\d+)?\s*k?", read_json(cand_dir(slug) / "intake.json", {}).get("preferences", {}).get("salary_expectation", ""), re.I)
+        if m:                                 # the person's own figure: "AUD 90,000 + super"
+            v = m.group().replace(",", "").strip()
+            target = float(v.rstrip("kK")) * (1000 if v.lower().endswith("k") else 1)
+            ans = closest_option(options, target) if options else str(int(target))
+            return {"answer": ans, "source": "rule:salary", "confidence": "medium"}
     if ("education" in ql or "qualification" in ql) and options:
         ans = pick(options, "Bachelor Degree", "Bachelor") if options else "Bachelor Degree"
         return {"answer": ans, "source": "rule:education", "confidence": "medium"}
