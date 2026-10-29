@@ -88,6 +88,7 @@ const children = [
 ];
 
 if (cv.entrepreneurship?.length) children.push(...heading("Entrepreneurship"), ...cv.entrepreneurship.flatMap(entry));
+if (cv.projects?.length) children.push(...heading("Projects"), ...cv.projects.flatMap(entry));
 if (cv.other_employment?.length) children.push(...heading("Other Employment"), ...cv.other_employment.flatMap(entry));
 
 children.push(...heading("Education and Qualifications"));

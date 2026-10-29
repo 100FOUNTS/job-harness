@@ -58,6 +58,8 @@ if (kind === "cv") {
   heading("Professional Summary"); para(d.summary);
   heading("Key Skills"); d.skills.forEach(([k, v]) => bullet(v, k));
   heading("Work Experience"); d.experience.forEach(entry);
+  if (d.entrepreneurship?.length) { heading("Entrepreneurship"); d.entrepreneurship.forEach(entry); }
+  if (d.projects?.length) { heading("Projects"); d.projects.forEach(entry); }
   if (d.other_employment?.length) { heading("Other Employment"); d.other_employment.forEach(entry); }
   heading("Education and Qualifications");
   d.education.forEach(([q, inst, year], i) => { ensure(30); if (i) doc.y += 4; para(q, { bold: true }); para(`${inst}  |  ${year}`, { italic: true, color: GREY }); });
