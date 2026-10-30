@@ -59,8 +59,9 @@ if (kind === "cv") {
   heading("Key Skills"); d.skills.forEach(([k, v]) => bullet(v, k));
   heading("Work Experience"); d.experience.forEach(entry);
   if (d.entrepreneurship?.length) { heading("Entrepreneurship"); d.entrepreneurship.forEach(entry); }
-  if (typeof d.projects === "string") { heading("Projects"); para(d.projects); }
-  else if (d.projects?.length) { heading("Projects"); d.projects.forEach((p, i) => (typeof p === "string" ? bullet(p) : Array.isArray(p) ? bullet(p[1], p[0]) : entry(p, i))); }
+  const projectsTitle = d.projects_heading || "Projects";
+  if (typeof d.projects === "string") { heading(projectsTitle); para(d.projects); }
+  else if (d.projects?.length) { heading(projectsTitle); d.projects.forEach((p, i) => (typeof p === "string" ? bullet(p) : Array.isArray(p) ? bullet(p[1], p[0]) : entry(p, i))); }
   if (d.other_employment?.length) { heading("Other Employment"); d.other_employment.forEach(entry); }
   heading("Education and Qualifications");
   d.education.forEach(([q, inst, year], i) => { ensure(30); if (i) doc.y += 4; para(q, { bold: true }); para(`${inst}  |  ${year}`, { italic: true, color: GREY }); });
@@ -68,7 +69,7 @@ if (kind === "cv") {
   heading("Additional Information");
   if (d.certificates?.length) para(`Certificates: ${d.certificates.join(", ")}`);
   para(`Languages: ${d.languages}`);
-  para(`Referees: ${d.referees}`);
+  if (d.referees) para(`Referees: ${d.referees}`);
 } else {
   const order = ["purpose", "why_company", "technical", "australia", "closing"];
   doc.font("Helvetica-Bold").fontSize(13).fillColor(GREEN).text(d.sender[0], M, doc.y, { width: W });
