@@ -215,6 +215,12 @@ class TestRanking(unittest.TestCase):
         self.assertEqual(lead[2]["prob"], "low")
         self.assertEqual(dedupe_key("Environmental Technician (12 Month)", "Yara International"),
                          dedupe_key("Environmental Technician (12 Month)", "Yara Pilbara Fertilisers"))
+        # A different specialisation is a different role; a place or seniority tail is the same ad
+        self.assertNotEqual(dedupe_key("Environmental Consultant - Environmental Approvals", "WSP in Australia"),
+                            dedupe_key("Environmental Consultant – Contaminated Lands", "WSP in Australia"))
+        self.assertEqual(dedupe_key("HSE Advisor | Perth Based", "Ertech"), dedupe_key("HSE Advisor", "Ertech Pty Ltd"))
+        self.assertEqual(dedupe_key("Contaminated Land Consultants - Scientist to Associate Director", "Demo"),
+                         dedupe_key("Contaminated Land Consultants", "Demo"))
 
     def test_letter_uses_the_ads_wording_not_raw_keywords(self):
         # A letter once said "with its focus on gis, spatial" and "with its focus on compliance, mining, audit"

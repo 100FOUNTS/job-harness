@@ -77,11 +77,19 @@ def judge(job: dict[str, Any], targets: dict[str, Any]) -> tuple[str | None, str
 GENERIC_ORG = {"the", "of", "and", "shire", "city", "town", "department", "dept", "council", "government", "group", "pty", "ltd"}
 
 
+# Title tails that only say where, how long or how senior: the same ad reposted, not a different role
+NOISE_TAIL = re.compile(r"\b(perth|wa|western australia|adelaide|sa|regional|remote|metro|based|fifo|dido|roster|\d+\s*:\s*\d+"
+                        r"|contract|month|year|fixed[- ]term|permanent|full[- ]time|part[- ]time|hybrid|immediate start)\b|\bto\b", re.I)
+
+
 def dedupe_key(title: str, company: str) -> str:
-    """Same ad posted on both platforms or twice by the same employer: normalised title + first company word."""
-    head = re.split(r"\s+[-–|]\s+", title)[0]           # "Contaminated Land Consultants - Scientist to ..." variants
+    """Same ad posted on both platforms or twice by the same employer: normalised title + first company word.
+    Tails after " - " stay unless they are only place/term/seniority noise: "Environmental Consultant – Contaminated
+    Lands" and "Environmental Consultant - Environmental Approvals" at WSP are different roles."""
+    head, *tails = re.split(r"\s+[-–|]\s+", title)
+    keep = [t for t in tails if not NOISE_TAIL.search(t)]
     words = [w for w in re.findall(r"[a-z]+", company.lower()) if w not in GENERIC_ORG]
-    return re.sub(r"[^a-z]+", " ", head.lower()).strip() + "|" + (words or [""])[0]
+    return re.sub(r"[^a-z]+", " ", " ".join([head] + keep).lower()).strip() + "|" + (words or [""])[0]
 
 
 def by_description_possible(title: str, targets: dict[str, Any]) -> bool:
