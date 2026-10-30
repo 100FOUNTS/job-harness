@@ -59,7 +59,8 @@ if (kind === "cv") {
   heading("Key Skills"); d.skills.forEach(([k, v]) => bullet(v, k));
   heading("Work Experience"); d.experience.forEach(entry);
   if (d.entrepreneurship?.length) { heading("Entrepreneurship"); d.entrepreneurship.forEach(entry); }
-  if (d.projects?.length) { heading("Projects"); d.projects.forEach((p, i) => (typeof p === "string" ? bullet(p) : Array.isArray(p) ? bullet(p[1], p[0]) : entry(p, i))); }
+  if (typeof d.projects === "string") { heading("Projects"); para(d.projects); }
+  else if (d.projects?.length) { heading("Projects"); d.projects.forEach((p, i) => (typeof p === "string" ? bullet(p) : Array.isArray(p) ? bullet(p[1], p[0]) : entry(p, i))); }
   if (d.other_employment?.length) { heading("Other Employment"); d.other_employment.forEach(entry); }
   heading("Education and Qualifications");
   d.education.forEach(([q, inst, year], i) => { ensure(30); if (i) doc.y += 4; para(q, { bold: true }); para(`${inst}  |  ${year}`, { italic: true, color: GREY }); });

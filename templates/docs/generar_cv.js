@@ -91,7 +91,8 @@ const children = [
 ];
 
 if (cv.entrepreneurship?.length) children.push(...heading("Entrepreneurship"), ...cv.entrepreneurship.flatMap(entry));
-if (cv.projects?.length) children.push(...heading("Projects"), ...cv.projects.flatMap((p, i) => (typeof p === "string" ? [bullet(p)] : Array.isArray(p) ? [leadBullet(p)] : entry(p, i))));
+if (typeof cv.projects === "string") children.push(...heading("Projects"), body(cv.projects, { alignment: AlignmentType.JUSTIFIED }));
+else if (cv.projects?.length) children.push(...heading("Projects"), ...cv.projects.flatMap((p, i) => (typeof p === "string" ? [bullet(p)] : Array.isArray(p) ? [leadBullet(p)] : entry(p, i))));
 if (cv.other_employment?.length) children.push(...heading("Other Employment"), ...cv.other_employment.flatMap(entry));
 
 children.push(...heading("Education and Qualifications"));

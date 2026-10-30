@@ -2,7 +2,7 @@
 
 Goal: one CV JSON per track (`docs/cv_<track>.json`) and one cover letter JSON (`docs/cover_letter.json`), built and checked.
 
-Format (Australian, ATS): one column, no tables/text boxes/images/headers/footers, standard headings (Professional Summary, Key Skills, Work Experience, Projects (optional `projects`, same shape as experience), Other Employment, Education and Qualifications, Publications, Additional Information), reverse chronological, uniform dates "May 2025 – Dec 2025", one role per entry, 2 pages (max 3), en-AU spelling, contact in the body, "Referees: Available upon request".
+Format (Australian, ATS): one column, no tables/text boxes/images/headers/footers, standard headings (Professional Summary, Key Skills, Work Experience, Projects (optional `projects`: entries like experience, one-line bullets `[name, text]`, or a single paragraph string), Other Employment, Education and Qualifications, Publications, Additional Information), reverse chronological, uniform dates "May 2025 – Dec 2025", one role per entry, 2 pages (max 3), en-AU spelling, contact in the body, "Referees: Available upon request".
 
 1. Write the JSON (schema = `templates/docs` generators; see an existing candidate's `docs/`). Bullets: action verb + task + how + result, figures only from `facts.json`.
 2. `job docs <slug> build docs/cv_<track>.json --kind cv --out candidates/<slug>/docs/master --name <First_Last>_Resume[_TRACK]`. It writes docx + pdf and runs lint + facts verify on both. Fix until `ok: true`.
