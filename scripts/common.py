@@ -69,6 +69,14 @@ def run_dir(slug: str, day: str | None = None) -> Path:
     return d
 
 
+def keep_previous(path: Path) -> None:
+    """A second run on the same day must not erase the first: the earlier file becomes <name>.<HHMMSS>.json."""
+    path = Path(path)
+    if path.exists():
+        stamp = datetime.fromtimestamp(path.stat().st_mtime).strftime("%H%M%S")
+        path.rename(path.with_name(f"{path.stem}.{stamp}{path.suffix}"))
+
+
 def http_get(url: str, timeout: int = 25) -> tuple[int, str]:
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Language": "en-AU,en;q=0.9"})
     try:

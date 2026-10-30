@@ -7,7 +7,7 @@
 
 Ranking (deterministic, see score()): compatibility (the track's core/support keywords found in the ad) + probability
 (title level, years asked, and the person's own `ranking` block in targets.json) + recency.
-Same ad on both platforms is prepared once. The person opens each link, clicks Apply and uploads the two PDFs.
+Same ad on both platforms is prepared once; a repost under another title is recognised by its description (jobs.db). The person opens each link, clicks Apply and uploads the two PDFs.
 """
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from typing import Any
 
 from common import cand_dir, read_json, run_dir, save_json, today
 from docs import build
+from jobdb import REPOST_SIMILARITY, descriptions, record_outcome, similarity
 from tracker import add, load, set_status
 from triage import dedupe_key
 
@@ -245,6 +246,17 @@ def package_dir(slug: str, day: str | None = None) -> Path:
     return d
 
 
+def repost_of(key: str, dk: str, done: dict[str, str], texts: dict[str, str]) -> str | None:
+    """Same employer, same text under another title ("Environmental Advisor - Regional WA" reposted as
+    "... - Build Your Career in Renewable Energy - Regional WA"): the key of the ad already prepared."""
+    company = dk.split("|")[1]
+    for other_dk, other in done.items():
+        if other_dk.split("|")[1] == company and key in texts and other in texts \
+                and similarity(texts[key], texts[other]) >= REPOST_SIMILARITY:
+            return other
+    return None
+
+
 def prepare(slug: str, max_n: int, requeue: list[str] | None = None) -> list[dict[str, Any]]:
     base = cand_dir(slug)
     targets = read_json(base / "targets.json")
@@ -258,18 +270,26 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None) -> list[dic
             short.append({"key": k, "id": k.split(":", 1)[1], "platform": a["platform"], "title": a["title"],
                           "company": a.get("company", ""), "url": a["url"], "location": a.get("location", ""),
                           "track": a.get("track") or primary_track(targets)["id"], "listed": a.get("date", ""), "teaser": a.get("summary", "")})
-    done = {dedupe_key(a.get("title", ""), a.get("company") or "") for a in tracked.values() if a["key"] in seen}
-    ranked = []
+    done = {dedupe_key(a.get("title", ""), a.get("company") or ""): a["key"] for a in tracked.values() if a["key"] in seen}
+    texts = descriptions(slug, [*done.values(), *(j["key"] for j in short)])
+    ranked, outcome = [], {}
     for sc, j in sorted(((score(j, targets, slug), j) for j in short), key=lambda x: x[0][0], reverse=True):
         dk = dedupe_key(j.get("title", ""), j.get("company") or "")
-        if dk not in done and len(ranked) < max_n:
-            done.add(dk); ranked.append((sc, j))
+        twin = done.get(dk) or repost_of(j["key"], dk, done, texts)
+        if twin:
+            outcome[j["key"]] = (sc[0], f"twin of {twin}")
+        elif len(ranked) < max_n:
+            done[dk] = j["key"]; ranked.append((sc, j))
+        else:
+            outcome[j["key"]] = (sc[0], "below the daily cap")
     pkg = package_dir(slug)
     intake = read_json(base / "intake.json")
     first_last = intake["name"].replace(" ", "_")
     manifest = pkg / "items.json"
     out = read_json(manifest, {"items": []})["items"]
     start = max([x["n"] for x in out], default=0)
+    for sc, j in ranked[max(0, max_n - len(out)):]:
+        outcome[j["key"]] = (sc[0], "below the daily cap")
     ranked = ranked[:max(0, max_n - len(out))]            # --max is per day: a second run only tops the package up
     for i, ((fit, hits, odds), j) in enumerate(ranked, start + 1):
         track = tracks[j["track"]]
@@ -293,6 +313,10 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None) -> list[dic
         out.append({"notes": notes_for(j, hits, odds, slug), "n": i, "key": j["key"], "title": j["title"], "company": j.get("company", ""), "url": j["url"],
                     "platform": j["platform"], "location": j.get("location", ""), "fit": fit, "track": j["track"],
                     "dir": d.name, "ok": r["ok"], "easy_apply": j.get("easy_apply")})
+    for k, (fit, why) in outcome.items():
+        record_outcome(slug, k, fit, why)
+    for (fit, _, _), j in ranked:
+        record_outcome(slug, j["key"], fit, "prepared")
     save_json(manifest, {"items": out})
     write_index(pkg, out, slug)
     return [x for x in out if x["n"] > start]

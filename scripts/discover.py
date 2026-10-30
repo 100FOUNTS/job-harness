@@ -4,7 +4,8 @@ SEEK: public search JSON (same data the site uses). LinkedIn: public guest searc
 A handful of requests per day, spaced out, like a person opening their alerts.
 
   job discover <slug> [--max-age-days 3] [--dry]
-  → candidates/<slug>/data/<date>/jobs.json  (new jobs only: already-seen keys are skipped)
+  → candidates/<slug>/data/<date>/jobs.json  (new jobs only: tracked ads and ads already rejected under the same
+    targets are skipped; every ad found is still recorded as a sighting in jobs.db)
 """
 from __future__ import annotations
 
@@ -19,7 +20,8 @@ from typing import Any
 
 import urllib.request
 
-from common import UA, cand_dir, http_get, read_json, run_dir, save_json
+from common import UA, cand_dir, http_get, keep_previous, read_json, run_dir, save_json
+from jobdb import record_seen, settled
 from tracker import seen_keys
 
 SEEK_API = "https://www.seek.com.au/api/jobsearch/v5/search"
@@ -98,7 +100,6 @@ def seek_detail(job_id: str) -> str:
 
 def discover(slug: str, max_age_days: int, dry: bool = False) -> dict[str, Any]:
     targets = read_json(cand_dir(slug) / "targets.json")
-    seen = seen_keys(slug)
     jobs: dict[str, dict[str, Any]] = {}
     errors = []
     for track in targets["tracks"]:
@@ -108,16 +109,18 @@ def discover(slug: str, max_age_days: int, dry: bool = False) -> dict[str, Any]:
                 if "_error" in j:
                     errors.append(j["_error"]); continue
                 key = f"{j['platform']}:{j['id']}"
-                if key in seen:
-                    continue
                 if key in jobs:
                     if track["id"] not in jobs[key]["tracks"]:
                         jobs[key]["tracks"].append(track["id"])
                     continue
                 jobs[key] = j | {"key": key, "tracks": [track["id"]], "search": s["keywords"]}
             time.sleep(random.uniform(2.0, 4.5))          # human-like spacing between requests
-    result = {"date": run_dir(slug).name, "new_jobs": list(jobs.values()), "errors": errors}
+    skip = seen_keys(slug) | settled(slug, targets)
+    result = {"date": run_dir(slug).name, "new_jobs": [j for k, j in jobs.items() if k not in skip],
+              "already_known": len([k for k in jobs if k in skip]), "errors": errors}
     if not dry:
+        record_seen(slug, jobs.values(), result["date"])
+        keep_previous(run_dir(slug) / "jobs.json")
         save_json(run_dir(slug) / "jobs.json", result)
     return result
 
@@ -132,7 +135,8 @@ def main() -> None:
     by = {}
     for j in r["new_jobs"]:
         by[j["platform"]] = by.get(j["platform"], 0) + 1
-    print(json.dumps({"new_jobs": len(r["new_jobs"]), "by_platform": by, "errors": r["errors"]}, indent=2))
+    print(json.dumps({"new_jobs": len(r["new_jobs"]), "already_known": r["already_known"], "by_platform": by,
+                      "errors": r["errors"]}, indent=2))
 
 
 if __name__ == "__main__":

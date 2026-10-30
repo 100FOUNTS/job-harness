@@ -64,6 +64,7 @@ Everything about a person lives in `candidates/<slug>/`; the code has nothing ab
 | `answers.json` | Pre-approved answers to application questions |
 | `docs/` | One CV JSON per track + a cover letter template → `job docs` builds docx + PDF |
 | `state.json`, `tracker.json`, `approvals/` | Bookkeeping, changed only through `job` commands |
+| `jobs.db` | Every ad ever listed (SQLite): sightings, verdict and reason, full description, fit, outcome. Ads already rejected are not judged again; reposts are caught by their text. `job db <slug> stats` |
 
 ## Your own setup (stays out of git)
 Candidate folders other than `example/`, the browser profile and `.claude/settings.local.json` are git-ignored, and `job test` fails if a personal candidate file is ever tracked. Owner preferences go in `.claude/settings.local.json` (read by Claude Code) and in the shell that runs `job schedule install` (copied into the launchd job):

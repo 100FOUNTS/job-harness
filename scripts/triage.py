@@ -9,6 +9,7 @@ Rules (all from targets.json):
 - text must not match `exclude_text` (citizenship/PR/clearance requirements)
 - location must match `locations_include`
 Shortlisted jobs get their full description (LinkedIn guest page, SEEK GraphQL; one request each, spaced) and are re-judged.
+A description already in jobs.db is reused instead of fetched again. Every verdict, reason and description goes to jobs.db.
 """
 from __future__ import annotations
 
@@ -19,7 +20,8 @@ import re
 import time
 from typing import Any
 
-from common import cand_dir, read_json, run_dir, save_json
+from common import cand_dir, keep_previous, read_json, run_dir, save_json
+from jobdb import descriptions, record_triage
 
 
 def rx(words: list[str]) -> re.Pattern[str] | None:
@@ -105,6 +107,9 @@ def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
     from discover import linkedin_detail, seek_detail
     targets = read_json(cand_dir(slug) / "targets.json")
     jobs = read_json(run_dir(slug, day) / "jobs.json")["new_jobs"]
+    known = descriptions(slug, [j["key"] for j in jobs])        # fetched on an earlier day: no second request
+    for j in jobs:
+        j["description"] = j.get("description") or known.get(j["key"], "")
     short, rejected = [], []
     for j in sorted(jobs, key=lambda x: x.get("listed", ""), reverse=True):
         track, why = judge(j, targets)
@@ -137,6 +142,8 @@ def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
         rejected.append({"key": j["key"], "title": j.get("title"), "company": j.get("company"),
                          "reason": "twin ad " + barred[dedupe_key(j.get("title", ""), j.get("company", ""))]})
     out = {"shortlist": short, "rejected": rejected}
+    record_triage(slug, jobs, short, rejected, targets)
+    keep_previous(run_dir(slug, day) / "shortlist.json")
     save_json(run_dir(slug, day) / "shortlist.json", out)
     return out
 

@@ -7,7 +7,7 @@ Code, keys and internal notes in English. Answer the user in their language. Can
 
 ## How to work here
 - **Entry points:** `/job-onboard <stage> <slug>` (stages 0–5), `/job-daily <slug>` (the daily cycle; also run by launchd), `/job-learn`. In the terminal everything goes through `bin/job` (`job help`).
-- **Source of truth:** `candidates/<slug>/` → `intake.json`, `targets.json`, `answers.json`, `facts.json`, `state.json`, `tracker.json`, `progress.md`, `approvals/`, `docs/`, `data/<date>/`. Never the chat history. The SessionStart hook injects `job status --context`.
+- **Source of truth:** `candidates/<slug>/` → `intake.json`, `targets.json`, `answers.json`, `facts.json`, `state.json`, `tracker.json`, `progress.md`, `approvals/`, `docs/`, `data/<date>/`, `jobs.db` (every ad ever listed, with verdict, reason, description, fit and outcome: `job db <slug> stats|sql`). Never the chat history. The SessionStart hook injects `job status --context`.
 - **Scripts for data, agents for judgment.** Discovery (`job discover`) and pre-filtering (`job triage`) are code: no browser, no LLM. Claude judges the shortlist, writes tailored documents and fills forms.
 - **Browser:** Claude in Chrome, one tab at a time, closed when done. The user's own Chrome holds the SEEK/LinkedIn sessions.
 

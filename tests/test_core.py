@@ -259,6 +259,43 @@ class TestAtsParse(unittest.TestCase):
             self.assertTrue(any(problem in i for i in bad), problem)
 
 
+class TestJobMemory(Base):
+    def job(self, key, **kw):
+        return {"key": key, "platform": "seek", "id": key.split(":")[1], "title": "Environmental Advisor",
+                "company": "UGL", "url": "u", "tracks": ["env"], "bullets": [], **kw}
+
+    def test_sightings_and_settled_verdicts(self):
+        from jobdb import connect, record_seen, record_triage, settled
+        targets = {"tracks": [{"id": "env"}]}
+        a, b, c = self.job("seek:1"), self.job("seek:2"), self.job("seek:3")
+        record_seen("ana", [a, b, c], "2026-10-29")
+        record_seen("ana", [a], "2026-10-30")
+        record_triage("ana", [a | {"description": "full text"}, b, c], [a | {"track": "env"}],
+                      [{"key": "seek:2", "reason": "title does not match any target track"},
+                       {"key": "seek:3", "reason": "over shortlist cap"}], targets)
+        row = connect("ana").execute("SELECT * FROM jobs WHERE key='seek:1'").fetchone()
+        self.assertEqual((row["times_seen"], row["first_seen"], row["last_seen"]), (2, "2026-10-29", "2026-10-30"))
+        self.assertEqual(row["description"], "full text")
+        self.assertEqual(settled("ana", targets), {"seek:2"})      # the cap depends on the day, not on the ad
+        self.assertEqual(settled("ana", {"tracks": [{"id": "env"}, {"id": "gis"}]}), set())   # new targets: judge again
+
+    def test_repost_under_another_title_is_a_twin(self):
+        from prepare import repost_of
+        from triage import dedupe_key
+        ad = "Environmental Advisor for renewable energy projects in regional WA. " * 3 + "Approvals, monitoring and audits."
+        texts = {"seek:1": ad, "seek:2": ad + " Build your career with us.", "seek:3": "Botanist for flora surveys " * 5}
+        done = {dedupe_key("Environmental Advisor - Build Your Career in Renewable Energy", "UGL"): "seek:1"}
+        self.assertEqual(repost_of("seek:2", dedupe_key("Environmental Advisor - Regional WA", "UGL"), done, texts), "seek:1")
+        self.assertIsNone(repost_of("seek:3", dedupe_key("Botanist", "UGL"), done, texts))
+        self.assertIsNone(repost_of("seek:2", dedupe_key("Environmental Advisor", "Other Co"), done, texts))
+
+    def test_same_day_rerun_keeps_the_first_file(self):
+        from common import keep_previous, save_json
+        f = self.tmp / "jobs.json"
+        save_json(f, {"run": 1}); keep_previous(f); save_json(f, {"run": 2})
+        self.assertEqual(len(list(self.tmp.glob("jobs.*.json"))), 1)
+
+
 class TestPrivacy(unittest.TestCase):
     def test_only_the_fictional_candidate_is_tracked(self):
         r = subprocess.run(["git", "ls-files", "candidates", ".browser"], cwd=ROOT, capture_output=True, text=True)

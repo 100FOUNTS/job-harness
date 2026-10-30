@@ -3,7 +3,7 @@
 
 Blocks (exit 2, reason on stderr):
 1. Reading secrets (.env, credentials).
-2. Hand-editing bookkeeping: state.json, facts.json, tracker.json, approvals/ (only the scripts write them).
+2. Hand-editing bookkeeping: state.json, facts.json, tracker.json, jobs.db, approvals/ (only the scripts write them).
 3. Human signatures from the agent: `job sign` without --by-agent, any --confirm, or a file that wraps them.
 4. Deleting candidate data from the shell, and "delete/remove" clicks in the browser
    (the harness never deletes anything in the person's accounts).
@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(ROOT / "scripts"))
 
-BOOKKEEPING = re.compile(r"candidates/[^/]+/(state\.json|facts\.json|tracker\.json|approvals/)")
+BOOKKEEPING = re.compile(r"candidates/[^/]+/(state\.json|facts\.json|tracker\.json|jobs\.db|approvals/)")
 SECRET = re.compile(r"(^|[/\s'\"])\.env(\b|$)|credentials|\.netrc|id_rsa", re.I)
 SIGN = re.compile(r"\b(job|gates\.py)\b[^\n;|&]*\bsign\b")
 DELETE_SHELL = re.compile(r"\b(rm|rmdir|unlink|trash|shred)\b[^\n;|&]*candidates|git\s+clean", re.I)

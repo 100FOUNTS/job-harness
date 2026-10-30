@@ -6,6 +6,7 @@
   job new <slug> --name "..."                  create a candidate
   job discover <slug>                          new jobs from the saved searches (no browser, no LLM)
   job triage <slug>                            deterministic pre-filter → shortlist.json
+  job db <slug> import|stats|show <key>|sql "<SELECT>"   every ad ever listed (jobs.db): verdicts, reposts, market
   job prepare <slug> [--max 15]                ranked top jobs → CV + filled cover letter + daily package (no LLM)
   job cleanup <slug> [--days 15]               old packages: keep the summary, remove the documents
   job apply <slug> [--dry] | job apply <slug> login seek   scripted SEEK Quick Apply (modes easy/full)
@@ -33,7 +34,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 S = ROOT / "scripts"
 DIRECT = {"status": "status.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
-          "triage": "triage.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
+          "triage": "triage.py", "db": "jobdb.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
           "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py"}
 
 

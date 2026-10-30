@@ -9,6 +9,7 @@ candidates/example/docs/master/
 candidates/example/logs/
 candidates/example/pending_questions.json
 candidates/example/barred.json
+candidates/example/jobs.db
 
 # Browser profile for scripted applying (holds session cookies)
 .browser/

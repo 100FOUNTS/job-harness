@@ -15,6 +15,7 @@ Run unattended. No questions to the user: anything uncertain becomes `manual-rev
 
 ## 1. Data (scripts, no LLM)
 If `candidates/$slug/data/<today>/shortlist.json` does not exist: `job discover $slug` then `job triage $slug`.
+Both write `candidates/$slug/jobs.db`: ads already rejected under the same targets are not listed again, and descriptions already fetched are reused. For questions across days (who hires, which requirement keeps excluding the person, a possible repost) query it: `job db $slug sql "SELECT ..."`.
 
 ## 1b. Carry-over
 Jobs already in the tracker with status `prepared` (documents built on a previous run or by hand) go straight to step 4 first, using their recorded `cv`/`letter` paths: `job track $slug list --status prepared`. They count towards today's quota.
