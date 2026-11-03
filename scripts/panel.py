@@ -173,7 +173,7 @@ def maybes(slug: str, days: int = 7, n: int = 10) -> list[dict[str, Any]]:
           for ws in [targets.get("exclude_title", []), *[t.get("exclude_title", []) for t in targets.get("tracks", [])]] if ws]
     since = (date.today() - timedelta(days=days)).isoformat()
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-    rows = con.execute("SELECT key, title, company, url, last_seen, teaser, bullets, description FROM jobs "
+    rows = con.execute("SELECT key, title, company, url, last_seen, teaser, bullets, substr(description, 1, 6000) FROM jobs "
                        "WHERE verdict='rejected' AND reason LIKE 'title does not match%' AND last_seen >= ? "
                        "ORDER BY last_seen DESC LIMIT 3000", (since,)).fetchall()
     con.close()
@@ -182,7 +182,7 @@ def maybes(slug: str, days: int = 7, n: int = 10) -> list[dict[str, Any]]:
     for key, title, company, url, seen, teaser, bullets, desc in rows:
         if key in tracked or not title or any(x.search(title) for x in ex):
             continue
-        found = m.found(" ".join(filter(None, [title, teaser, bullets, (desc or "")[:6000]])))   # an ad's first pages say what it is
+        found = m.found(" ".join(filter(None, [title, teaser, bullets, desc])))      # SQL keeps the first 6000 characters: an ad's opening says what it is
         score = m.score(found)
         if score >= suggest.MIN_SCORE:
             out.append({"key": key, "title": title, "company": company or "", "url": url or "", "day": seen, "score": score,
