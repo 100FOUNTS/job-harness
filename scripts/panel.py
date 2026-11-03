@@ -14,6 +14,8 @@ GET  /api/job?slug=&key=        one application in full: description, keyword co
 GET  /files/<slug>/<path>       a file from the candidate's package folder (CV, letter)
 POST /status {slug,key,status}  POST /note {slug,key,text}  POST /rescue {slug,key}  POST /open {slug,key}
 Every POST must carry the token the page was served with, so another site open in the browser cannot post to it.
+JOB_SUPPORT_URL (env or .claude/settings.local.json): a "Buy me a coffee" link, e.g. a Stripe Payment Link where the
+customer chooses the amount; the floating button only shows when it is set.
 """
 from __future__ import annotations
 
@@ -226,7 +228,7 @@ def data(slug: str) -> dict[str, Any]:
                       "followups": [f for f in followups(slug) if f["action"] != "waiting (already chased)"],
                       "pending_answers": pending_answers},
             "funnel": funnel(slug, all_apps), "dropped": dropped(slug), "companies": companies(slug),
-            "candidates": list_candidates(),
+            "candidates": list_candidates(), "support_url": setting("JOB_SUPPORT_URL", ""),
             "generated": datetime.now().strftime("%H:%M")}
 
 

@@ -179,6 +179,10 @@ td { border-top: 1px solid var(--line); padding: 8px 8px 8px 0; vertical-align: 
 td.r, th.r { text-align: right; }
 .scroll { overflow-x: auto; }
 
+.coffee { position: fixed; right: 20px; bottom: 20px; z-index: 25; display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px 10px 12px; border-radius: 999px; background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); box-shadow: var(--shadow-lift); font-weight: 700; font-size: 13px; text-decoration: none; transition: transform .15s ease, border-color .15s ease; }
+.coffee:hover { transform: translateY(-2px); border-color: var(--accent); }
+.coffee svg { width: 20px; height: 20px; stroke: var(--accent); }
+@media (max-width: 900px) { .coffee span { display: none; } .coffee { padding: 12px; } }
 #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding: 10px 16px; border-radius: 8px; z-index: 50; box-shadow: var(--shadow-lift); }
 .help { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(15,21,25,.4); z-index: 40; }
 .help > div { background: var(--surface); border-radius: 12px; padding: 22px 26px; width: min(440px, 92vw); display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; align-items: center; }
@@ -227,6 +231,7 @@ td.r, th.r { text-align: right; }
 <div id="drawer-root"></div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
 <div id="help-root"></div>
+<div id="coffee-root"></div>
 
 <script>
 const D = __DATA__, TOKEN = "__TOKEN__";
@@ -576,6 +581,8 @@ document.addEventListener("keydown", async e => {
   if (/^[1-5]$/.test(k)) { const col = COLS[+k - 1][0], a = D.apps.find(x => x.key === S.focus); if (a && a.col !== col) { await setStatus(S.focus, {column: col}); focusCard(S.focus); } }
 });
 
+if (/^https:\/\//.test(D.support_url || "")) $("#coffee-root").innerHTML = `<a class="coffee" href="${esc(D.support_url)}" target="_blank" rel="noopener" aria-label="Buy me a coffee: support 100 FOUNTS, who build this harness">
+  <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17M8 3v2M12 3v2"/></svg><span>Buy me a coffee</span></a>`;
 render();
 </script>
 </body>
