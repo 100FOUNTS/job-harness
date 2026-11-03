@@ -17,7 +17,7 @@ La herramienta funciona hoy solo para Australia. El soporte de Windows y Linux e
 ## Qué necesitas
 **Obligatorio**
 - Un computador con macOS, Windows o Linux.
-- Una suscripción de pago a Claude (Pro, Max, Ultra, Team o Enterprise) con Claude Code: la aplicación de escritorio de Claude (pestaña **Code**) o la línea de comandos.
+- Una suscripción de pago a Claude (Pro, Max, Team o Enterprise) con Claude Code: la aplicación de escritorio de Claude (pestaña **Code**) o la línea de comandos.
 - Python 3.9 o superior y Node.js 20 o superior. Si faltan, Claude te lo dice y te muestra el comando para instalarlos.
 - Una carpeta con tus CV, certificados y otros documentos.
 
@@ -63,3 +63,8 @@ claude
 La ejecución diaria no cuesta nada (son scripts, sin IA). La configuración inicial, `/job-harness:job-tailor` (adapta el CV y la carta de las mejores ofertas) y `/job-harness:job-interview` (preparación de entrevistas) usan tu plan de Claude.
 
 Los documentos de postulación se escriben en inglés australiano (`docs_language`); el idioma de lo que lees (resumen diario) se elige con `ui_language` (`es` para español). Claude te responde en tu idioma.
+
+## Apoya el proyecto
+job-harness es gratis, de código abierto y no usa servicios pagos. Si te ayudó en tu búsqueda, un café ayuda a mantenerlo.
+
+<p align="center"><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><img src="../assets/buy-me-a-coffee.png" alt="Buy me a coffee: apoya a 100 FOUNTS, que construye job-harness" width="180"></a><br><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><b>☕ Buy me a coffee</b></a></p>
