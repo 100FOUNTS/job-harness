@@ -1,14 +1,14 @@
 """Daily summary: what was applied to (company, role, link, CV, fit, summary) and what needs a person.
 
   job report <slug> [--date YYYY-MM-DD] [--notify]
-  → data/<date>/report.md  (+ macOS notification with --notify)
+  → data/<date>/report.md  (+ desktop notification with --notify)
 """
 from __future__ import annotations
 
 import argparse
-import subprocess
 from typing import Any
 
+import osutil
 from common import cand_dir, read_json, run_dir, today
 from state import load_state
 from tracker import calibrate, followups, load, quota
@@ -67,7 +67,7 @@ def main() -> None:
         apps = [x for x in load(a.slug) if x["date"] == day]
         msg = f"{sum(x['status'] == 'submitted' for x in apps)} sent · {sum(x['status'] == 'dry-run' for x in apps)} dry-run · " \
               f"{sum(x['status'] == 'manual-review' for x in apps)} need you"
-        subprocess.run(["osascript", "-e", f'display notification "{msg}" with title "Job harness: {a.slug}"'])
+        osutil.notify(f"Job harness: {a.slug}", msg)
 
 
 if __name__ == "__main__":

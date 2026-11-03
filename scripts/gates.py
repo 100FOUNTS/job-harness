@@ -18,11 +18,12 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
-from common import cand_dir, now_iso, read_json, save_json
+from common import HARNESS_VERSION, cand_dir, load_intake, now_iso, read_json, save_json
 
 TYPES = ("master-docs", "profile-changes", "go-live", "targets", "report")
 AGENT_OK = {"master-docs", "profile-changes", "go-live", "targets", "report"}  # agent signs ONLY after an explicit OK in
@@ -80,13 +81,66 @@ def request(slug: str, typ: str, files: list[str], description: str) -> str:
     gid = f"{typ}-{n:02d}"
     save_json(adir(slug) / f"{now_iso()[:10]}-{gid}.json",
               {"id": gid, "type": typ, "status": "pending", "requested": now_iso(), "description": description,
-               "files": {f: sha(base / f) for f in files}, "signed_by": None})
+               "files": {f: sha(base / f) for f in files}, "harness_version": HARNESS_VERSION, "signed_by": None})
     return gid
 
 
 def write(g: dict[str, Any]) -> None:
     p = Path(g.pop("_path"))
     save_json(p, g)
+
+
+def check(label: str, fn: Any) -> str:
+    """One automatic check as a checklist line; a check that cannot run says so instead of failing the review."""
+    try:
+        issues = fn()
+    except Exception as e:
+        return f"  ? {label}: not checked ({type(e).__name__}: {str(e)[:60]})"
+    return f"  ✓ {label}" if not issues else f"  ✗ {label}: " + "; ".join(issues[:3])
+
+
+def doc_checks(slug: str, f: str) -> list[str]:
+    path = cand_dir(slug) / f
+    if not path.is_file() or path.suffix not in (".docx", ".pdf", ".md", ".txt"):
+        return []
+    kind = "letter" if re.search(r"letter|carta|cover", path.name, re.I) else "cv"
+
+    def lint_issues() -> list[str]:
+        from lint import lint
+        return lint(slug, path, kind)["issues"]
+
+    def facts_issues() -> list[str]:
+        from facts import verify
+        return [f"unregistered figure {x}" for x in verify(slug, path)["unknown_figures"]]
+
+    return [check(f"lint {f}", lint_issues), check(f"facts verify {f}", facts_issues)]
+
+
+def intake_checks(slug: str) -> list[str]:
+    def rules_issues() -> list[str]:
+        rules = load_intake(slug).get("rules")
+        return [] if rules and (rules.get("never_mention") or rules.get("never_include")) else ["intake rules empty or missing"]
+
+    def mode_issues() -> list[str]:
+        from state import load_state
+        return [f"mode is '{m}'"] if (m := load_state(slug)["mode"]) == "live" else []
+
+    return [check("intake rules present (never_mention / never_include)", rules_issues),
+            check("mode is not already live", mode_issues)]
+
+
+def checklist(slug: str, g: dict[str, Any]) -> str:
+    """Read-only evidence for the person about to sign: seals first, then the automatic checks for this kind."""
+    base = cand_dir(slug)
+    lines = [f"Review {g['id']} ({g['type']}, {g['status']}), harness {g.get('harness_version', 'unknown')}", "Sealed files:"]
+    for f, h in g["files"].items():
+        state = "unchanged" if (base / f).exists() and sha(base / f) == h else "CHANGED since request" if (base / f).exists() else "MISSING"
+        lines.append(f"  {'✓' if state == 'unchanged' else '✗'} {f}: {state}")
+    lines.append("Automatic checks:")
+    extra = {"master-docs": lambda: [c for f in g["files"] for c in doc_checks(slug, f)],
+             "targets": lambda: intake_checks(slug), "go-live": lambda: intake_checks(slug)}.get(g["type"])
+    lines += (extra() if extra else []) or ["  (none for this kind)"]
+    return "\n".join(lines)
 
 
 def sign(slug: str, gid: str, by_agent: bool, note: str, confirm: str | None) -> None:
@@ -101,17 +155,18 @@ def sign(slug: str, gid: str, by_agent: bool, note: str, confirm: str | None) ->
             raise SystemExit(f"'{g['type']}' needs a human signature. Ask the person to run: job sign {slug} {gid}")
         if not note.startswith("User approved in chat:"):
             raise SystemExit('--by-agent needs --note "User approved in chat: \'<their words>\'"')
-        g["signed_by"] = {"by": "agent", "note": note, "date": now_iso()}
+        g["signed_by"] = {"by": "agent", "note": note, "date": now_iso(), "harness_version": HARNESS_VERSION}
     else:
         typed = confirm
         if typed is None:
             if not sys.stdin.isatty():
                 raise SystemExit("A human signature needs an interactive terminal (or `!` in Claude Code with --confirm).")
+            print(checklist(slug, g) + "\n")
             print(json.dumps({k: g[k] for k in ("id", "type", "description", "files")}, indent=2, ensure_ascii=False))
             typed = input(f"Type the candidate slug '{slug}' to sign: ").strip()
         if typed != slug:
             raise SystemExit("Confirmation does not match. Not signed.")
-        g["signed_by"] = {"by": "human", "note": note, "date": now_iso()}
+        g["signed_by"] = {"by": "human", "note": note, "date": now_iso(), "harness_version": HARNESS_VERSION}
     g["status"] = "signed"
     write(g)
     print(f"✅ {gid} signed")
@@ -143,6 +198,7 @@ def main() -> None:
         sys.exit(1 if bad else 0)
     elif a.cmd == "review":
         g = find(a.slug, a.id); ok, broken = seals_ok(a.slug, g); g.pop("_path")
+        print(checklist(a.slug, g) + "\n")
         print(json.dumps(g | {"seal_ok": ok, "broken": broken}, indent=2, ensure_ascii=False))
     elif a.cmd == "sign":
         sign(a.slug, a.id, a.by_agent, a.note, a.confirm)

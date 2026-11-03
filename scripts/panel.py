@@ -33,6 +33,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+import osutil
 from common import cand_dir, list_candidates, read_json, setting
 from tracker import OUTCOMES, PENDING, SENT, calibrate, followups, load, set_note, set_status
 
@@ -278,7 +279,7 @@ def rescue(slug: str, key: str) -> dict[str, Any]:
         add(slug, {"key": key, "title": row["title"], "company": row["company"], "url": row["url"], "platform": row["platform"],
                    "track": track, "location": row["location"] or "", "summary": "rescued from the panel"})
         set_status(slug, key, "skipped", reason="rescued: waiting for its package")
-    r = subprocess.run(["python3", str(Path(__file__).parent / "prepare.py"), slug, "--max", "99", "--requeue", key, "--only"],
+    r = subprocess.run([*osutil.python(), str(Path(__file__).parent / "prepare.py"), slug, "--max", "99", "--requeue", key, "--only"],
                        capture_output=True, text=True, timeout=300)
     return {"ok": r.returncode == 0, "error": r.stderr[-300:] if r.returncode else ""}
 
@@ -288,7 +289,7 @@ def open_folder(slug: str, key: str) -> dict[str, Any]:
     d = job_dir(slug, app, package_items(slug).get(key)) if app else None
     if not d:
         return {"ok": False, "error": "This application has no package folder."}
-    subprocess.run(["open", str(d)], check=False)          # the package folder: the CV and letter to upload
+    osutil.open_path(d)          # the package folder: the CV and letter to upload
     return {"ok": True, "path": str(d)}
 
 
@@ -362,7 +363,7 @@ def main() -> None:
     url = f"http://127.0.0.1:{a.port}/"
     print(f"panel: {url}  (Ctrl+C to stop)")
     if not a.no_open:
-        subprocess.run(["open", url])
+        osutil.open_path(url)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

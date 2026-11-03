@@ -15,6 +15,7 @@ import subprocess
 import time
 from pathlib import Path
 
+import osutil
 from common import ROOT, cand_dir, today
 from gates import valid_approval
 from state import load_state
@@ -31,7 +32,8 @@ def profile_dir(slug: str) -> Path:
 
 def login(slug: str, site: str) -> None:
     url = {"seek": "https://www.seek.com.au/oauth/login", "linkedin": "https://www.linkedin.com/login"}[site]
-    subprocess.Popen(["open", "-na", "Google Chrome", "--args", f"--user-data-dir={profile_dir(slug)}", url])
+    if not osutil.open_chrome(url, profile_dir(slug)):
+        raise SystemExit("Google Chrome was not found on this machine. Install it, then run this again.")
     print(f"Chrome opened with the dedicated profile ({profile_dir(slug)}). The person logs in once; then close that window.")
 
 

@@ -8,15 +8,22 @@ Blocks (exit 2, reason on stderr):
 4. Deleting candidate data from the shell, and "delete/remove" clicks in the browser
    (the harness never deletes anything in the person's accounts).
 5. Submitting an application in the browser unless a candidate is in mode live with a valid, intact go-live.
+6. Reading browser profiles (.browser/, session cookies) and ~/.ssh, ~/.aws.
 
-Honest limit: these are pattern checks. They stop mistakes and casual workarounds, not deliberate obfuscation;
-the tracker and approval records are what make every action visible afterwards.
+Asks (permissionDecision "ask": the person approves with one click, nothing is blocked):
+7. Changing the harness's own rules: hooks/, bin/, scripts/gates.py, .claude/settings*.json. A job ad aimed at an AI
+   cannot silently rewrite them; the person can still approve any change they asked for.
+
+Honest limits: these are pattern checks. They stop mistakes and casual workarounds, not deliberate obfuscation;
+the tracker and approval records are what make every action visible afterwards. An "ask" cannot be answered in an
+unattended `claude -p` run (the daily schedule), so no rule change happens overnight: that is intended.
 """
 from __future__ import annotations
 
 import json
 import os
 import re
+import shlex
 import sys
 from pathlib import Path
 
@@ -31,9 +38,64 @@ SUBMIT = re.compile(r"\b(submit|send)(s|ting|ted|ing)?\b[^.]{0,40}\b(application
 DELETE_UI = re.compile(r"\b(delet|remov)(e|es|ed|ing)\b[^.]{0,40}\b(resum|cv|publication|certification|experience|education|account|search|alert|post)", re.I)
 
 
+SECRET_DIR = re.compile(r"(^|[/\s'\"=~])\.(browser|ssh|aws)(/|\s*$|['\"]?(\s|$))")
+SECRET_DIR_READ = re.compile(r"\b(cat|less|more|head|tail|grep|rg|awk|sed|cut|strings|xxd|od|base64|cp|mv|tar|zip|scp|rsync|sqlite3|source|open)\b")
+PROTECTED = re.compile(r"^(hooks/(?!__pycache__)|bin/|scripts/gates\.py$|\.claude/settings(\.local)?\.json$)")
+SHELL_SPLIT = re.compile(r"&&|\|\||[;|\n]")
+REDIRECT = re.compile(r"(?<![<>&\d])\d?>>?\s*([^\s&|;<>]+)")
+WRITE_ALL = {"rm", "mv", "tee", "truncate", "chmod", "unlink", "rmdir"}   # any protected argument is a change
+WRITE_LAST = {"cp", "install", "ln"}                                      # only the destination (last argument)
+
+
 def block(msg: str) -> None:
     print(f"[job-harness gate] {msg}", file=sys.stderr)
     sys.exit(2)
+
+
+def ask(path: str) -> None:
+    reason = f"This changes the harness's own rules ({path}). Approve only if you asked for it."
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
+                                             "permissionDecisionReason": reason}}))
+    sys.exit(0)
+
+
+def protected(path: str) -> str:
+    """The protected path (relative to the project) that `path` names, or ''."""
+    p = path.strip("'\"").replace("\\", "/")
+    for root in {str(ROOT).replace("\\", "/"), str(ROOT.resolve()).replace("\\", "/")}:
+        if p.startswith(root + "/"):
+            p = p[len(root) + 1:]
+    p = re.sub(r"^(\./)+", "", p)
+    return p if PROTECTED.match(p) else ""
+
+
+def shell_writes(cmd: str) -> str:
+    """The first protected path a shell command clearly writes to (redirect, tee, sed -i, cp/mv/rm, git checkout/restore)."""
+    for seg in SHELL_SPLIT.split(cmd.replace("\\\n", " ")):
+        for m in REDIRECT.finditer(seg):
+            if protected(m.group(1)):
+                return protected(m.group(1))
+        try:
+            words = shlex.split(seg)
+        except ValueError:
+            words = seg.split()
+        while words and (words[0] in ("sudo", "command", "env") or re.match(r"\w+=", words[0])):
+            words = words[1:]
+        if not words:
+            continue
+        verb, args = Path(words[0]).name, [w for w in words[1:] if not w.startswith("-") or w == "--"]
+        if verb in WRITE_LAST:
+            args = args[-1:]
+        elif verb in ("sed", "perl", "ruby") and any(re.match(r"-\w*i", w) for w in words[1:]):
+            pass
+        elif verb == "git" and args[:1] in (["checkout"], ["restore"], ["rm"], ["stash"], ["reset"]):
+            pass
+        elif verb not in WRITE_ALL:
+            continue
+        for a in args:
+            if protected(a):
+                return protected(a)
+    return ""
 
 
 def live_allowed() -> bool:
@@ -63,13 +125,17 @@ def main() -> None:
     except Exception:
         sys.exit(0)
     tool, inp = data.get("tool_name", ""), data.get("tool_input", {}) or {}
+    touched = ""
 
     if tool in ("Read", "Grep", "Glob"):
         target = str(inp.get("file_path") or inp.get("path") or inp.get("pattern") or "")
         if SECRET.search(target):
             block("Do not read secrets. Use `job doctor` to see what is configured.")
+        if any(SECRET_DIR.search(str(inp.get(k) or "")) for k in ("file_path", "path", "glob") + (("pattern",) if tool == "Glob" else ())):
+            block("Do not read browser profiles or SSH/AWS keys: they hold session cookies and credentials.")
     if tool in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
-        fp = str(inp.get("file_path", ""))
+        fp = str(inp.get("file_path") or inp.get("notebook_path") or "")
+        touched = protected(fp)
         if BOOKKEEPING.search(fp):
             block(f"{fp} is bookkeeping: change it through `job state|facts|track|gate`, never by hand.")
         content = str(inp.get("content", "")) + str(inp.get("new_string", ""))
@@ -79,11 +145,14 @@ def main() -> None:
         cmd = str(inp.get("command", ""))
         if SECRET.search(cmd) and re.search(r"\b(cat|less|head|tail|grep|source|env|printenv|open)\b", cmd):
             block("Do not read or dump secrets.")
+        if SECRET_DIR.search(cmd) and SECRET_DIR_READ.search(cmd):
+            block("Do not read browser profiles or SSH/AWS keys: they hold session cookies and credentials.")
         if SIGN.search(cmd.replace("\\\n", " ")) and ("--by-agent" not in cmd or "--confirm" in cmd):
             block("Human signatures are given by the person: they run `job sign <slug> <id>` in their terminal, "
                   "or `! bin/job sign <slug> <id> --confirm <slug>` in Claude Code. Show them the command and wait.")
         if DELETE_SHELL.search(cmd):
             block("The harness never deletes candidate data.")
+        touched = shell_writes(cmd)
     if tool.startswith("mcp__claude-in-chrome__") and tool.split("__")[-1] in (
             "computer", "form_input", "browser_batch", "javascript_tool"):
         texts = " | ".join(browser_texts(tool, inp))
@@ -92,6 +161,8 @@ def main() -> None:
         if SUBMIT.search(texts) and not live_allowed():
             block("Dry-run: do not submit. Leave the form filled, record `job track <slug> set <key> dry-run`, "
                   "and move on. Submitting needs mode live with a signed go-live approval.")
+    if touched:
+        ask(touched)
     sys.exit(0)
 
 

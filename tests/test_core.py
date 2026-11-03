@@ -374,7 +374,7 @@ class TestPanelViews(Base):
         add("ana", {"key": "seek:1", "title": "Analyst", "company": "Acme", "url": "u1", "platform": "seek", "fit": 80})
         set_status("ana", "seek:1", "prepared", cv=str(folder / "Ana_Resume.pdf"))
         with unittest.mock.patch.dict(os.environ, {"JOB_PACKAGE_DIR": str(pkgs)}), \
-             unittest.mock.patch.object(panel.subprocess, "run") as run:
+             unittest.mock.patch.object(panel.osutil, "open_path") as run:
             d = panel.detail("ana", "seek:1")
             self.assertEqual((d["col"], d["has_folder"], [x["name"] for x in d["docs"]]), ("todo", True, ["Ana_Resume.pdf"]))
             self.assertIn("Python", d["description"])
@@ -382,7 +382,7 @@ class TestPanelViews(Base):
             self.assertEqual(panel.detail("ana", "seek:1")["notes"], "called the recruiter")
             self.assertEqual(len(load("ana")[0]["history"]), 2)                      # a note is not a status change
             self.assertTrue(panel.open_folder("ana", "seek:1")["ok"])
-            run.assert_called_with(["open", str(folder)], check=False)
+            run.assert_called_with(folder)
             self.assertFalse(panel.open_folder("ana", "seek:9")["ok"])
             co = panel.companies("ana")
         # Acme: 2 qualifying ads (one tracked, one shortlisted); Beta was dropped (not counted); Gamma: 1

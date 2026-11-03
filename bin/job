@@ -2,7 +2,8 @@
 """job — single entry point to the job-harness.
 
   job status [slug] [--json]                   where every candidate is, and the exact next step
-  job doctor                                   what this machine can run
+  job setup [--check] [--apply-tools]          get this machine ready: tools, `job` on your PATH, package folder
+  job doctor [--json]                          what this machine can run, and how to fix what is missing
   job new <slug> --name "..."                  create a candidate
   job discover <slug>                          new jobs from the saved searches (no browser, no LLM)
   job triage <slug>                            deterministic pre-filter → shortlist.json
@@ -37,7 +38,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 S = ROOT / "scripts"
-DIRECT = {"status": "status.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
+DIRECT = {"status": "status.py", "setup": "setup.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
           "triage": "triage.py", "db": "jobdb.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
           "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "panel": "panel.py"}
 

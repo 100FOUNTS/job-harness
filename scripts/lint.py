@@ -15,22 +15,21 @@ Checks
 - cliché and AI-tell phrases ("passionate", "spearheaded", "I am excited", "here is the revised"…): a reader
   discards a letter that sounds generated (list adapted from ApplyPilot's validator); a candidate can allow a
   term with intake.rules.allow_phrases
-- .pdf layout, measured from word boxes (pdftotext -bbox) instead of eyeballed: a hole in the middle of a page, a
+- .pdf layout, measured from word boxes (pdf.js, via scripts/pdftext.py) instead of eyeballed: a hole in the middle of a page, a
   page that is not the last one ending early, a section heading stranded at the bottom of a page, a last CV page
   with only a few lines
 """
 from __future__ import annotations
 
 import argparse
-import html
 import json
 import re
-import subprocess
 import sys
 import zipfile
 from pathlib import Path
 from typing import Any
 
+import pdftext
 from common import load_intake
 from facts import extract_text
 
@@ -44,9 +43,7 @@ AI_TELLS = ["as an ai", "here is the revised", "here is the updated", "here is y
 
 
 def pdf_pages(path: Path) -> int:
-    out = subprocess.run(["pdfinfo", str(path)], capture_output=True, text=True).stdout
-    m = re.search(r"Pages:\s+(\d+)", out)
-    return int(m.group(1)) if m else 0
+    return pdftext.pages(path)
 
 
 MON = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*"
@@ -93,16 +90,8 @@ HOLE_PT, EARLY_PT, THIN_LAST = 90, 140, 0.15
 
 
 def pdf_lines(path: Path) -> list[tuple[float, list[tuple[float, float, str]]]]:
-    """Per page: (height, [(top, bottom, text) per line]) from Poppler's word boxes. [] if pdftotext fails."""
-    out = subprocess.run(["pdftotext", "-bbox", str(path), "-"], capture_output=True, text=True).stdout
-    pages = []
-    for pg in re.finditer(r'<page width="[\d.]+" height="([\d.]+)">(.*?)</page>', out, re.S):
-        rows: dict[int, list[tuple[float, str]]] = {}
-        for m in re.finditer(r'<word xMin="[\d.]+" yMin="([\d.]+)" xMax="[\d.]+" yMax="([\d.]+)">(.*?)</word>', pg.group(2)):
-            rows.setdefault(round(float(m.group(1))), []).append((float(m.group(2)), html.unescape(m.group(3))))
-        pages.append((float(pg.group(1)), [(y, max(b for b, _ in rows[y]), " ".join(w for _, w in rows[y]))
-                                           for y in sorted(rows)]))
-    return pages
+    """Per page: (height, [(top, bottom, text) per line]) from the PDF reader (scripts/pdftext.py)."""
+    return pdftext.lines(path)
 
 
 def layout_issues(path: Path, kind: str) -> list[str]:
@@ -173,7 +162,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("slug"); ap.add_argument("file"); ap.add_argument("--kind", choices=["cv", "letter"], default="cv")
     a = ap.parse_args()
-    r = lint(a.slug, Path(a.file), a.kind)
+    try:
+        r = lint(a.slug, Path(a.file), a.kind)
+    except RuntimeError as e:
+        sys.exit(str(e))
     print(json.dumps(r, ensure_ascii=False, indent=2))
     sys.exit(0 if r["ok"] else 1)
 
