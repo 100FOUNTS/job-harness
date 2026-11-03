@@ -350,7 +350,7 @@ function card(a) {
     <div class="head"><div class="who"><div class="t">${esc(a.title)}</div><div class="c">${esc(a.company)}${a.location ? " · " + esc(a.location.split(",")[0]) : ""}</div></div>
       ${a.fit != null ? `<div class="score num ${scoreCls(a.fit)}" title="Score">${a.fit}</div>` : ""}</div>
     <div class="tags">${tags}</div>${body}
-    <div class="actions">${primary}<button class="btn" data-open="${esc(a.key)}">Details</button>
+    <div class="actions">${primary}${a.url ? `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener" draggable="false" aria-label="Open the ad for ${esc(a.title)} in a new tab">Open ad ${icon.ext}</a>` : ""}<button class="btn" data-open="${esc(a.key)}">Details</button>
       <button class="grip" aria-label="Move ${esc(a.title)}: select the card and press 1 to 5" title="Drag to another column, or press 1 to 5" tabindex="-1">${icon.grip}</button></div>
   </article>`;
 }

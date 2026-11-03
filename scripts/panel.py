@@ -315,7 +315,8 @@ class Handler(BaseHTTPRequestHandler):
         u = urllib.parse.urlparse(self.path)
         q = urllib.parse.parse_qs(u.query)
         cands = list_candidates()
-        slug = q.get("slug", [cands[0] if cands else ""])[0]
+        first = ([c for c in cands if c != "example"] or cands or [""])[0]      # the fictional sample only when it is alone
+        slug = q.get("slug", [first])[0]
         if u.path.startswith("/files/"):
             rel = Path(urllib.parse.unquote(u.path[len("/files/"):]))
             if not rel.parts or rel.parts[0] not in cands:
