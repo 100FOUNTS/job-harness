@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Postulaciones</title>
+<title>Applications</title>
 <style>
-/* Panel de postulaciones. Gris azulado de base, un azul para acciones y selección, ámbar solo para lo que vence o
-   pide acción hoy, naranja oscuro para brechas. Fuente del sistema (sin red), números tabulares. */
+/* Applications panel. Blue-grey ground, one blue for actions and selection, amber only for what closes or needs
+   action today, dark orange for gaps. System font (no network), tabular numerals. */
 :root {
   --ground: #eef1f3; --surface: #ffffff; --sunken: #e3e8eb; --ink: #18232b; --muted: #5a6872; --faint: #8a969e;
   --line: #d5dce1; --line-strong: #c3ccd2;
@@ -206,22 +206,22 @@ td.r, th.r { text-align: right; }
 </head>
 <body>
 <header class="top">
-  <div class="brand"><div class="mark" aria-hidden="true">jh</div><div><b>Postulaciones</b><small id="sub"></small></div></div>
-  <label class="field">Candidato <select id="cand"></select></label>
-  <div class="tabs" role="tablist" aria-label="Vistas">
-    <button class="tab" role="tab" id="tab-board" data-view="board">Tablero</button>
-    <button class="tab" role="tab" id="tab-funnel" data-view="funnel">Embudo</button>
-    <button class="tab" role="tab" id="tab-companies" data-view="companies">Empresas</button>
-    <button class="tab" role="tab" id="tab-dropped" data-view="dropped">Descartados <span class="count num" id="dropcount"></span></button>
+  <div class="brand"><div class="mark" aria-hidden="true">jh</div><div><b>Applications</b><small id="sub"></small></div></div>
+  <label class="field">Candidate <select id="cand"></select></label>
+  <div class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" id="tab-board" data-view="board">Board</button>
+    <button class="tab" role="tab" id="tab-funnel" data-view="funnel">Funnel</button>
+    <button class="tab" role="tab" id="tab-companies" data-view="companies">Companies</button>
+    <button class="tab" role="tab" id="tab-dropped" data-view="dropped">Dropped <span class="count num" id="dropcount"></span></button>
   </div>
   <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    <span class="sr">Buscar</span><input id="q" type="search" placeholder="Buscar empresa, cargo o palabra clave" autocomplete="off"><kbd>/</kbd></label>
-  <button class="icon-btn" id="theme" aria-label="Cambiar tema claro u oscuro"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
-  <button class="icon-btn" id="helpbtn" aria-label="Atajos de teclado"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
+    <span class="sr">Search</span><input id="q" type="search" placeholder="Search company, role or keyword" autocomplete="off"><kbd>/</kbd></label>
+  <button class="icon-btn" id="theme" aria-label="Switch light or dark theme"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <button class="icon-btn" id="helpbtn" aria-label="Keyboard shortcuts"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
 </header>
 
-<div class="filters" id="filters" aria-label="Filtros"></div>
-<section class="today" id="today" aria-label="Hoy"></section>
+<div class="filters" id="filters" aria-label="Filters"></div>
+<section class="today" id="today" aria-label="Today"></section>
 <main id="main"></main>
 <div class="keys" id="keys"></div>
 <div id="drawer-root"></div>
@@ -230,18 +230,18 @@ td.r, th.r { text-align: right; }
 
 <script>
 const D = __DATA__, TOKEN = "__TOKEN__";
-const COLS = [["todo", "Por postular"], ["sent", "Postulé"], ["interview", "Entrevista"], ["offer", "Oferta"], ["closed", "Cerrada"]];
+const COLS = [["todo", "To apply"], ["sent", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["closed", "Closed"]];
 const COL_NAME = Object.fromEntries(COLS);
-const STATUS_ES = {shortlisted: "En la lista", prepared: "Paquete preparado", "dry-run": "Llenado sin enviar", "manual-review": "Necesita revisión",
-  submitted: "Enviada por el harness", applied: "Postulé", interview: "Entrevista", offer: "Oferta", hired: "Contratado",
-  rejected: "Rechazo", "no-response": "Sin respuesta", withdrawn: "Me retiré", closed: "El aviso cerró", skipped: "Descartada", failed: "Falló"};
+const STATUS = {shortlisted: "Shortlisted", prepared: "Package prepared", "dry-run": "Filled, not sent", "manual-review": "Needs a person",
+  submitted: "Sent by the harness", applied: "Applied", interview: "Interview", offer: "Offer", hired: "Hired",
+  rejected: "Rejected", "no-response": "No response", withdrawn: "Withdrawn", closed: "Ad closed", skipped: "Dropped", failed: "Failed"};
 const PLAT = {seek: "SEEK", linkedin: "LinkedIn", wagov: "WA Gov"};
 const PER_COL = 12;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 const today = new Date(); today.setHours(0, 0, 0, 0);
 const daysTo = iso => iso ? Math.round((new Date(iso + "T00:00:00") - today) / 864e5) : null;
-const fmt = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString("es", {day: "numeric", month: "short"}) : "";
+const fmt = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString("en-AU", {day: "numeric", month: "short"}) : "";
 const icon = {
   cal: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
   clock: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -270,7 +270,7 @@ async function post(path, body) {
 
 /* ---------- header, filters, today ---------- */
 function header() {
-  $("#sub").textContent = `${D.name} · datos de las ${D.generated}`;
+  $("#sub").textContent = `${D.name} · data as of ${D.generated}`;
   $("#cand").innerHTML = D.candidates.map(c => `<option ${c === D.slug ? "selected" : ""}>${esc(c)}</option>`).join("");
   $("#dropcount").textContent = D.dropped.length;
   document.querySelectorAll(".tab").forEach(t => { t.setAttribute("aria-selected", t.dataset.view === S.view); t.tabIndex = t.dataset.view === S.view ? 0 : -1; });
@@ -278,19 +278,19 @@ function header() {
 function filters() {
   const tracks = [...new Set(D.apps.map(a => a.track).filter(Boolean))];
   const chip = (group, val, label) => `<button class="chip" data-f="${group}" data-v="${esc(val)}" aria-pressed="${S[group] === val}">${esc(label)}</button>`;
-  $("#filters").innerHTML = `<span class="lbl">Filtrar</span>${chip("city", "Perth", "Perth")}${chip("city", "Adelaide", "Adelaide")}<span class="sep"></span>`
+  $("#filters").innerHTML = `<span class="lbl">Filter</span>${chip("city", "Perth", "Perth")}${chip("city", "Adelaide", "Adelaide")}<span class="sep"></span>`
     + Object.entries(PLAT).map(([k, v]) => chip("plat", k, v)).join("") + `<span class="sep"></span>`
     + tracks.map(t => chip("track", t, t.length <= 2 ? t.toUpperCase() : t[0].toUpperCase() + t.slice(1))).join("")
-    + `<label class="range">Puntaje mínimo <input id="min" type="range" min="0" max="100" step="5" value="${S.min}"><output class="num" for="min">${S.min}</output></label>`;
+    + `<label class="range">Minimum score <input id="min" type="range" min="0" max="100" step="5" value="${S.min}"><output class="num" for="min">${S.min}</output></label>`;
 }
 function todayTiles() {
   const T = D.today, soon = T.closing_soon.map(k => D.apps.find(a => a.key === k)).filter(Boolean);
   const f = T.followups[0];
   $("#today").innerHTML = `
-    <button class="tile" data-go="todo"><span class="k">Por postular</span><span class="v num">${T.to_apply}</span><span class="d">${T.new ? T.new + " nuevos hoy" : "Nada nuevo hoy"}</span></button>
-    <button class="tile ${soon.length ? "urgent" : ""}" data-go="soon"><span class="k">Cierran en 3 días</span><span class="v num">${soon.length}</span><span class="d">${soon[0] ? esc(soon[0].company + " · " + soon[0].title) : "Ninguno"}</span></button>
-    <button class="tile ${T.followups.length ? "urgent" : ""}" data-go="quiet"><span class="k">Recordatorios</span><span class="v num">${T.followups.length}</span><span class="d">${f ? esc(f.company + ", enviada el " + fmt(f.sent)) : "Nada pendiente"}</span></button>
-    <div class="tile" style="cursor:default"><span class="k">Respuestas por confirmar</span><span class="v num">${T.pending_answers}</span><span class="d">${T.pending_answers ? "job answer " + esc(D.slug) + " pending" : "Todo confirmado"}</span></div>`;
+    <button class="tile" data-go="todo"><span class="k">To apply</span><span class="v num">${T.to_apply}</span><span class="d">${T.new ? T.new + " new today" : "Nothing new today"}</span></button>
+    <button class="tile ${soon.length ? "urgent" : ""}" data-go="soon"><span class="k">Closing in 3 days</span><span class="v num">${soon.length}</span><span class="d">${soon[0] ? esc(soon[0].company + " · " + soon[0].title) : "None"}</span></button>
+    <button class="tile ${T.followups.length ? "urgent" : ""}" data-go="quiet"><span class="k">Follow-ups</span><span class="v num">${T.followups.length}</span><span class="d">${f ? esc(f.company + ", sent " + fmt(f.sent)) : "Nothing due"}</span></button>
+    <div class="tile" style="cursor:default"><span class="k">Answers to confirm</span><span class="v num">${T.pending_answers}</span><span class="d">${T.pending_answers ? "job answer " + esc(D.slug) + " pending" : "All confirmed"}</span></div>`;
 }
 
 /* ---------- board ---------- */
@@ -310,46 +310,46 @@ function card(a) {
     a.tailored ? `<span class="tag on">Adaptado</span>` : "", a.notes ? `<span class="tag">Con notas</span>` : "", a.new ? `<span class="tag on">Nuevo</span>` : ""].join("");
   let body = "";
   if (a.col === "todo") {
-    if (a.match != null) body += `<div class="meter"><div class="row"><span>Palabras clave</span><b class="num">${a.match}%</b></div><div class="bar"><i style="width:${a.match}%"></i></div>`
-      + (a.gaps.length ? `<span class="gapline">Falta: ${esc(a.gaps.join(", "))}</span>` : "") + `</div>`;
-    if (a.closes) body += `<div class="when ${soon ? "urgent" : ""}">${soon ? icon.clock : icon.cal}${d < 0 ? "Cerró el " + fmt(a.closes) : d === 0 ? "Cierra hoy" : soon ? `Cierra en ${d} día${d === 1 ? "" : "s"}` : `Cierra el ${fmt(a.closes)} · ${d} días`}</div>`;
+    if (a.match != null) body += `<div class="meter"><div class="row"><span>Keywords</span><b class="num">${a.match}%</b></div><div class="bar"><i style="width:${a.match}%"></i></div>`
+      + (a.gaps.length ? `<span class="gapline">Missing: ${esc(a.gaps.join(", "))}</span>` : "") + `</div>`;
+    if (a.closes) body += `<div class="when ${soon ? "urgent" : ""}">${soon ? icon.clock : icon.cal}${d < 0 ? "Closed " + fmt(a.closes) : d === 0 ? "Closes today" : soon ? `Closes in ${d} day${d === 1 ? "" : "s"}` : `Closes ${fmt(a.closes)} · ${d} days`}</div>`;
   } else if (a.col === "sent" && a.sent) {
     const n = -daysTo(a.sent), late = n >= 10;
-    body += `<div class="meter"><div class="row"><span>Enviada el ${fmt(a.sent)}</span><b class="num" style="color:${late ? "var(--gap)" : "inherit"}">${n} día${n === 1 ? "" : "s"}</b></div><div class="bar ${late ? "warn" : ""}"><i style="width:${Math.min(100, n / 30 * 100)}%"></i></div></div>`;
+    body += `<div class="meter"><div class="row"><span>Sent ${fmt(a.sent)}</span><b class="num" style="color:${late ? "var(--gap)" : "inherit"}">${n} day${n === 1 ? "" : "s"}</b></div><div class="bar ${late ? "warn" : ""}"><i style="width:${Math.min(100, n / 30 * 100)}%"></i></div></div>`;
   } else {
-    body += `<div class="c">${esc(STATUS_ES[a.status] || a.status)}</div>`;
+    body += `<div class="c">${esc(STATUS[a.status] || a.status)}</div>`;
   }
-  const primary = a.col === "todo" ? `<button class="btn primary" data-act="applied" data-k="${esc(a.key)}">Ya postulé</button>`
-    : a.col === "sent" && a.sent && -daysTo(a.sent) >= 10 ? `<button class="btn warn" data-open="${esc(a.key)}" data-tab="resumen">Recordatorio</button>` : "";
+  const primary = a.col === "todo" ? `<button class="btn primary" data-act="applied" data-k="${esc(a.key)}">I applied</button>`
+    : a.col === "sent" && a.sent && -daysTo(a.sent) >= 10 ? `<button class="btn warn" data-open="${esc(a.key)}" data-tab="resumen">Follow up</button>` : "";
   return `<article class="card ${soon ? "soon" : ""} ${a.col === "closed" ? "done" : ""} ${S.focus === a.key ? "focus" : ""}" draggable="true" data-key="${esc(a.key)}" tabindex="${S.focus === a.key ? 0 : -1}" aria-label="${esc(a.title + ", " + a.company + ", " + COL_NAME[a.col])}">
     <div class="head"><div class="who"><div class="t">${esc(a.title)}</div><div class="c">${esc(a.company)}${a.location ? " · " + esc(a.location.split(",")[0]) : ""}</div></div>
-      ${a.fit != null ? `<div class="score num ${scoreCls(a.fit)}" title="Puntaje">${a.fit}</div>` : ""}</div>
+      ${a.fit != null ? `<div class="score num ${scoreCls(a.fit)}" title="Score">${a.fit}</div>` : ""}</div>
     <div class="tags">${tags}</div>${body}
-    <div class="actions">${primary}<button class="btn" data-open="${esc(a.key)}">Detalle</button>
-      <button class="grip" aria-label="Mover ${esc(a.title)}: elige la tarjeta y usa las teclas 1 a 5" title="Arrastra a otra columna o usa las teclas 1 a 5" tabindex="-1">${icon.grip}</button></div>
+    <div class="actions">${primary}<button class="btn" data-open="${esc(a.key)}">Details</button>
+      <button class="grip" aria-label="Move ${esc(a.title)}: select the card and press 1 to 5" title="Drag to another column, or press 1 to 5" tabindex="-1">${icon.grip}</button></div>
   </article>`;
 }
 function board() {
   const apps = D.apps.filter(visible).sort((x, y) => x.col === "sent" ? (x.sent > y.sent ? 1 : -1) : (y.fit ?? 0) - (x.fit ?? 0));
   const cols = COLS.map(([id, name]) => {
     const g = apps.filter(a => a.col === id), lim = S.expanded[id] ? g.length : PER_COL;
-    const empty = {todo: "No hay avisos con estos filtros.", sent: "Arrastra aquí lo que ya enviaste.", interview: "Cuando te llamen, mueve la tarjeta aquí.",
-      offer: "Cuando llegue una oferta, mueve la tarjeta aquí.", closed: "Aquí quedan los rechazos, sin respuesta y avisos cerrados."}[id];
+    const empty = {todo: "No ads match these filters.", sent: "Drag here what you have sent.", interview: "When they call you, move the card here.",
+      offer: "When an offer arrives, move the card here.", closed: "Rejections, no responses and closed ads end up here."}[id];
     if (id === "todo") {                      /* today's package first, then what is still waiting from earlier days */
       const fresh = g.filter(a => a.new), old = g.filter(a => !a.new), olim = S.expanded.todo ? old.length : PER_COL;
       return `<section class="col" data-col="todo" aria-label="${name}"><h2>${name} <span class="num">${g.length}</span></h2>
-        <h3 class="sub">Hoy <span class="num">${fresh.length}</span></h3>
-        ${fresh.map(card).join("") || `<div class="empty">La corrida de hoy no dejó avisos nuevos con estos filtros.</div>`}
-        <h3 class="sub">Días anteriores <span class="num">${old.length}</span></h3>
-        ${old.slice(0, olim).map(card).join("") || `<div class="empty">No queda nada pendiente de días anteriores.</div>`}
-        ${old.length > olim ? `<button class="more" data-more="todo">Ver ${old.length - olim} más</button>` : ""}</section>`;
+        <h3 class="sub">Today <span class="num">${fresh.length}</span></h3>
+        ${fresh.map(card).join("") || `<div class="empty">Today's run left no new ads with these filters.</div>`}
+        <h3 class="sub">Earlier days <span class="num">${old.length}</span></h3>
+        ${old.slice(0, olim).map(card).join("") || `<div class="empty">Nothing left from earlier days.</div>`}
+        ${old.length > olim ? `<button class="more" data-more="todo">Show ${old.length - olim} more</button>` : ""}</section>`;
     }
     return `<section class="col" data-col="${id}" aria-label="${name}"><h2>${name} <span class="num">${g.length}</span></h2>
       ${g.slice(0, lim).map(card).join("") || `<div class="empty">${empty}</div>`}
-      ${g.length > lim ? `<button class="more" data-more="${id}">Ver ${g.length - lim} más</button>` : ""}</section>`;
+      ${g.length > lim ? `<button class="more" data-more="${id}">Show ${g.length - lim} more</button>` : ""}</section>`;
   }).join("");
   $("#main").innerHTML = `<div class="board-wrap"><div class="board" id="board">${cols}</div></div>`;
-  $("#keys").innerHTML = `<b style="color:var(--ink)">Atajos</b><span><kbd>/</kbd> buscar</span><span><kbd>J</kbd> <kbd>K</kbd> moverse</span><span><kbd>Enter</kbd> detalle</span><span><kbd>A</kbd> ya postulé</span><span><kbd>1</kbd>–<kbd>5</kbd> mover a columna</span><span><kbd>O</kbd> abrir carpeta</span><span><kbd>T</kbd> <kbd>E</kbd> <kbd>C</kbd> <kbd>D</kbd> vistas</span><span><kbd>?</kbd> ayuda</span>`;
+  $("#keys").innerHTML = `<b style="color:var(--ink)">Shortcuts</b><span><kbd>/</kbd> search</span><span><kbd>J</kbd> <kbd>K</kbd> move</span><span><kbd>Enter</kbd> details</span><span><kbd>A</kbd> I applied</span><span><kbd>1</kbd>–<kbd>5</kbd> move to column</span><span><kbd>O</kbd> open folder</span><span><kbd>T</kbd> <kbd>E</kbd> <kbd>C</kbd> <kbd>D</kbd> views</span><span><kbd>?</kbd> help</span>`;
 }
 
 /* ---------- funnel ---------- */
@@ -357,23 +357,23 @@ function funnel() {
   const F = D.funnel, max = Math.max(1, ...F.stages.map(s => s[1]));
   const sent = F.stages[1][1];
   const stages = F.stages.map(([n, v], i) => `<div class="stage"><b>${n}</b><div><div class="fill" style="width:${v / max * 100}%"></div></div>
-    <span class="num">${v}${i === 1 && F.stages[0][1] ? ` <span style="color:var(--muted)">${Math.round(v / F.stages[0][1] * 100)}%</span>` : i > 1 && sent ? ` <span style="color:var(--muted)">${Math.round(v / sent * 100)}% de enviadas</span>` : ""}</span></div>`).join("");
+    <span class="num">${v}${i === 1 && F.stages[0][1] ? ` <span style="color:var(--muted)">${Math.round(v / F.stages[0][1] * 100)}%</span>` : i > 1 && sent ? ` <span style="color:var(--muted)">${Math.round(v / sent * 100)}% of sent</span>` : ""}</span></div>`).join("");
   const rows = obj => Object.entries(obj).map(([k, r]) => `<tr><td>${esc(PLAT[k] || k)}</td><td class="r num">${r.sent}</td><td class="r num">${r.interviews}</td><td class="r num"><b>${r.interview_rate == null ? "—" : Math.round(r.interview_rate * 100) + "%"}</b></td></tr>`).join("")
-    || `<tr><td colspan="4" style="color:var(--muted)">Todavía no hay postulaciones enviadas.</td></tr>`;
-  const table = (title, obj, first) => `<section class="panel"><h2>${title}</h2><div class="scroll"><table><thead><tr><th>${first}</th><th class="r">Enviadas</th><th class="r">Entrevistas</th><th class="r">Tasa</th></tr></thead><tbody>${rows(obj)}</tbody></table></div></section>`;
+    || `<tr><td colspan="4" style="color:var(--muted)">No applications sent yet.</td></tr>`;
+  const table = (title, obj, first) => `<section class="panel"><h2>${title}</h2><div class="scroll"><table><thead><tr><th>${first}</th><th class="r">Sent</th><th class="r">Interviews</th><th class="r">Rate</th></tr></thead><tbody>${rows(obj)}</tbody></table></div></section>`;
   const quiet = D.today.followups.map(f => `<tr><td><b>${esc(f.title)}</b> · ${esc(f.company || "")}</td><td class="num">${fmt(f.sent)}</td>
-    <td>${f.action === "follow up" ? `<button class="btn warn" data-open="${esc(f.key)}">Escribir recordatorio</button>` : `<button class="btn" data-act="no-response" data-k="${esc(f.key)}">Marcar sin respuesta</button>`}</td></tr>`).join("")
-    || `<tr><td colspan="3" style="color:var(--muted)">Nadie lleva más de 10 días sin responder.</td></tr>`;
+    <td>${f.action === "follow up" ? `<button class="btn warn" data-open="${esc(f.key)}">Write a follow-up</button>` : `<button class="btn" data-act="no-response" data-k="${esc(f.key)}">Mark no response</button>`}</td></tr>`).join("")
+    || `<tr><td colspan="3" style="color:var(--muted)">Nobody has been quiet for more than 10 days.</td></tr>`;
   $("#main").innerHTML = `<div class="page">
-    <section class="panel"><h2>De paquete a oferta</h2>${stages}
-      <p class="note">${F.known < 10 ? `Hay ${F.known} resultado${F.known === 1 ? "" : "s"} conocido${F.known === 1 ? "" : "s"}. Con menos de 10 el puntaje todavía no se puede calibrar: marca en el tablero qué pasó con cada postulación.` : "Compara la tasa de entrevistas por puntaje: si los puntajes altos no ganan, la clasificación necesita ajustes."}${F.avg_wait != null ? ` Tiempo medio hasta una respuesta: ${F.avg_wait} días.` : ""}</p></section>
-    <div class="three">${table("¿El puntaje predice entrevistas?", F.by_fit, "Puntaje")}${table("Por track", F.by_track, "Track")}${table("Por fuente", F.by_platform, "Fuente")}</div>
-    <section class="panel" id="quiet"><h2>Sin respuesta</h2><div class="scroll"><table><thead><tr><th>Postulación</th><th>Enviada</th><th>Acción</th></tr></thead><tbody>${quiet}</tbody></table></div></section></div>`;
+    <section class="panel"><h2>From package to offer</h2>${stages}
+      <p class="note">${F.known < 10 ? `${F.known} known outcome${F.known === 1 ? "" : "s"}. Under 10 the score cannot be calibrated yet: mark on the board what happened to each application.` : "Compare the interview rate by score band: if high scores do not win, the ranking needs adjusting."}${F.avg_wait != null ? ` Average time to a response: ${F.avg_wait} days.` : ""}</p></section>
+    <div class="three">${table("Does the score predict interviews?", F.by_fit, "Score")}${table("By track", F.by_track, "Track")}${table("By source", F.by_platform, "Source")}</div>
+    <section class="panel" id="quiet"><h2>No response</h2><div class="scroll"><table><thead><tr><th>Application</th><th>Sent</th><th>Action</th></tr></thead><tbody>${quiet}</tbody></table></div></section></div>`;
   $("#keys").innerHTML = "";
 }
 
 /* ---------- companies ---------- */
-const SPONSOR_ES = {exact: "Sí", likely: "Probable", possible: "Posible"};
+const SPONSOR = {exact: "Yes", likely: "Likely", possible: "Possible"};
 function companiesView() {
   const q = S.q.toLowerCase(), sort = ["value", "fit", "sponsor"].includes(S.csort) ? S.csort : "value";
   const rank = {exact: 0, likely: 1, possible: 2};
@@ -391,20 +391,20 @@ function companiesView() {
   else rows = rows.filter(g => g.sponsor).sort((a, b) => rank[a.sponsor] - rank[b.sponsor] || b.ads - a.ads || (b.best ?? 0) - (a.best ?? 0));
   const seg = (v, l) => `<button class="chip" data-csort="${v}" aria-pressed="${sort === v}">${l}</button>`;
   const li = c => "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(c + " talent acquisition");
-  $("#main").innerHTML = `<div class="page"><section class="panel"><h2>Empresas para contactar</h2>
-    <p style="margin:0;color:var(--muted);font-size:13px">Solo cuentan los avisos que pasaron tus filtros en los últimos 60 días, y los filtros de arriba (ciudad, fuente, track, puntaje mínimo) también se aplican aquí. Orden: más avisos que calificaron, luego mejor puntaje, luego si está en las listas de patrocinio.</p>
-    <div class="actions">${seg("value", "Por valor")}${seg("fit", "Solo por puntaje")}${seg("sponsor", "Solo patrocinadoras")}
-      <label class="field" style="margin-left:auto"><input type="checkbox" id="noagency" ${S.noagency ? "checked" : ""}> Ocultar agencias de reclutamiento</label></div>
-    <div class="scroll"><table><thead><tr><th>Empresa</th><th class="r">Avisos que calificaron</th><th class="r">Mejor puntaje</th><th>Patrocinio (solo para ti)</th><th>Cargos</th><th></th></tr></thead><tbody>
-    ${rows.slice(0, 60).map(g => `<tr><td><b>${esc(g.company)}</b>${g.agency ? ` <span class="tag">Agencia</span>` : ""}<br><small style="color:var(--muted)">${esc(g.cities.join(", ") || "—")} · visto ${fmt(g.last)}</small></td>
+  $("#main").innerHTML = `<div class="page"><section class="panel"><h2>Companies to contact</h2>
+    <p style="margin:0;color:var(--muted);font-size:13px">Only ads that passed your rules in the last 60 days count, and the filters above (city, source, track, minimum score) apply here too. Order: most qualifying ads, then best score, then whether the employer is on a sponsor list.</p>
+    <div class="actions">${seg("value", "By value")}${seg("fit", "Score only")}${seg("sponsor", "Sponsors only")}
+      <label class="field" style="margin-left:auto"><input type="checkbox" id="noagency" ${S.noagency ? "checked" : ""}> Hide recruitment agencies</label></div>
+    <div class="scroll"><table><thead><tr><th>Company</th><th class="r">Qualifying ads</th><th class="r">Best score</th><th>Sponsor lists (for you only)</th><th>Roles</th><th></th></tr></thead><tbody>
+    ${rows.slice(0, 60).map(g => `<tr><td><b>${esc(g.company)}</b>${g.agency ? ` <span class="tag">Agency</span>` : ""}<br><small style="color:var(--muted)">${esc(g.cities.join(", ") || "—")} · seen ${fmt(g.last)}</small></td>
       <td class="r num"><b>${g.ads}</b></td>
       <td class="r">${g.best != null ? `<span class="score num ${scoreCls(g.best)}" style="width:34px;height:30px;display:inline-grid">${g.best}</span>` : "—"}</td>
-      <td>${g.sponsor ? `<b>${SPONSOR_ES[g.sponsor]}</b><br><small style="color:var(--muted)">${esc(g.sponsor_name)}</small>` : `<span style="color:var(--muted)">No aparece</span>`}</td>
+      <td>${g.sponsor ? `<b>${SPONSOR[g.sponsor]}</b><br><small style="color:var(--muted)">${esc(g.sponsor_name)}</small>` : `<span style="color:var(--muted)">Not listed</span>`}</td>
       <td style="max-width:300px">${esc(g.titles.join(" · "))}</td>
-      <td><div class="actions" style="flex-wrap:nowrap"><a class="btn" href="${li(g.company)}" target="_blank" rel="noopener">Buscar contacto ${icon.ext}</a>${g.best_url ? `<a class="btn" href="${esc(g.best_url)}" target="_blank" rel="noopener">Mejor aviso</a>` : ""}</div></td></tr>`).join("")
-      || `<tr><td colspan="6" style="color:var(--muted)">Ninguna empresa con avisos que calificaron con esos filtros.</td></tr>`}
+      <td><div class="actions" style="flex-wrap:nowrap"><a class="btn" href="${li(g.company)}" target="_blank" rel="noopener">Find a contact ${icon.ext}</a>${g.best_url ? `<a class="btn" href="${esc(g.best_url)}" target="_blank" rel="noopener">Best ad</a>` : ""}</div></td></tr>`).join("")
+      || `<tr><td colspan="6" style="color:var(--muted)">No company has qualifying ads with these filters.</td></tr>`}
     </tbody></table></div>
-    <p style="margin:0;font-size:12px;color:var(--muted)">«Patrocinio» compara el nombre con las listas de Home Affairs (2023 y 2025). Que no aparezca no significa que no patrocine. Nunca va en el CV ni en la carta.</p></section></div>`;
+    <p style="margin:0;font-size:12px;color:var(--muted)">"Sponsor lists" matches the name against the Home Affairs lists (2023 and 2025). Not being listed does not mean the employer does not sponsor. Never goes in a CV or letter.</p></section></div>`;
   $("#keys").innerHTML = "";
 }
 
@@ -412,11 +412,11 @@ function companiesView() {
 function droppedView() {
   const q = S.q.toLowerCase();
   const rows = D.dropped.filter(d => !q || (d.title + " " + d.company + " " + d.reason).toLowerCase().includes(q));
-  $("#main").innerHTML = `<div class="page"><section class="panel"><h2>Descartados por las reglas, últimos 7 días</h2>
-    <p style="margin:0;color:var(--muted);font-size:13px">Cada aviso dice qué regla lo dejó fuera. Si no estás de acuerdo, recupéralo: se arma su paquete al momento.</p>
-    <div class="scroll"><table><thead><tr><th>Visto</th><th>Cargo</th><th>Empresa</th><th>Motivo</th><th></th></tr></thead><tbody>
+  $("#main").innerHTML = `<div class="page"><section class="panel"><h2>Dropped by the rules, last 7 days</h2>
+    <p style="margin:0;color:var(--muted);font-size:13px">Each ad shows the rule that dropped it. If you disagree, rescue it: its package is built right away.</p>
+    <div class="scroll"><table><thead><tr><th>Seen</th><th>Role</th><th>Company</th><th>Reason</th><th></th></tr></thead><tbody>
     ${rows.slice(0, 200).map(d => `<tr><td class="num">${fmt(d.day)}</td><td><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a></td><td>${esc(d.company)}</td><td>${esc(d.reason)}</td>
-      <td><button class="btn" data-rescue="${esc(d.key)}">Recuperar</button></td></tr>`).join("") || `<tr><td colspan="5" style="color:var(--muted)">Nada descartado con esa búsqueda.</td></tr>`}
+      <td><button class="btn" data-rescue="${esc(d.key)}">Rescue</button></td></tr>`).join("") || `<tr><td colspan="5" style="color:var(--muted)">Nothing dropped matches that search.</td></tr>`}
     </tbody></table></div></section></div>`;
   $("#keys").innerHTML = "";
 }
@@ -425,50 +425,50 @@ function droppedView() {
 async function openDetail(key, tab) {
   S.open = key; S.tab = tab || "resumen"; S.focus = key;
   const root = $("#drawer-root");
-  root.innerHTML = `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Detalle"><div class="dbody"><div class="skeleton" style="width:60%"></div><div class="skeleton"></div><div class="skeleton" style="width:80%"></div></div></aside>`;
+  root.innerHTML = `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Details"><div class="dbody"><div class="skeleton" style="width:60%"></div><div class="skeleton"></div><div class="skeleton" style="width:80%"></div></div></aside>`;
   try {
     const r = await fetch(`/api/job?slug=${encodeURIComponent(D.slug)}&key=${encodeURIComponent(key)}`);
     const j = await r.json();
     if (j.error) throw new Error(j.error);
     S.job = j; drawer();
-  } catch (e) { root.innerHTML = ""; toast("No se pudo abrir el detalle: " + e.message); }
+  } catch (e) { root.innerHTML = ""; toast("Could not open the details: " + e.message); }
 }
 function drawer() {
   const j = S.job, c = j.coverage, d = daysTo(j.closes);
-  const tabs = [["resumen", "Resumen"], ["aviso", "Aviso completo"], ["docs", "Documentos"], ["notas", "Notas"]];
-  const move = `<label class="field" style="margin-left:auto">Mover a <select id="moveto">${COLS.map(([id, n]) => `<option value="${id}" ${id === j.col ? "selected" : ""}>${n}</option>`).join("")}</select></label>`;
+  const tabs = [["resumen", "Summary"], ["aviso", "Full ad"], ["docs", "Documents"], ["notas", "Notes"]];
+  const move = `<label class="field" style="margin-left:auto">Move to <select id="moveto">${COLS.map(([id, n]) => `<option value="${id}" ${id === j.col ? "selected" : ""}>${n}</option>`).join("")}</select></label>`;
   let body = "";
   if (S.tab === "resumen") {
-    body += c ? `<section><h2>Por qué calza</h2><div class="meter" style="margin-bottom:10px"><div class="row"><span>El CV cubre las palabras clave del aviso</span><b class="num">${c.match_pct ?? "—"}%</b></div><div class="bar"><i style="width:${c.match_pct || 0}%"></i></div></div>
-      <div class="cov"><div><b class="c1">En el CV · ${c.terms.filter(t => t.status === "covered").length}</b><span>${esc(c.terms.filter(t => t.status === "covered").map(t => t.term).join(", ")) || "—"}</span></div>
-      <div><b class="c2">Lo tienes · ${c.have_it.length}</b><span>${c.have_it.length ? esc(c.have_it.join(", ")) + ". Está en tu perfil: agrégalo si aplica." : "—"}</span></div>
-      <div class="${c.gaps.length ? "gapbox" : ""}"><b class="c3">Brecha · ${c.gaps.length}</b><span>${c.gaps.length ? esc(c.gaps.join(", ")) + ". No se agregan al CV." : "Ninguna detectada."}</span></div></div></section>`
-      : `<section><h2>Por qué calza</h2><p style="margin:0;color:var(--muted)">Sin descripción guardada para comparar con el CV.</p></section>`;
+    body += c ? `<section><h2>Why it fits</h2><div class="meter" style="margin-bottom:10px"><div class="row"><span>Ad keywords the CV covers</span><b class="num">${c.match_pct ?? "—"}%</b></div><div class="bar"><i style="width:${c.match_pct || 0}%"></i></div></div>
+      <div class="cov"><div><b class="c1">In the CV · ${c.terms.filter(t => t.status === "covered").length}</b><span>${esc(c.terms.filter(t => t.status === "covered").map(t => t.term).join(", ")) || "—"}</span></div>
+      <div><b class="c2">You have it · ${c.have_it.length}</b><span>${c.have_it.length ? esc(c.have_it.join(", ")) + ". In your profile: add it where it is true." : "—"}</span></div>
+      <div class="${c.gaps.length ? "gapbox" : ""}"><b class="c3">Gap · ${c.gaps.length}</b><span>${c.gaps.length ? esc(c.gaps.join(", ")) + ". Never added to the CV." : "None found."}</span></div></div></section>`
+      : `<section><h2>Why it fits</h2><p style="margin:0;color:var(--muted)">No saved description to compare with the CV.</p></section>`;
     body += `<section class="facts">
-      <div><span>Cierra</span><b>${j.closes ? fmt(j.closes) + (d >= 0 ? ` · faltan ${d} días` : " · ya cerró") : "Sin fecha publicada"}</b></div>
-      <div><span>Experiencia pedida</span><b>${j.years ? j.years + "+ años" : "No lo dice"}</b></div>
-      <div><span>Cómo postular</span><b>${esc(j.how || PLAT[j.platform] || j.platform)}</b></div>
-      <div><span>Listas de patrocinio (solo para ti)</span><b>${esc(j.sponsor || "Sin datos")}</b></div>
-      ${j.salary ? `<div><span>Sueldo</span><b>${esc(j.salary)}</b></div>` : ""}<div><span>Track</span><b>${esc(j.track || "—")}</b></div></section>`;
-    body += `<section><h2>Historial</h2><ol class="timeline">${j.history.map(h => `<li><span class="dot"></span><span><b>${esc(STATUS_ES[h.status] || h.status)}</b>${h.note && h.note !== "from the panel" ? `<br><small>${esc(h.note)}</small>` : ""}</span><small class="num">${fmt(h.date)}</small></li>`).join("")}</ol></section>`;
+      <div><span>Closes</span><b>${j.closes ? fmt(j.closes) + (d >= 0 ? ` · ${d} days left` : " · closed") : "No date published"}</b></div>
+      <div><span>Experience asked</span><b>${j.years ? j.years + "+ years" : "Not stated"}</b></div>
+      <div><span>How to apply</span><b>${esc(j.how || PLAT[j.platform] || j.platform)}</b></div>
+      <div><span>Sponsor lists (for you only)</span><b>${esc(j.sponsor || "No data")}</b></div>
+      ${j.salary ? `<div><span>Salary</span><b>${esc(j.salary)}</b></div>` : ""}<div><span>Track</span><b>${esc(j.track || "—")}</b></div></section>`;
+    body += `<section><h2>History</h2><ol class="timeline">${j.history.map(h => `<li><span class="dot"></span><span><b>${esc(STATUS[h.status] || h.status)}</b>${h.note && h.note !== "from the panel" ? `<br><small>${esc(h.note)}</small>` : ""}</span><small class="num">${fmt(h.date)}</small></li>`).join("")}</ol></section>`;
   } else if (S.tab === "aviso") {
-    body = j.description ? `<section><div class="desc">${esc(j.description)}</div></section>` : `<p style="color:var(--muted)">No hay descripción guardada. Ábrelo en el sitio.</p>`;
+    body = j.description ? `<section><div class="desc">${esc(j.description)}</div></section>` : `<p style="color:var(--muted)">No saved description. Open the ad on the site.</p>`;
   } else if (S.tab === "docs") {
-    body = `<section><h2>${j.tailored ? "Documentos adaptados a este aviso" : "Documentos de este paquete"}</h2>${j.docs.length ? `<div class="docs">${j.docs.map(f => `<a class="doc" href="${f.url}" target="_blank" rel="noopener">${icon.doc}<span><b>${f.kind === "cv" ? "CV" : f.kind === "letter" ? "Carta" : "Notas de la empresa"}</b><small>${esc(f.name)}</small></span></a>`).join("")}</div>` : `<p style="color:var(--muted)">Esta postulación no tiene documentos en la carpeta de paquetes.</p>`}</section>
-      ${j.has_folder ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Abrir carpeta en Finder</button>` : ""}`;
+    body = `<section><h2>${j.tailored ? "Documents tailored to this ad" : "Documents in this package"}</h2>${j.docs.length ? `<div class="docs">${j.docs.map(f => `<a class="doc" href="${f.url}" target="_blank" rel="noopener">${icon.doc}<span><b>${f.kind === "cv" ? "CV" : f.kind === "letter" ? "Cover letter" : "Employer notes"}</b><small>${esc(f.name)}</small></span></a>`).join("")}</div>` : `<p style="color:var(--muted)">This application has no documents in the package folder.</p>`}</section>
+      ${j.has_folder ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Open folder in Finder</button>` : ""}`;
   } else {
-    body = `<section><label for="notes" style="font-weight:700;font-size:15px;display:block;margin-bottom:8px">Notas</label><textarea id="notes" placeholder="Lo que quieras recordar: a quién escribiste, qué te preguntaron, qué preparar.">${esc(j.notes)}</textarea>
-      <div class="actions" style="margin-top:8px"><button class="btn primary" id="savenote">Guardar notas</button><span style="font-size:12px;color:var(--muted)">Se guardan solo en esta postulación.</span></div></section>`;
+    body = `<section><label for="notes" style="font-weight:700;font-size:15px;display:block;margin-bottom:8px">Notes</label><textarea id="notes" placeholder="Anything to remember: who you wrote to, what they asked, what to prepare.">${esc(j.notes)}</textarea>
+      <div class="actions" style="margin-top:8px"><button class="btn primary" id="savenote">Save notes</button><span style="font-size:12px;color:var(--muted)">Saved on this application only.</span></div></section>`;
   }
-  const primary = j.col === "todo" ? `<button class="btn primary" data-act="applied" data-k="${esc(j.key)}">Ya postulé</button>` : "";
+  const primary = j.col === "todo" ? `<button class="btn primary" data-act="applied" data-k="${esc(j.key)}">I applied</button>` : "";
   $("#drawer-root").innerHTML = `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dt">
     <header><div style="display:flex;gap:14px;align-items:flex-start"><div style="flex:1;min-width:0"><h1 id="dt">${esc(j.title)}</h1>
       <div class="sub">${esc(j.company)}${j.location ? " · " + esc(j.location) : ""} · ${PLAT[j.platform] || esc(j.platform)}</div></div>
-      ${j.fit != null ? `<div class="score big num ${scoreCls(j.fit)}" title="Puntaje">${j.fit}</div>` : ""}
-      <button class="icon-btn" data-close aria-label="Cerrar detalle">${icon.x}</button></div>
-      <div class="actions">${primary}<a class="btn" href="${esc(j.url)}" target="_blank" rel="noopener">Abrir aviso ${icon.ext}</a>
-        ${j.has_folder ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Abrir carpeta</button>` : ""}
-        ${j.col === "todo" ? `<button class="btn" data-act="skipped" data-k="${esc(j.key)}">Descartar</button>` : ""}${move}</div>
+      ${j.fit != null ? `<div class="score big num ${scoreCls(j.fit)}" title="Score">${j.fit}</div>` : ""}
+      <button class="icon-btn" data-close aria-label="Close details">${icon.x}</button></div>
+      <div class="actions">${primary}<a class="btn" href="${esc(j.url)}" target="_blank" rel="noopener">Open ad ${icon.ext}</a>
+        ${j.has_folder ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Open folder</button>` : ""}
+        ${j.col === "todo" ? `<button class="btn" data-act="skipped" data-k="${esc(j.key)}">Drop</button>` : ""}${move}</div>
       <div class="dtabs" role="tablist">${tabs.map(([id, n]) => `<button class="dtab" role="tab" data-dtab="${id}" aria-selected="${S.tab === id}">${n}</button>`).join("")}</div></header>
     <div class="dbody">${body}</div></aside>`;
   const first = $("#drawer-root .drawer [data-close]"); if (first) first.focus();
@@ -482,10 +482,10 @@ async function setStatus(key, opts) {
     const r = await post("/status", {key, ...opts});
     if (a) { a.status = r.status; a.col = Object.entries({todo: ["prepared", "dry-run", "manual-review", "shortlisted"], sent: ["applied", "submitted"], interview: ["interview"], offer: ["offer", "hired"], closed: ["closed", "rejected", "no-response", "withdrawn"]}).find(([, v]) => v.includes(r.status))?.[0] || null;
       if (a.col === "sent" && !a.sent) a.sent = new Date().toISOString().slice(0, 10); if (!a.col) D.apps = D.apps.filter(x => x !== a); }
-    toast(`${a ? a.title : "Postulación"}: ${STATUS_ES[r.status] || r.status}`);
+    toast(`${a ? a.title : "Application"}: ${STATUS[r.status] || r.status}`);
     if (S.open === key) { S.job.col = a?.col; S.job.status = r.status; await openDetail(key, S.tab); }
     render();
-  } catch (e) { if (a && before) Object.assign(a, before); toast("No se pudo cambiar: " + e.message); render(); }
+  } catch (e) { if (a && before) Object.assign(a, before); toast("Could not change it: " + e.message); render(); }
 }
 function render() {
   header(); filters(); todayTiles();
@@ -506,9 +506,9 @@ document.addEventListener("click", async e => {
   if (t.dataset.open) { openDetail(t.dataset.open, t.dataset.tab); return; }
   if (t.dataset.act) { t.disabled = true; await setStatus(t.dataset.k, {status: t.dataset.act}); return; }
   if (t.dataset.dtab) { S.tab = t.dataset.dtab; drawer(); return; }
-  if (t.dataset.folder) { try { await post("/open", {key: t.dataset.folder}); toast("Carpeta abierta en Finder"); } catch (err) { toast(err.message); } return; }
-  if (t.dataset.rescue) { t.disabled = true; t.textContent = "Preparando…"; try { await post("/rescue", {key: t.dataset.rescue}); toast("Paquete creado. Recargando…"); setTimeout(() => location.reload(), 700); } catch (err) { toast("No se pudo: " + err.message); t.disabled = false; t.textContent = "Recuperar"; } return; }
-  if (t.id === "savenote") { try { await post("/note", {key: S.job.key, text: $("#notes").value}); S.job.notes = $("#notes").value; const a = D.apps.find(x => x.key === S.job.key); if (a) a.notes = !!S.job.notes; toast("Notas guardadas"); } catch (err) { toast("No se pudo guardar: " + err.message); } return; }
+  if (t.dataset.folder) { try { await post("/open", {key: t.dataset.folder}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
+  if (t.dataset.rescue) { t.disabled = true; t.textContent = "Preparing…"; try { await post("/rescue", {key: t.dataset.rescue}); toast("Package built. Reloading…"); setTimeout(() => location.reload(), 700); } catch (err) { toast("Could not do it: " + err.message); t.disabled = false; t.textContent = "Rescue"; } return; }
+  if (t.id === "savenote") { try { await post("/note", {key: S.job.key, text: $("#notes").value}); S.job.notes = $("#notes").value; const a = D.apps.find(x => x.key === S.job.key); if (a) a.notes = !!S.job.notes; toast("Notes saved"); } catch (err) { toast("Could not save: " + err.message); } return; }
   if (t.id === "theme") { const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); const next = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; try { localStorage.setItem("panel-theme", next); } catch (err) {} return; }
   if (t.id === "helpbtn") { help(); return; }
   if (t.classList.contains("tile") && t.dataset.go) {
@@ -540,9 +540,9 @@ document.addEventListener("drop", async e => {
 
 /* keyboard */
 function help() {
-  const rows = [["/", "Buscar"], ["J  K", "Siguiente y anterior tarjeta"], ["Enter", "Abrir el detalle"], ["A", "Marcar «Ya postulé»"], ["1 a 5", "Mover a Por postular, Postulé, Entrevista, Oferta, Cerrada"],
-    ["O", "Abrir la carpeta del paquete en Finder"], ["T  E  C  D", "Tablero, Embudo, Empresas, Descartados"], ["Esc", "Cerrar"], ["?", "Esta ayuda"]];
-  $("#help-root").innerHTML = `<div class="help" data-close-help><div role="dialog" aria-modal="true" aria-labelledby="ht"><h2 id="ht">Atajos de teclado</h2>${rows.map(([k, v]) => `<kbd>${k}</kbd><span>${v}</span>`).join("")}<button class="btn" data-close-help style="grid-column:1/-1;justify-self:end">Cerrar</button></div></div>`;
+  const rows = [["/", "Search"], ["J  K", "Next and previous card"], ["Enter", "Open details"], ["A", "Mark as applied"], ["1 to 5", "Move to To apply, Applied, Interview, Offer, Closed"],
+    ["O", "Open the package folder in Finder"], ["T  E  C  D", "Board, Funnel, Companies, Dropped"], ["Esc", "Close"], ["?", "This help"]];
+  $("#help-root").innerHTML = `<div class="help" data-close-help><div role="dialog" aria-modal="true" aria-labelledby="ht"><h2 id="ht">Keyboard shortcuts</h2>${rows.map(([k, v]) => `<kbd>${k}</kbd><span>${v}</span>`).join("")}<button class="btn" data-close-help style="grid-column:1/-1;justify-self:end">Close</button></div></div>`;
   $("#help-root button").focus();
 }
 document.addEventListener("click", e => { if (e.target.matches("[data-close-help]")) $("#help-root").innerHTML = ""; });
@@ -564,7 +564,7 @@ document.addEventListener("keydown", async e => {
   if (!S.focus) return;
   if (e.key === "Enter") { openDetail(S.focus); return; }
   if (k === "a") { const a = D.apps.find(x => x.key === S.focus); if (a?.col === "todo") await setStatus(S.focus, {status: "applied"}); return; }
-  if (k === "o") { try { await post("/open", {key: S.focus}); toast("Carpeta abierta en Finder"); } catch (err) { toast(err.message); } return; }
+  if (k === "o") { try { await post("/open", {key: S.focus}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
   if (/^[1-5]$/.test(k)) { const col = COLS[+k - 1][0], a = D.apps.find(x => x.key === S.focus); if (a && a.col !== col) { await setStatus(S.focus, {column: col}); focusCard(S.focus); } }
 });
 

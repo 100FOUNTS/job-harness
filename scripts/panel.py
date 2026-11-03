@@ -129,8 +129,8 @@ def funnel(slug: str, apps: list[dict[str, Any]]) -> dict[str, Any]:
         if sd and od:
             waits.append((date.fromisoformat(od) - date.fromisoformat(sd)).days)
     cal = calibrate(slug)
-    return {"stages": [["Preparados", len(prepared)], ["Postulé", len(sent)], ["Entrevista", len(interview)],
-                       ["Oferta", len(offer)]],
+    return {"stages": [["Prepared", len(prepared)], ["Applied", len(sent)], ["Interview", len(interview)],
+                       ["Offer", len(offer)]],
             "known": cal["total"]["with_outcome"], "by_fit": cal["by_fit"], "by_track": cal["by_track"],
             "by_platform": cal["by_platform"], "avg_wait": round(sum(waits) / len(waits)) if waits else None}
 
@@ -235,7 +235,7 @@ def detail(slug: str, key: str) -> dict[str, Any]:
     from triage import min_years_required
     app = next((a for a in load(slug) if a["key"] == key), None)
     if not app:
-        return {"error": "Esa postulación ya no está en el tracker."}
+        return {"error": "That application is no longer in the tracker."}
     it = package_items(slug).get(key, {})
     ad = ads(slug, [key]).get(key, {})
     d = job_dir(slug, app, it)
@@ -269,7 +269,7 @@ def rescue(slug: str, key: str) -> dict[str, Any]:
     row = con.execute("SELECT * FROM jobs WHERE key=?", (key,)).fetchone()
     con.close()
     if not row:
-        return {"ok": False, "error": "Ese aviso no está en la memoria de avisos."}
+        return {"ok": False, "error": "That ad is not in the job memory."}
     targets = read_json(cand_dir(slug) / "targets.json")
     track = row["track"] or next((t["id"] for t in targets["tracks"] if t.get("primary")), targets["tracks"][0]["id"])
     if key not in {a["key"] for a in load(slug)}:
@@ -285,7 +285,7 @@ def open_folder(slug: str, key: str) -> dict[str, Any]:
     app = next((a for a in load(slug) if a["key"] == key), None)
     d = job_dir(slug, app, package_items(slug).get(key)) if app else None
     if not d:
-        return {"ok": False, "error": "Esta postulación no tiene carpeta de paquete."}
+        return {"ok": False, "error": "This application has no package folder."}
     subprocess.run(["open", str(d)], check=False)          # the package folder: the CV and letter to upload
     return {"ok": True, "path": str(d)}
 
