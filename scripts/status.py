@@ -19,7 +19,8 @@ def summary(slug: str) -> dict[str, Any]:
     st = load_state(slug)
     pending = [g["id"] for g in load_all(slug) if g["status"] == "pending"]
     allg = load_all(slug)
-    latest = {g["type"]: g["id"] for g in allg if g["status"] == "signed"}       # superseded approvals don't count
+    # superseded approvals don't count: the newest signed-or-pending one of each type is the one that matters
+    latest = {g["type"]: g["id"] for g in allg if g["status"] in ("signed", "pending")}
     broken = [g["id"] for g in allg if g["status"] == "signed" and latest[g["type"]] == g["id"] and not seals_ok(slug, g)[0]]
     live_ok, live_why = valid_approval(slug, "go-live")
     apps = load(slug)

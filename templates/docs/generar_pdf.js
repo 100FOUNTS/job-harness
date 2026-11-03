@@ -6,6 +6,8 @@ const PDFDocument = require("pdfkit");
 
 const [, , kind, input, output] = process.argv;
 const d = JSON.parse(fs.readFileSync(input, "utf8"));
+// Date ranges with an ASCII hyphen: some ATS imports (Workday) drop a date joined by an en dash.
+const asciiDates = (s) => String(s ?? "").replace(/\s*[‐-―−]\s*/g, " - ");
 const GREEN = "#1F4E3D", GREY = "#44564D";
 const M = 54; // ~1.9 cm margins
 const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 40, left: M, right: M },
@@ -45,7 +47,7 @@ function entry(e, i) {
   ensure(50);
   if (i > 0) doc.moveDown(0.55);
   para(e.role, { bold: true });
-  para(e.dates ? `${e.org}  |  ${e.dates}` : e.org, { italic: true, color: GREY });
+  para(e.dates ? `${e.org}  |  ${asciiDates(e.dates)}` : e.org, { italic: true, color: GREY });
   doc.y += 2;
   (e.bullets || []).forEach((b) => bullet(b));
 }
@@ -64,7 +66,7 @@ if (kind === "cv") {
   else if (d.projects?.length) { heading(projectsTitle); d.projects.forEach((p, i) => (typeof p === "string" ? bullet(p) : Array.isArray(p) ? bullet(p[1], p[0]) : entry(p, i))); }
   if (d.other_employment?.length) { heading("Other Employment"); d.other_employment.forEach(entry); }
   heading("Education and Qualifications");
-  d.education.forEach(([q, inst, year], i) => { ensure(30); if (i) doc.y += 4; para(q, { bold: true }); para(`${inst}  |  ${year}`, { italic: true, color: GREY }); });
+  d.education.forEach(([q, inst, year], i) => { ensure(30); if (i) doc.y += 4; para(q, { bold: true }); para(`${inst}  |  ${asciiDates(year)}`, { italic: true, color: GREY }); });
   if (d.publications?.length) { heading("Publications"); d.publications.forEach((p) => bullet(p)); }
   heading("Additional Information");
   if (d.certificates?.length) para(`Certificates: ${d.certificates.join(", ")}`);

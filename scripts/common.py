@@ -18,6 +18,14 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/130.0 Safari/537.36")
 
 
+def setting(name: str, default: str) -> str:
+    """A JOB_* setting: the environment first, then the repo's .claude/settings.local.json `env` (so a run started
+    from another folder or a schedule installed from a plain shell still honours the owner's choice), then default."""
+    if name in os.environ:
+        return os.environ[name]
+    return str(read_json(ROOT / ".claude/settings.local.json", {}).get("env", {}).get(name, default))
+
+
 def candidates_dir() -> Path:
     return Path(os.environ.get("JOB_CANDIDATES_DIR", ROOT / "candidates"))
 

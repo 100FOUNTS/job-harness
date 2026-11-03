@@ -12,7 +12,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from common import ROOT, cand_dir
+from common import ROOT, cand_dir, setting
 
 LABEL = "com.jobharness.daily.{slug}"
 
@@ -25,6 +25,8 @@ def env_xml() -> str:
     """PATH plus the JOB_* settings of the shell that installs the schedule (e.g. JOB_PACKAGE_DIR), so the
     unattended run behaves like the owner's terminal."""
     env = {"PATH": os.environ.get("PATH", "")} | {k: v for k, v in os.environ.items() if k.startswith("JOB_")}
+    if (pkg := setting("JOB_PACKAGE_DIR", "")):                 # also when installed from a shell without it
+        env["JOB_PACKAGE_DIR"] = pkg
     return "".join(f"<key>{k}</key><string>{v}</string>" for k, v in sorted(env.items()))
 
 

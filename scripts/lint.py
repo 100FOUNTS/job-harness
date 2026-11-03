@@ -10,11 +10,19 @@ Checks
 - .pdf: page count (CV ≤ 3, letter = 1) and that text extracts at all
 - CV, read the way an ATS parser reads it: email and phone near the top, standard headings for experience,
   education and skills (summary before experience), month-year date ranges ("Mar 2019 – Present"),
-  no glyphs that parse as garbage (ligatures ﬁ/ﬂ, U+FFFD, private-use symbols)
+  no glyphs that parse as garbage (ligatures ﬁ/ﬂ, U+FFFD, private-use symbols), date ranges joined by an ASCII
+  hyphen (a Workday import dropped a date joined by an en dash; reported by ai-job-search)
+- cliché and AI-tell phrases ("passionate", "spearheaded", "I am excited", "here is the revised"…): a reader
+  discards a letter that sounds generated (list adapted from ApplyPilot's validator); a candidate can allow a
+  term with intake.rules.allow_phrases
+- .pdf layout, measured from word boxes (pdftotext -bbox) instead of eyeballed: a hole in the middle of a page, a
+  page that is not the last one ending early, a section heading stranded at the bottom of a page, a last CV page
+  with only a few lines
 """
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import re
 import subprocess
@@ -27,6 +35,12 @@ from common import load_intake
 from facts import extract_text
 
 LIGATURE_FONTS = ("Calibri", "Cambria", "Candara", "Constantia")
+CLICHES = ["passionate", "spearheaded", "spearhead", "orchestrated", "championed", "synergy", "go-getter", "self-starter",
+           "team player", "proven track record", "results-driven", "detail-oriented", "highly motivated", "cutting-edge",
+           "state-of-the-art", "best-in-class", "thrives in", "well-versed in", "i am excited", "i'm excited",
+           "i am thrilled", "delve", "leverage my", "tapestry", "dynamic environment"]
+AI_TELLS = ["as an ai", "here is the revised", "here is the updated", "here is your", "i have rewritten",
+            "i apologize", "as requested", "[insert", "{{", "lorem ipsum"]
 
 
 def pdf_pages(path: Path) -> int:
@@ -64,9 +78,49 @@ def ats_issues(text: str) -> list[str]:
         issues.append(f"ATS: numeric dates (use 'Mon YYYY'): {bad_dates[0][:60]!r}")
     if not re.search(rf"(?i){MON} \d{{4}}\s*[–-]\s*({MON} \d{{4}}|Present|Current)", text):
         issues.append("ATS: no month-year date range (e.g. 'Mar 2019 – Jun 2021')")
+    dash = re.search(rf"(?:{MON} )?\d{{4}}\s*[\u2010-\u2015\u2212]\s*(?:(?:{MON} )?\d{{4}}|Present|Current)", text)
+    if dash:
+        issues.append(f"ATS: date range joined by a Unicode dash, use '-': {dash.group(0)!r}")
     glyphs = sorted({c for c in text if c in "\ufb00\ufb01\ufb02\ufb03\ufb04\ufffd" or 0xE000 <= ord(c) <= 0xF8FF})
     if glyphs:
         issues.append(f"ATS: characters that parse as garbage: {[hex(ord(c)) for c in glyphs]}")
+    return issues
+
+
+# Calibrated on the pdfkit layout (A4, 40pt top/bottom margins): normal gaps are ≤ 27pt, a full page ends ~36pt
+# above the bottom margin.
+HOLE_PT, EARLY_PT, THIN_LAST = 90, 140, 0.15
+
+
+def pdf_lines(path: Path) -> list[tuple[float, list[tuple[float, float, str]]]]:
+    """Per page: (height, [(top, bottom, text) per line]) from Poppler's word boxes. [] if pdftotext fails."""
+    out = subprocess.run(["pdftotext", "-bbox", str(path), "-"], capture_output=True, text=True).stdout
+    pages = []
+    for pg in re.finditer(r'<page width="[\d.]+" height="([\d.]+)">(.*?)</page>', out, re.S):
+        rows: dict[int, list[tuple[float, str]]] = {}
+        for m in re.finditer(r'<word xMin="[\d.]+" yMin="([\d.]+)" xMax="[\d.]+" yMax="([\d.]+)">(.*?)</word>', pg.group(2)):
+            rows.setdefault(round(float(m.group(1))), []).append((float(m.group(2)), html.unescape(m.group(3))))
+        pages.append((float(pg.group(1)), [(y, max(b for b, _ in rows[y]), " ".join(w for _, w in rows[y]))
+                                           for y in sorted(rows)]))
+    return pages
+
+
+def layout_issues(path: Path, kind: str) -> list[str]:
+    issues = []
+    pages = [(h, ls) for h, ls in pdf_lines(path) if ls]
+    heading = re.compile(rf"(?i)({'|'.join(HEADINGS.values())}|(professional|career)?\s*(summary|profile)|"
+                         r"projects|certifications|languages|referees)")
+    for n, (h, ls) in enumerate(pages, 1):
+        last = n == len(pages)
+        gap = max(((ls[i + 1][0] - ls[i][1], ls[i + 1][2]) for i in range(len(ls) - 1)), default=(0, ""))
+        if gap[0] > HOLE_PT:
+            issues.append(f"layout: {gap[0]:.0f}pt hole on page {n} before {gap[1][:40]!r}")
+        if not last and ls[-1][1] < h - 40 - EARLY_PT:
+            issues.append(f"layout: page {n} ends {h - 40 - ls[-1][1]:.0f}pt early (an entry was pushed to the next page)")
+        if not last and heading.fullmatch(ls[-1][2].strip()):
+            issues.append(f"layout: heading {ls[-1][2]!r} stranded at the bottom of page {n}")
+        if last and kind == "cv" and n > 1 and (ls[-1][1] - ls[0][0]) < THIN_LAST * (h - 80):
+            issues.append(f"layout: last page has only {len(ls)} lines (cut or tighten)")
     return issues
 
 
@@ -80,6 +134,10 @@ def lint(slug: str, path: Path, kind: str) -> dict[str, Any]:
     for term in rules.get("never_include", []):
         if re.search(re.escape(term), text, re.I):
             issues.append(f"must not include: '{term}'")
+    allowed = {t.lower() for t in rules.get("allow_phrases", [])}
+    for term in CLICHES + AI_TELLS:
+        if term not in allowed and re.search(rf"(?<!\w){re.escape(term)}(?!\w)" if term[0].isalpha() else re.escape(term), text, re.I):
+            issues.append(f"{'generated-text leftover' if term in AI_TELLS else 'cliché'}: '{term}'")
     if path.suffix == ".docx":
         with zipfile.ZipFile(path) as z:
             names = z.namelist()
@@ -105,6 +163,7 @@ def lint(slug: str, path: Path, kind: str) -> dict[str, Any]:
             issues.append(f"CV has {pages} pages (max 3)")
         if kind == "letter" and pages != 1:
             issues.append(f"cover letter has {pages} pages (must be 1)")
+        issues += layout_issues(path, kind)
     if kind == "cv" and path.suffix in (".pdf", ".docx"):
         issues += ats_issues(text)
     return {"file": str(path), "ok": not issues, "issues": issues}

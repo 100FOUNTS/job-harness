@@ -3,7 +3,9 @@
   job prepare <slug> [--max 15]
   → for the top jobs of today's shortlist: tracker status `prepared`, CV (track master) + cover letter
     (template filled with company, role, source and the job's matching skills), checked with lint + facts,
-    and a daily package ~/job-packages/<slug>/<date>/ with numbered folders, a summary (SUMMARY.md) and index.html.
+    and a daily package $JOB_PACKAGE_DIR/<slug>/<date>/ with numbered folders, a summary (SUMMARY.md) and index.html.
+    The summary also says whether the employer is on a Home Affairs sponsor list (`job sponsors`), for the person
+    only: it never goes into the CV or the letter.
 
 Ranking (deterministic, see score()): compatibility (the track's core/support keywords found in the ad) + probability
 (title level, years asked, and the person's own `ranking` block in targets.json) + recency.
@@ -13,6 +15,8 @@ from __future__ import annotations
 
 import argparse
 import html
+import random
+import time
 import os
 import json
 import re
@@ -21,9 +25,13 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from common import cand_dir, read_json, run_dir, save_json, today
+from common import cand_dir, read_json, run_dir, save_json, setting, today
+from discover import GUARD_MARK, alive
+from coverage import coverage
 from docs import build
+from facts import extract_text
 from jobdb import REPOST_SIMILARITY, descriptions, record_outcome, similarity
+from sponsors import describe as sponsor_line
 from tracker import add, load, set_status
 from triage import dedupe_key
 
@@ -45,26 +53,30 @@ LABELS = {
            "no_credential": "asks for a credential not in the profile", "no_licence": "asks for a licence not in the profile",
            "secondary_location": "secondary location", "senior_salary": "senior-level salary", "years": "asks for {n}+ years",
            "years_long": "asks for {n}+ years of experience", "residency": "check residency/citizenship requirements",
-           "senior_title": "senior/principal role", "graduate": "graduate program: check eligibility",
+           "senior_title": "senior/principal role", "graduate": "graduate program: check eligibility", "closes": "closes {d}", "guard": "the ad has hidden text aimed at an AI: read it yourself", "coverage": "CV covers {p}% of the ad's keywords",
+           "have_it": "in your profile but not in the CV", "gaps": "not in your profile", "match": "Keywords",
            "high": "high", "medium": "medium", "low": "low", "score": "score", "check_ad": "check the ad",
            "how_li_easy": "LinkedIn Easy Apply", "how_li": "LinkedIn → Apply (may lead to the employer's site)",
            "how_seek": "SEEK → Quick apply (or the employer's site, as the ad says)",
+           "how_wagov": "WA Government Jobs → Apply Now (account on the agency's portal; often asks for a statement against the selection criteria)",
            "title": "Applications", "howto": "How to apply: open the link → Apply → upload the CV and letter from the folder with the same number.",
            "what": "What it is", "fits": "Why it fits", "odds": "Odds", "watch": "Watch out", "apply": "How to apply",
-           "ad": "Ad", "folder": "Folder", "open_ad": "Open ad", "upload": "Upload the CV and cover letter in this folder.",
+           "ad": "Ad", "folder": "Folder", "open_ad": "Open ad", "sponsor": "Visa sponsor lists (for you only)", "upload": "Upload the CV and cover letter in this folder.",
            "summary_file": "SUMMARY.md", "readme_file": "README.md"},
     "es": {"entry": "cargo de entrada", "officer": "nivel officer/coordinator", "senior": "senior", "principal": "principal",
            "lead": "jefatura", "specialist": "specialist", "off_field": "otra especialidad",
            "no_credential": "pide una certificación que no tiene", "no_licence": "pide una licencia que no tiene",
            "secondary_location": "ubicación secundaria", "senior_salary": "sueldo de nivel senior", "years": "pide {n}+ años",
            "years_long": "pide {n}+ años de experiencia", "residency": "revisar requisitos de residencia/ciudadanía",
-           "senior_title": "cargo senior/principal", "graduate": "programa de graduados: revisar elegibilidad",
+           "senior_title": "cargo senior/principal", "graduate": "programa de graduados: revisar elegibilidad", "closes": "cierra el {d}", "guard": "el aviso tiene texto dirigido a una IA: léelo tú", "coverage": "el CV cubre {p}% de las palabras clave del aviso",
+           "have_it": "lo tienes pero no está en el CV", "gaps": "no está en tu perfil", "match": "Palabras clave",
            "high": "alta", "medium": "media", "low": "baja", "score": "puntaje", "check_ad": "revisar el aviso",
            "how_li_easy": "LinkedIn Easy Apply", "how_li": "LinkedIn → Apply (puede llevar a la web de la empresa)",
            "how_seek": "SEEK → Quick apply (o web de la empresa, según el aviso)",
+           "how_wagov": "WA Government Jobs → Apply Now (cuenta en el portal de la agencia; suele pedir una declaración según los criterios de selección)",
            "title": "Postulaciones", "howto": "Cómo postular: abrir el link → Apply → subir el CV y la carta de la carpeta con el mismo número.",
            "what": "Qué es", "fits": "Por qué calza", "odds": "Probabilidad", "watch": "Ojo", "apply": "Cómo postular",
-           "ad": "Aviso", "folder": "Carpeta", "open_ad": "Abrir aviso", "upload": "Subir el CV y la carta de esta carpeta.",
+           "ad": "Aviso", "folder": "Carpeta", "open_ad": "Abrir aviso", "sponsor": "Listas de patrocinio (solo para ti)", "upload": "Subir el CV y la carta de esta carpeta.",
            "summary_file": "LISTA.md", "readme_file": "LEEME.md"},
 }
 SUMMARY_FILES = {v["summary_file"] for v in LABELS.values()}
@@ -207,7 +219,8 @@ def fill_letter(tpl: dict[str, Any], job: dict[str, Any], hits: list[str], track
     return l
 
 
-def notes_for(job: dict[str, Any], hits: list[str], odds: dict[str, Any] | None = None, slug: str = "") -> dict[str, str]:
+def notes_for(job: dict[str, Any], hits: list[str], odds: dict[str, Any] | None = None, slug: str = "",
+              cv_text: str = "") -> dict[str, str]:
     """Plain-language summary for the person: what the role is, why it fits, odds, what to watch, how to apply."""
     from triage import min_years_required
     L = labels(slug)
@@ -223,11 +236,24 @@ def notes_for(job: dict[str, Any], hits: list[str], odds: dict[str, Any] | None 
         watch.append(L["senior_title"])
     if re.search(r"graduate", job["title"], re.I):
         watch.append(L["graduate"])
-    how = (L["how_li_easy"] if job.get("easy_apply") else L["how_li"]) if job["platform"] == "linkedin" else L["how_seek"]
+    if job.get("closes"):
+        watch.append(L["closes"].format(d=job["closes"]))
+    if GUARD_MARK in text:
+        watch.append(L["guard"])
+    how = ((L["how_li_easy"] if job.get("easy_apply") else L["how_li"]) if job["platform"] == "linkedin"
+           else L["how_wagov"] if job["platform"] == "wagov" else L["how_seek"])
     odds = odds or {}
     watch += [L[w] for w in odds.get("why", []) if w in WATCH]
-    return {"role": first or job["title"], "fits": ", ".join(hits[:5]) or L["check_ad"],
-            "prob": L.get(odds.get("prob", ""), ""), "watch": "; ".join(watch) or "—", "how": how}
+    lang = "es" if L is LABELS["es"] else "en"
+    cov = ""
+    if cv_text and text.strip():
+        c = coverage(slug, text, cv_text, job.get("track"))
+        if c["match_pct"] is not None:
+            cov = L["coverage"].format(p=c["match_pct"]) + "".join(
+                f"; {L[k]}: {', '.join(c[k][:6])}" for k in ("have_it", "gaps") if c[k])
+    return {"role": first or job["title"], "fits": ", ".join(hits[:5]) or L["check_ad"], "coverage": cov,
+            "prob": L.get(odds.get("prob", ""), ""), "watch": "; ".join(watch) or "—", "how": how,
+            "sponsor": sponsor_line(job.get("company") or "", lang)}
 
 
 def primary_track(targets: dict[str, Any]) -> dict[str, Any]:
@@ -239,9 +265,9 @@ def safe(s: str) -> str:
 
 
 def package_dir(slug: str, day: str | None = None) -> Path:
-    """Daily package for the person: $JOB_PACKAGE_DIR (default ~/job-packages)/<slug>/<YYYY-MM-DD>/.
+    """Daily package for the person: JOB_PACKAGE_DIR (env or .claude/settings.local.json; default ~/job-packages)/<slug>/<YYYY-MM-DD>/.
     Keep it outside ~/Documents on macOS: launchd jobs cannot write there."""
-    d = Path(os.environ.get("JOB_PACKAGE_DIR", Path.home() / "job-packages")) / slug / (day or today())
+    d = Path(setting("JOB_PACKAGE_DIR", str(Path.home() / "job-packages"))) / slug / (day or today())
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -257,13 +283,13 @@ def repost_of(key: str, dk: str, done: dict[str, str], texts: dict[str, str]) ->
     return None
 
 
-def prepare(slug: str, max_n: int, requeue: list[str] | None = None) -> list[dict[str, Any]]:
+def prepare(slug: str, max_n: int, requeue: list[str] | None = None, only: bool = False) -> list[dict[str, Any]]:
     base = cand_dir(slug)
     targets = read_json(base / "targets.json")
     tracks = {t["id"]: t for t in targets["tracks"]}
     tracked = {a["key"]: a for a in load(slug)}
     seen = set(tracked) - set(requeue or [])
-    short = [j for j in read_json(run_dir(slug) / "shortlist.json")["shortlist"] if j["key"] not in seen]
+    short = [] if only else [j for j in read_json(run_dir(slug) / "shortlist.json")["shortlist"] if j["key"] not in seen]
     for k in requeue or []:                     # previously skipped jobs the person wants back
         a = tracked.get(k)
         if a and k not in {j["key"] for j in short}:
@@ -272,6 +298,8 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None) -> list[dic
                           "track": a.get("track") or primary_track(targets)["id"], "listed": a.get("date", ""), "teaser": a.get("summary", "")})
     done = {dedupe_key(a.get("title", ""), a.get("company") or ""): a["key"] for a in tracked.values() if a["key"] in seen}
     texts = descriptions(slug, [*done.values(), *(j["key"] for j in short)])
+    for j in short:
+        j["description"] = j.get("description") or texts.get(j["key"], "")
     ranked, outcome = [], {}
     for sc, j in sorted(((score(j, targets, slug), j) for j in short), key=lambda x: x[0][0], reverse=True):
         dk = dedupe_key(j.get("title", ""), j.get("company") or "")
@@ -291,6 +319,15 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None) -> list[dic
     for sc, j in ranked[max(0, max_n - len(out)):]:
         outcome[j["key"]] = (sc[0], "below the daily cap")
     ranked = ranked[:max(0, max_n - len(out))]            # --max is per day: a second run only tops the package up
+    live = []
+    for sc, j in ranked:                                  # never build a package for an ad that has already closed
+        state, closes = alive(j["key"])
+        time.sleep(random.uniform(1.0, 2.0))
+        if state is False:
+            outcome[j["key"]] = (sc[0], "ad closed")
+        else:
+            live.append((sc, j | ({"closes": closes} if closes else {})))
+    ranked = live
     for i, ((fit, hits, odds), j) in enumerate(ranked, start + 1):
         track = tracks[j["track"]]
         d = pkg / f"{i:02d}_{safe(j.get('company') or 'company')}_{safe(j['title'])}"
@@ -305,12 +342,12 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None) -> list[dic
         if j["key"] not in tracked:
             add(slug, {"key": j["key"], "title": j["title"], "company": j.get("company"), "url": j["url"],
                        "platform": j["platform"], "track": j["track"], "location": j.get("location", ""), "fit": fit,
-                       "summary": summary})
+                       "summary": summary, **({"closes": j["closes"]} if j.get("closes") else {})})
         if r["ok"]:
             set_status(slug, j["key"], "prepared", cv=str(cv), letter=r["pdf"], summary=summary)
         else:
             set_status(slug, j["key"], "manual-review", reason=f"letter check failed: {r['problems']}")
-        out.append({"notes": notes_for(j, hits, odds, slug), "n": i, "key": j["key"], "title": j["title"], "company": j.get("company", ""), "url": j["url"],
+        out.append({"notes": notes_for(j, hits, odds, slug, extract_text(cv)), "n": i, "key": j["key"], "title": j["title"], "company": j.get("company", ""), "url": j["url"],
                     "platform": j["platform"], "location": j.get("location", ""), "fit": fit, "track": j["track"],
                     "dir": d.name, "ok": r["ok"], "easy_apply": j.get("easy_apply")})
     for k, (fit, why) in outcome.items():
@@ -330,14 +367,20 @@ def write_index(pkg: Path, items: list[dict[str, Any]], slug: str) -> None:
         prob = f"{n['prob']} ({L['score']} {x['fit']})" if n.get("prob") else f"{L['score']} {x['fit']}"
         md += [f"## {x['n']}. {x['title']} — {x['company']}", f"- **{L['what']}:** {n['role']}", f"- **{L['fits']}:** {n['fits']}",
                f"- **{L['odds']}:** {prob}", f"- **{L['watch']}:** {n['watch']}", f"- **{L['apply']}:** {n['how']}",
+               *([f"- **{L['match']}:** {n['coverage']}"] if n.get("coverage") else []),
+               *([f"- **{L['sponsor']}:** {n['sponsor']}"] if n.get("sponsor") else []),
                f"- **{L['ad']}:** {x['url']}", f"- **{L['folder']}:** `{x['dir']}`", ""]
         (pkg / x["dir"]).mkdir(exist_ok=True)
         (pkg / x["dir"] / L["readme_file"]).write_text(
             f"# {x['title']} — {x['company']}\n\n- {L['what']}: {n['role']}\n- {L['fits']}: {n['fits']}\n- {L['odds']}: {prob}\n"
-            f"- {L['watch']}: {n['watch']}\n- {L['apply']}: {n['how']}\n- {L['ad']}: {x['url']}\n\n{L['upload']}\n")
+            f"- {L['watch']}: {n['watch']}\n- {L['apply']}: {n['how']}\n"
+            + (f"- {L['match']}: {n['coverage']}\n" if n.get("coverage") else "")
+            + (f"- {L['sponsor']}: {n['sponsor']}\n" if n.get("sponsor") else "") + f"- {L['ad']}: {x['url']}\n\n{L['upload']}\n")
         cards.append(f"<li style='margin-bottom:14px'><b>{x['n']}. {html.escape(x['title'])}</b> — {html.escape(x['company'])}"
                      f"<br><i>{html.escape(n['role'])}</i><br>✅ {html.escape(n['fits'])}<br>🎯 {L['odds']}: {html.escape(prob)}"
                      f"<br>⚠️ {html.escape(n['watch'])}"
+                     + (f"<br>🔑 {L['match']}: {html.escape(n['coverage'])}" if n.get("coverage") else "")
+                     + (f"<br>🛂 {L['sponsor']}: {html.escape(n['sponsor'])}" if n.get("sponsor") else "") +
                      f"<br>📝 {html.escape(n['how'])} · <a href='{x['url']}'>{L['open_ad']}</a> · <a href='{x['dir']}/'>{L['folder']}</a></li>")
     pkg.joinpath(L["summary_file"]).write_text("\n".join(md))
     pkg.joinpath("index.html").write_text(
@@ -351,8 +394,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("slug"); ap.add_argument("--max", type=int, default=15, help="jobs per day (a later run the same day only tops up)")
     ap.add_argument("--requeue", nargs="*", default=[], help="tracker keys previously skipped to prepare anyway")
+    ap.add_argument("--only", action="store_true", help="build only the --requeue jobs (the panel's rescue button)")
     a = ap.parse_args()
-    items = prepare(a.slug, a.max, a.requeue)
+    items = prepare(a.slug, a.max, a.requeue, a.only)
     print(json.dumps({"prepared": len(items), "package": str(package_dir(a.slug)),
                       "jobs": [f"{x['n']}. {x['title']} — {x['company']} (fit {x['fit']})" for x in items]},
                      ensure_ascii=False, indent=2))

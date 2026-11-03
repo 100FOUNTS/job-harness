@@ -30,9 +30,18 @@ def export_pdf(src: Path, kind: str, pdf: Path) -> Path | None:
     return pdf if r.returncode == 0 and pdf.exists() else None
 
 
+def _in_candidate(slug: str, p: Path) -> Path:
+    """Relative paths are relative to the candidate folder; one written from the repo root
+    ("candidates/<slug>/docs/master") means the same folder, not candidates/<slug>/candidates/<slug>/... (2026-11-03)."""
+    if p.is_absolute():
+        return p
+    parts = p.parts[2:] if p.parts[:2] == ("candidates", slug) else p.parts
+    return cand_dir(slug).joinpath(*parts)
+
+
 def build(slug: str, src: Path, kind: str, out: Path | None, name: str | None) -> dict:
-    src = (src if src.is_absolute() else cand_dir(slug) / src).resolve()
-    out = (src.parent if out is None else out if out.is_absolute() else cand_dir(slug) / out).resolve()  # same base as src; the generator runs in templates/docs: paths must be absolute
+    src, out = (_in_candidate(slug, p) if p is not None else None for p in (src, out))
+    out = (out or src.parent).resolve()          # the generator runs in templates/docs: paths must be absolute
     out.mkdir(parents=True, exist_ok=True)
     docx = out / f"{name or src.stem}.docx"
     r = subprocess.run(["node", str(GEN[kind]), str(src), str(docx)], capture_output=True, text=True,

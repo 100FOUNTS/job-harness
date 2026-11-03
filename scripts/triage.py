@@ -104,7 +104,7 @@ def by_description_possible(title: str, targets: dict[str, Any]) -> bool:
 
 
 def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
-    from discover import linkedin_detail, seek_detail
+    from discover import linkedin_detail, seek_detail, wagov_detail
     targets = read_json(cand_dir(slug) / "targets.json")
     jobs = read_json(run_dir(slug, day) / "jobs.json")["new_jobs"]
     known = descriptions(slug, [j["key"] for j in jobs])        # fetched on an earlier day: no second request
@@ -117,6 +117,10 @@ def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
         if (track or maybe) and len(short) < max_n:
             if j["platform"] == "seek" and not j.get("description"):
                 j["description"] = seek_detail(j["id"])          # empty on failure: teaser + bullets still judged
+                time.sleep(random.uniform(0.8, 1.8))
+                track, why = judge(j, targets)
+            elif j["platform"] == "wagov" and not j.get("description"):
+                j["description"] = wagov_detail(j["id"])
                 time.sleep(random.uniform(0.8, 1.8))
                 track, why = judge(j, targets)
             elif j["platform"] == "linkedin" and not j.get("description"):

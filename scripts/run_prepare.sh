@@ -18,6 +18,7 @@ MODE=$(python3 -c "import json;print(json.load(open('candidates/$SLUG/state.json
 if [[ "$MODE" == "easy" || "$MODE" == "full" ]]; then
   python3 scripts/apply.py "$SLUG" || echo "apply failed"
 fi
+python3 scripts/tracker.py "$SLUG" sweep || echo "sweep failed"
 python3 scripts/cleanup.py "$SLUG" --days 15 || echo "cleanup failed"
 python3 scripts/report.py "$SLUG" --notify || true
 echo "=== $(date) prepare end"
