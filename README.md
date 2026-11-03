@@ -44,7 +44,7 @@ Ads it dropped stay visible in the panel, with the reason; the best near misses 
 | | What | Needed for |
 |---|---|---|
 | **Required** | A computer with macOS, Windows or Linux | everything |
-| **Required** | A paid Claude subscription (Pro, Max, Team or Enterprise) with Claude Code: the Claude desktop app (Code tab) or the CLI | onboarding, tailoring, judgment steps |
+| **Required** | A paid Claude subscription (Pro, Max, Ultra, Team or Enterprise) with Claude Code: the Claude desktop app (Code tab) or the CLI | onboarding, tailoring, judgment steps |
 | **Required** | Python 3.9 or newer | the scripts |
 | **Required** | Node.js 20 or newer | building CVs and letters, reading PDFs |
 | **Required** | A folder with your CVs, certificates and other documents | stage 0 (intake) |

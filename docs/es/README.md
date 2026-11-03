@@ -17,7 +17,7 @@ La herramienta funciona hoy solo para Australia. El soporte de Windows y Linux e
 ## Qué necesitas
 **Obligatorio**
 - Un computador con macOS, Windows o Linux.
-- Una suscripción de pago a Claude (Pro, Max, Team o Enterprise) con Claude Code: la aplicación de escritorio de Claude (pestaña **Code**) o la línea de comandos.
+- Una suscripción de pago a Claude (Pro, Max, Ultra, Team o Enterprise) con Claude Code: la aplicación de escritorio de Claude (pestaña **Code**) o la línea de comandos.
 - Python 3.9 o superior y Node.js 20 o superior. Si faltan, Claude te lo dice y te muestra el comando para instalarlos.
 - Una carpeta con tus CV, certificados y otros documentos.
 
