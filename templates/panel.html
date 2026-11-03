@@ -184,6 +184,16 @@ th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 8px 6
 td { border-top: 1px solid var(--line); padding: 8px 8px 8px 0; vertical-align: top; }
 td.r, th.r { text-align: right; }
 .scroll { overflow-x: auto; }
+.banner { margin: 0; padding: 12px 14px; background: var(--accent-soft); color: var(--ink); border: 1px solid var(--accent); border-radius: 8px; font-size: 13px; }
+.maybe { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.maybe li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+.maybe li:first-child { border-top: 0; }
+.maybe .who { min-width: 0; }
+.maybe .who > a { font-weight: 600; }
+.maybe .who > span { color: var(--muted); font-size: 13px; }
+.maybe .kw { grid-column: 1; display: flex; flex-wrap: wrap; gap: 4px; }
+.maybe .kw .tag { font-size: 11px; padding: 1px 7px; }
+.maybe .btn { grid-column: 2; grid-row: 1 / span 2; }
 
 .coffee { position: fixed; right: 20px; bottom: 20px; z-index: 25; display: inline-flex; align-items: center; gap: 10px; padding: 11px 20px 11px 14px; border-radius: 999px; background: linear-gradient(135deg, #ffb36b, #f06f3a 55%, #e2553a); color: #fff; border: 0; box-shadow: 0 8px 22px rgba(240,111,58,.45), 0 2px 6px rgba(0,0,0,.18); font-weight: 800; font-size: 14px; letter-spacing: .01em; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease; animation: coffee-bob 6s ease-in-out 2s infinite; }
 .coffee:hover, .coffee:focus-visible { transform: translateY(-3px) scale(1.04); box-shadow: 0 12px 30px rgba(240,111,58,.6), 0 0 0 4px rgba(255,179,107,.35); animation: none; }
@@ -444,7 +454,15 @@ function companiesView() {
 function droppedView() {
   const q = S.q.toLowerCase();
   const rows = D.dropped.filter(d => !q || (d.title + " " + d.company + " " + d.reason).toLowerCase().includes(q));
-  $("#main").innerHTML = `<div class="page"><section class="panel"><h2>Dropped by the rules, last 7 days</h2>
+  const maybes = (D.maybes || []).filter(m => !q || (m.title + " " + m.company + " " + m.keywords.join(" ")).toLowerCase().includes(q));
+  const sugg = D.suggestions || [];
+  const banner = sugg.length ? `<p class="banner" role="status">From your rescues, the filter could also accept: <b>${sugg.map(x => esc(x.phrase) + (x.track ? " (" + esc(x.track) + ")" : "")).join(", ")}</b>. Ask Claude to add them to your targets.</p>` : "";
+  const maybeBox = maybes.length ? `<section class="panel" id="maybe"><h2>Maybe worth a look</h2>
+    <p style="margin:0;color:var(--muted);font-size:13px">Dropped only because the title matched none of your tracks, but the ad mentions your keywords. Best matches from the last 7 days.</p>
+    <ul class="maybe">${maybes.map(m => `<li><div class="who"><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a> <span>· ${esc(m.company)}${m.day ? " · " + fmt(m.day) : ""}</span></div>
+      <div class="kw">${m.keywords.map(k => `<span class="tag on">${esc(k)}</span>`).join("")}</div>
+      <button class="btn" data-rescue="${esc(m.key)}" data-track="${esc(m.track)}">Rescue</button></li>`).join("")}</ul></section>` : "";
+  $("#main").innerHTML = `<div class="page">${banner}${maybeBox}<section class="panel"><h2>Dropped by the rules, last 7 days</h2>
     <p style="margin:0;color:var(--muted);font-size:13px">Each ad shows the rule that dropped it. If you disagree, rescue it: its package is built right away.</p>
     <div class="scroll"><table><thead><tr><th>Seen</th><th>Role</th><th>Company</th><th>Reason</th><th></th></tr></thead><tbody>
     ${rows.slice(0, 200).map(d => `<tr><td class="num">${fmt(d.day)}</td><td><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a></td><td>${esc(d.company)}</td><td>${esc(d.reason)}</td>
@@ -539,7 +557,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.act) { t.disabled = true; await setStatus(t.dataset.k, {status: t.dataset.act}); return; }
   if (t.dataset.dtab) { S.tab = t.dataset.dtab; drawer(); return; }
   if (t.dataset.folder) { try { await post("/open", {key: t.dataset.folder}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
-  if (t.dataset.rescue) { t.disabled = true; t.textContent = "Preparing…"; try { await post("/rescue", {key: t.dataset.rescue}); toast("Package built. Reloading…"); setTimeout(() => location.reload(), 700); } catch (err) { toast("Could not do it: " + err.message); t.disabled = false; t.textContent = "Rescue"; } return; }
+  if (t.dataset.rescue) { t.disabled = true; t.textContent = "Preparing…"; try { const r = await post("/rescue", {key: t.dataset.rescue, track: t.dataset.track || undefined}); toast(r.suggested ? `Package built. Filter suggestion saved: ${r.suggested}` : "Package built. Reloading…"); setTimeout(() => location.reload(), r.suggested ? 1800 : 700); } catch (err) { toast("Could not do it: " + err.message); t.disabled = false; t.textContent = "Rescue"; } return; }
   if (t.id === "savenote") { try { await post("/note", {key: S.job.key, text: $("#notes").value}); S.job.notes = $("#notes").value; const a = D.apps.find(x => x.key === S.job.key); if (a) a.notes = !!S.job.notes; toast("Notes saved"); } catch (err) { toast("Could not save: " + err.message); } return; }
   if (t.id === "theme") { const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); const next = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; try { localStorage.setItem("panel-theme", next); } catch (err) {} return; }
   if (t.id === "helpbtn") { help(); return; }

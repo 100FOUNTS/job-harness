@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE TABLE IF NOT EXISTS sightings (key TEXT, day TEXT, PRIMARY KEY (key, day));
 """
 # Verdicts worth judging again even under the same targets: they depended on the day, not on the ad
-TRANSIENT = ("over shortlist cap", "description unavailable")
+TRANSIENT = ("over shortlist cap", "description unavailable", "title does not match any target track (not read")
 REPOST_SIMILARITY = 0.7          # RPS reposted with a longer company blurb: 0.77; same employer, other role: ≤ 0.65
 
 

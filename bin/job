@@ -6,6 +6,7 @@
   job doctor [--json]                          what this machine can run, and how to fix what is missing
   job new <slug> --name "..."                  create a candidate
   job discover <slug>                          new jobs from the saved searches (no browser, no LLM)
+  job suggest <slug> list|clear [phrase]       title words the filter could accept, learnt from your rescues
   job triage <slug>                            deterministic pre-filter → shortlist.json
   job db <slug> import|stats|show <key>|sql "<SELECT>"   every ad ever listed (jobs.db): verdicts, reposts, market
   job prepare <slug> [--max 15]                ranked top jobs → CV + filled cover letter + daily package (no LLM)
@@ -40,7 +41,7 @@ ROOT = Path(__file__).resolve().parent.parent
 S = ROOT / "scripts"
 DIRECT = {"status": "status.py", "setup": "setup.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
           "triage": "triage.py", "db": "jobdb.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
-          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "panel": "panel.py"}
+          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "panel": "panel.py", "suggest": "suggest.py"}
 
 
 def run(script, args):

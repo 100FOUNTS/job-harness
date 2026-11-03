@@ -8,11 +8,12 @@ functions (set_status, set_note), the same rules as `job track` (limits, history
 drag between columns), career-ops web (Today), Jobscan and LinkedIn Job Match (why a job fits or was dropped).
 
 Views: Tablero (board), Embudo (funnel and calibration), Empresas (who publishes most, best fits, sponsor lists: the
-employers worth contacting in person), Descartados (dropped ads with the rule that dropped them).
+employers worth contacting in person), Descartados (dropped ads with the rule that dropped them, a 'maybe worth a look' list of near misses, and the
+filter suggestions learned from rescues).
 GET  /?slug=<s>                 the page, with the board data embedded
 GET  /api/job?slug=&key=        one application in full: description, keyword coverage, documents, history, notes
 GET  /files/<slug>/<path>       a file from the candidate's package folder (CV, letter)
-POST /status {slug,key,status}  POST /note {slug,key,text}  POST /rescue {slug,key}  POST /open {slug,key}
+POST /status {slug,key,status}  POST /note {slug,key,text}  POST /rescue {slug,key[,track]}  POST /open {slug,key}
 Every POST must carry the token the page was served with, so another site open in the browser cannot post to it.
 JOB_SUPPORT_URL (env or .claude/settings.local.json): the floating "Buy me a coffee" button. Defaults to 100 FOUNTS'
 Stripe donation link (they build the harness); point it elsewhere, or set it to "" to hide the button.
@@ -34,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 import osutil
+import suggest
 from common import cand_dir, list_candidates, read_json, setting
 from status import summary
 from tracker import OUTCOMES, PENDING, SENT, calibrate, followups, load, set_note, set_status
@@ -156,6 +158,39 @@ def dropped(slug: str, days: int = 7) -> list[dict[str, Any]]:
     return [dict(zip(cols, r)) for r in rows if r[0] not in tracked]
 
 
+def maybes(slug: str, days: int = 7, n: int = 10) -> list[dict[str, Any]]:
+    """Ads dropped ONLY because their title matched no track, ranked by how many of the tracks' keywords (core 2,
+    support 1) their text still contains: the near misses worth a second look. Needs a score of 3+; titles the global or
+    a track's exclude_title rejects stay out. Narrowed in SQL first (reason, date), then scored in one regex pass."""
+    db = cand_dir(slug) / "jobs.db"
+    if not db.exists():
+        return []
+    targets = read_json(cand_dir(slug) / "targets.json", {})
+    m = suggest.Matcher(targets)
+    if not m.rx:
+        return []
+    ex = [re.compile(r"\b(" + "|".join(re.escape(w) for w in ws) + r")\b", re.I)
+          for ws in [targets.get("exclude_title", []), *[t.get("exclude_title", []) for t in targets.get("tracks", [])]] if ws]
+    since = (date.today() - timedelta(days=days)).isoformat()
+    con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    rows = con.execute("SELECT key, title, company, url, last_seen, teaser, bullets, description FROM jobs "
+                       "WHERE verdict='rejected' AND reason LIKE 'title does not match%' AND last_seen >= ? "
+                       "ORDER BY last_seen DESC LIMIT 3000", (since,)).fetchall()
+    con.close()
+    tracked = {a["key"] for a in load(slug)}
+    out = []
+    for key, title, company, url, seen, teaser, bullets, desc in rows:
+        if key in tracked or not title or any(x.search(title) for x in ex):
+            continue
+        found = m.found(" ".join(filter(None, [title, teaser, bullets, desc])))
+        score = m.score(found)
+        if score >= suggest.MIN_SCORE:
+            out.append({"key": key, "title": title, "company": company or "", "url": url or "", "day": seen, "score": score,
+                        "keywords": m.chips(found), "track": m.best_track(found)})
+    out.sort(key=lambda r: (r["score"], r["day"]), reverse=True)
+    return out[:n]
+
+
 def companies(slug: str, days: int = 60) -> list[dict[str, Any]]:
     """Employers worth contacting, from the ads that QUALIFIED in the last `days` (passed the rules: tracked or
     shortlisted; dropped ads do not count). Ranked by the person's order of value: most qualifying ads, then best
@@ -231,7 +266,8 @@ def data(slug: str) -> dict[str, Any]:
                                        and today <= a["closes"] <= soon],
                       "followups": [f for f in followups(slug) if f["action"] != "waiting (already chased)"],
                       "pending_answers": pending_answers},
-            "funnel": funnel(slug, all_apps), "dropped": dropped(slug), "companies": companies(slug),
+            "funnel": funnel(slug, all_apps), "dropped": dropped(slug), "maybes": maybes(slug),
+            "suggestions": [{"phrase": x["phrase"], "track": x["track"]} for x in suggest.pending(slug)], "companies": companies(slug),
             "candidates": list_candidates(), "support_url": setting("JOB_SUPPORT_URL", SUPPORT_URL),
             "generated": datetime.now().strftime("%H:%M")}
 
@@ -267,8 +303,10 @@ def detail(slug: str, key: str) -> dict[str, Any]:
             "tailored": bool(d and (d / "tailored").is_dir())}
 
 
-def rescue(slug: str, key: str) -> dict[str, Any]:
-    """An ad the rules dropped that the person wants: track it and build its package now (job prepare --only)."""
+def rescue(slug: str, key: str, pick: str | None = None) -> dict[str, Any]:
+    """An ad the rules dropped that the person wants: track it and build its package now (job prepare --only).
+    If it was dropped only for its title, the track is the one picked (else the one with most keyword hits) and the
+    title's role phrase is saved as a filter suggestion (suggestions.json); targets.json is never touched."""
     from tracker import add
     con = sqlite3.connect(f"file:{cand_dir(slug) / 'jobs.db'}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
@@ -278,13 +316,19 @@ def rescue(slug: str, key: str) -> dict[str, Any]:
         return {"ok": False, "error": "That ad is not in the job memory."}
     targets = read_json(cand_dir(slug) / "targets.json")
     track = row["track"] or next((t["id"] for t in targets["tracks"] if t.get("primary")), targets["tracks"][0]["id"])
+    suggested = ""
+    if (row["reason"] or "").startswith("title does not match"):
+        m = suggest.Matcher(targets)
+        text = " ".join(filter(None, [row["title"], row["teaser"], row["bullets"], row["description"]]))
+        track = pick if pick in m.weights else m.best_track(m.found(text)) or track
+        suggested = suggest.record(slug, row["title"], key, track)
     if key not in {a["key"] for a in load(slug)}:
         add(slug, {"key": key, "title": row["title"], "company": row["company"], "url": row["url"], "platform": row["platform"],
                    "track": track, "location": row["location"] or "", "summary": "rescued from the panel"})
         set_status(slug, key, "skipped", reason="rescued: waiting for its package")
     r = subprocess.run([*osutil.python(), str(Path(__file__).parent / "prepare.py"), slug, "--max", "99", "--requeue", key, "--only"],
                        capture_output=True, encoding="utf-8", timeout=300)
-    return {"ok": r.returncode == 0, "error": r.stderr[-300:] if r.returncode else ""}
+    return {"ok": r.returncode == 0, "error": r.stderr[-300:] if r.returncode else "", "suggested": suggested}
 
 
 def open_folder(slug: str, key: str) -> dict[str, Any]:
@@ -351,7 +395,7 @@ class Handler(BaseHTTPRequestHandler):
                 set_note(slug, key, body.get("text") or "")
                 return self.json({"ok": True})
             if self.path == "/rescue":
-                return self.json(rescue(slug, key))
+                return self.json(rescue(slug, key, body.get("track")))
             if self.path == "/open":
                 return self.json(open_folder(slug, key))
         except SystemExit as e:                       # tracker refusals (limits, unknown key) come back as text

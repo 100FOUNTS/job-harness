@@ -45,11 +45,12 @@ LEVEL_ADJ = [
     (r"\b(team leader|lead)\b", -25, "lead"),
     (r"\bspecialist\b", -5, "specialist"),
 ]
-WATCH = ("off_field", "no_credential", "no_licence", "senior_salary", "lead")
+WATCH = ("off_field", "no_credential", "no_licence", "senior_salary", "lead", "deprioritized")
 # What the person reads in the daily package. intake.ui_language picks the set (default en).
 LABELS = {
     "en": {"entry": "entry-level role", "officer": "officer/coordinator level", "senior": "senior", "principal": "principal",
            "lead": "leadership role", "specialist": "specialist", "off_field": "different specialty",
+           "track_down": "lower priority track ({n})", "track_up": "higher priority track (+{n})", "deprioritized": "title on your lower-priority list",
            "no_credential": "asks for a credential not in the profile", "no_licence": "asks for a licence not in the profile",
            "secondary_location": "secondary location", "senior_salary": "senior-level salary", "years": "asks for {n}+ years",
            "years_long": "asks for {n}+ years of experience", "residency": "check residency/citizenship requirements",
@@ -65,6 +66,7 @@ LABELS = {
            "summary_file": "SUMMARY.md", "readme_file": "README.md"},
     "es": {"entry": "cargo de entrada", "officer": "nivel officer/coordinator", "senior": "senior", "principal": "principal",
            "lead": "jefatura", "specialist": "specialist", "off_field": "otra especialidad",
+           "track_down": "línea de menor prioridad ({n})", "track_up": "línea de mayor prioridad (+{n})", "deprioritized": "cargo de tu lista de menor prioridad",
            "no_credential": "pide una certificación que no tiene", "no_licence": "pide una licencia que no tiene",
            "secondary_location": "ubicación secundaria", "senior_salary": "sueldo de nivel senior", "years": "pide {n}+ años",
            "years_long": "pide {n}+ años de experiencia", "residency": "revisar requisitos de residencia/ciudadanía",
@@ -144,7 +146,16 @@ def score(job: dict[str, Any], targets: dict[str, Any], slug: str = "") -> tuple
         rec = {0: 6, 1: 3}.get((date.today() - date.fromisoformat(job.get("listed", "")[:10])).days, 0)
     except ValueError:
         pass
-    total = max(0, min(100, 30 + fit + prob + rec))
+    adjust = 0                                             # priority knobs: move the total, not the odds label
+    try:
+        if (n := int(track.get("rank_adjust") or 0)):
+            adjust += n; why.append(f"track_adjust:{n}")
+        dp = rk.get("deprioritize") or {}
+        if (r := words_rx(dp.get("terms", []))) and re.search(r + r"\b", title, re.I):
+            adjust -= abs(int(dp.get("points", 8))); why.append("deprioritized")
+    except (TypeError, ValueError):
+        pass
+    total = max(0, min(100, 30 + fit + prob + rec + adjust))
     label = "high" if prob >= 10 else "medium" if prob >= -5 else "low"
     return total, core + support, {"prob": label, "why": why}           # codes; LABELS turns them into words
 
@@ -244,6 +255,10 @@ def notes_for(job: dict[str, Any], hits: list[str], odds: dict[str, Any] | None 
            else L["how_wagov"] if job["platform"] == "wagov" else L["how_seek"])
     odds = odds or {}
     watch += [L[w] for w in odds.get("why", []) if w in WATCH]
+    for w in odds.get("why", []):
+        if w.startswith("track_adjust:"):
+            n = int(w.split(":")[1])
+            watch.append(L["track_down" if n < 0 else "track_up"].format(n=n if n < 0 else abs(n)))
     lang = "es" if L is LABELS["es"] else "en"
     cov = ""
     if cv_text and text.strip():
