@@ -1,4 +1,6 @@
 @echo off
+setlocal
+set "PYTHONUTF8=1"
 rem job launcher for Windows: runs bin\job with the first Python 3 found.
 where py >nul 2>nul && goto :py
 where python >nul 2>nul && goto :python

@@ -20,11 +20,11 @@ class Base(unittest.TestCase):
         d = self.tmp / "ana"
         shutil.copytree(ROOT / "templates/candidate", d)
         (d / "approvals").mkdir()
-        intake = json.loads((d / "intake.json").read_text())
+        intake = json.loads((d / "intake.json").read_text(encoding="utf-8"))
         intake["rules"]["never_include"] = ["Practice Project"]
-        (d / "intake.json").write_text(json.dumps(intake))
+        (d / "intake.json").write_text(json.dumps(intake), encoding="utf-8")
         (d / "facts.json").write_text(json.dumps({"claims": [{"id": "x", "value": "98.6%", "text": "t", "status": "approved"}],
-                                                  "allow": ["14001"]}))
+                                                  "allow": ["14001"]}), encoding="utf-8")
         self.d = d
 
     def tearDown(self):
@@ -36,7 +36,7 @@ class TestFacts(Base):
     def test_invented_figure_is_caught(self):
         from facts import verify
         f = self.d / "cv.md"
-        f.write_text("Removed 98.6% COD under ISO 14001 in 2022. Improved efficiency by 25%.")
+        f.write_text("Removed 98.6% COD under ISO 14001 in 2022. Improved efficiency by 25%.", encoding="utf-8")
         r = verify("ana", f)
         self.assertFalse(r["ok"])
         self.assertEqual(r["unknown_figures"], ["25%"])
@@ -44,7 +44,7 @@ class TestFacts(Base):
     def test_known_figures_years_and_small_counts_pass(self):
         from facts import verify
         f = self.d / "cv.md"
-        f.write_text("98.6% COD, ISO 14001, 2019 – 2026, three options and 3 sites. 17 October 2026. Re: Officer, Ref: 4471")
+        f.write_text("98.6% COD, ISO 14001, 2019 – 2026, three options and 3 sites. 17 October 2026. Re: Officer, Ref: 4471", encoding="utf-8")
         self.assertTrue(verify("ana", f)["ok"])
 
 
@@ -52,7 +52,7 @@ class TestLint(Base):
     def test_forbidden_terms(self):
         from lint import lint
         f = self.d / "letter.md"
-        f.write_text("I would need visa sponsorship. See my Practice Project.")
+        f.write_text("I would need visa sponsorship. See my Practice Project.", encoding="utf-8")
         issues = " ".join(lint("ana", f, "letter")["issues"])
         self.assertIn("sponsorship", issues)
         self.assertIn("Practice Project", issues)
@@ -60,7 +60,7 @@ class TestLint(Base):
     def test_cliches_and_generated_leftovers(self):
         from lint import lint
         f = self.d / "l.md"
-        f.write_text("Here is the revised letter. I am a passionate team player who spearheaded change.")
+        f.write_text("Here is the revised letter. I am a passionate team player who spearheaded change.", encoding="utf-8")
         issues = " ".join(lint("ana", f, "letter")["issues"])
         for t in ("generated-text leftover: 'here is the revised'", "cliché: 'passionate'", "cliché: 'spearheaded'"):
             self.assertIn(t, issues)
@@ -163,7 +163,7 @@ class TestGatesAndMode(Base):
         finally:
             os.environ.pop("JOB_HUMAN_SIGN")
         set_mode("ana", "live")
-        (self.d / "intake.json").write_text("{}")          # edit after approval → seal broken
+        (self.d / "intake.json").write_text("{}", encoding="utf-8")          # edit after approval → seal broken
         from gates import valid_approval
         self.assertFalse(valid_approval("ana", "go-live")[0])
 
@@ -172,7 +172,7 @@ class TestHook(Base):
     def run_hook(self, payload):
         env = os.environ | {"CLAUDE_PROJECT_DIR": str(ROOT)}
         return subprocess.run([sys.executable, str(ROOT / "hooks/gate.py")], input=json.dumps(payload),
-                              capture_output=True, text=True, env=env).returncode
+                              capture_output=True, encoding="utf-8", env=env).returncode
 
     def test_blocks_agent_human_signature(self):
         self.assertEqual(self.run_hook({"tool_name": "Bash", "tool_input": {"command": "bin/job sign ana go-live-01"}}), 2)
@@ -203,11 +203,11 @@ class TestAnswerEngine(Base):
         super().setUp()
         (self.d / "answers.json").write_text(json.dumps({"answers": [
             {"match": ["right to work"], "answer": "Yes", "option_prefer": ["restrictions on work hours"]},
-            {"match": ["medical"], "answer": "Willing to undertake"}]}))
+            {"match": ["medical"], "answer": "Willing to undertake"}]}), encoding="utf-8")
         (self.d / "docs").mkdir()
         (self.d / "docs" / "cv_environmental.json").write_text(json.dumps({"title": "Environmental Engineer", "experience": [
             {"role": "Environmental Consultant", "dates": "Jan 2021 – Oct 2021", "bullets": []},
-            {"role": "Project Engineer", "dates": "Dec 2021 – May 2022", "bullets": []}]}))
+            {"role": "Project Engineer", "dates": "Dec 2021 – May 2022", "bullets": []}]}), encoding="utf-8")
 
     def test_rules(self):
         from answer import decide
@@ -224,8 +224,8 @@ class TestAnswerEngine(Base):
     def test_years_cap_and_own_salary(self):
         from answer import decide
         p = self.d / "intake.json"
-        i = json.loads(p.read_text()) if p.exists() else {}
-        p.write_text(json.dumps(i | {"preferences": {"years_experience_claimed": 1, "salary_expectation": "AUD 90,000 + super"}}))
+        i = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+        p.write_text(json.dumps(i | {"preferences": {"years_experience_claimed": 1, "salary_expectation": "AUD 90,000 + super"}}), encoding="utf-8")
         yrs = decide("ana", "How many years of experience as an environmental engineer?", "text", [])
         self.assertEqual((yrs["answer"], yrs["source"]), ("1", "rule:years-from-cv (1.0)"))   # 1.3 from the CV → cap 1
         self.assertEqual(decide("ana", "What is your expected annual base salary?", "text", [])["answer"], "90000")  # not another person's
@@ -315,8 +315,8 @@ class TestCoverage(Base):
     def test_covered_have_it_and_gap(self):
         import coverage, prepare
         kw = {"core": ["python", "full stack", "kubernetes"], "support": ["plc"]}
-        intake = json.loads((self.d / "intake.json").read_text()); intake["coursework"] = ["PLCs and industrial networks"]
-        (self.d / "intake.json").write_text(json.dumps(intake))
+        intake = json.loads((self.d / "intake.json").read_text(encoding="utf-8")); intake["coursework"] = ["PLCs and industrial networks"]
+        (self.d / "intake.json").write_text(json.dumps(intake), encoding="utf-8")
         with unittest.mock.patch.object(prepare, "track_keywords", return_value=kw):
             r = coverage.coverage("ana", "Python, full-stack work, Kubernetes and PLC programming. .NET required.", "Full-Stack Python developer")
         self.assertEqual({x["term"]: x["status"] for x in r["terms"]},
@@ -362,7 +362,7 @@ class TestPanelViews(Base):
         folder.mkdir(parents=True)
         (folder / "Ana_Resume.pdf").write_bytes(b"%PDF-1.4")
         (pkgs / "ana" / day / "items.json").write_text(json.dumps({"items": [{"key": "seek:1", "n": 1, "dir": folder.name,
-            "title": "Analyst", "company": "Acme", "url": "u", "fit": 80, "notes": {"how": "SEEK"}}]}))
+            "title": "Analyst", "company": "Acme", "url": "u", "fit": 80, "notes": {"how": "SEEK"}}]}), encoding="utf-8")
         ads = [{"key": f"seek:{i}", "platform": "seek", "id": str(i), "title": t, "company": c, "location": "Perth WA",
                 "url": f"u{i}", "description": "Python and SQL work."}
                for i, t, c in ((1, "Analyst", "Acme Pty Ltd"), (2, "Engineer", "Acme"), (3, "Clerk", "Beta"), (4, "Dev", "Gamma"))]
@@ -441,7 +441,8 @@ class TestJobMemory(Base):
         record_triage("ana", [a | {"description": "full text"}, b, c], [a | {"track": "env"}],
                       [{"key": "seek:2", "reason": "title does not match any target track"},
                        {"key": "seek:3", "reason": "over shortlist cap"}], targets)
-        row = connect("ana").execute("SELECT * FROM jobs WHERE key='seek:1'").fetchone()
+        with connect("ana") as con:
+            row = con.execute("SELECT * FROM jobs WHERE key='seek:1'").fetchone()
         self.assertEqual((row["times_seen"], row["first_seen"], row["last_seen"]), (2, "2026-10-29", "2026-10-30"))
         self.assertEqual(row["description"], "full text")
         self.assertEqual(settled("ana", targets), {"seek:2"})      # the cap depends on the day, not on the ad
@@ -460,7 +461,7 @@ class TestJobMemory(Base):
     def test_rate_limited_search_is_retried(self):
         import discover
         (self.d / "targets.json").write_text(json.dumps({"tracks": [{"id": "env", "searches": [
-            {"platform": "linkedin", "keywords": "GIS Analyst"}, {"platform": "linkedin", "keywords": "Broken"}]}]}))
+            {"platform": "linkedin", "keywords": "GIS Analyst"}, {"platform": "linkedin", "keywords": "Broken"}]}]}), encoding="utf-8")
         calls = {}
         def fake(s, _age):
             calls[s["keywords"]] = calls.get(s["keywords"], 0) + 1
@@ -488,7 +489,7 @@ class TestJobMemory(Base):
 
 class TestPrivacy(unittest.TestCase):
     def test_only_the_fictional_candidate_is_tracked(self):
-        r = subprocess.run(["git", "ls-files", "candidates", ".browser"], cwd=ROOT, capture_output=True, text=True)
+        r = subprocess.run(["git", "ls-files", "candidates", ".browser"], cwd=ROOT, capture_output=True, encoding="utf-8")
         if r.returncode:                                   # not a git checkout: nothing can be published from here
             self.skipTest("not a git repository")
         leaked = [f for f in r.stdout.split() if not f.startswith("candidates/example/")]

@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import time
@@ -18,6 +19,11 @@ import osutil  # noqa: E402
 
 def on(platform):
     return mock.patch.object(sys, "platform", platform)
+
+
+def fwd(s):
+    """Paths with forward slashes, so POSIX-shaped assertions hold when the suite runs on Windows."""
+    return re.sub(r"\\+", "/", str(s))
 
 
 def ok(rc=0):
@@ -80,7 +86,7 @@ class TestOsutil(unittest.TestCase):
         tmp = Path(tempfile.mkdtemp())
         exe = tmp / "pf86/Google/Chrome/Application/chrome.exe"
         exe.parent.mkdir(parents=True)
-        exe.write_text("")
+        exe.write_text("", encoding="utf-8")
         env = {"ProgramFiles": str(tmp / "pf"), "ProgramFiles(x86)": str(tmp / "pf86")}
         with on("win32"), mock.patch.dict(os.environ, env), mock.patch("subprocess.Popen") as popen:
             os.environ.pop("LocalAppData", None)
@@ -113,7 +119,7 @@ class TestSchedulePrint(Base):
             text = self.printed("darwin", "install", "ana", "--hour", "7", "--minute", "30")
         self.assertIn("com.jobharness.daily.ana.plist", text)
         self.assertIn("<string>/bin/zsh</string>", text)
-        self.assertIn("scripts/run_prepare.sh", text)
+        self.assertIn("scripts/run_prepare.sh", fwd(text))
         self.assertIn("<key>Hour</key><integer>7</integer>", text)
         self.assertIn("launchctl bootstrap gui/501", text)
 
@@ -125,7 +131,7 @@ class TestSchedulePrint(Base):
 
     def test_linux_systemd_timer(self):
         text = self.printed("linux", "install", "ana", "--hour", "6", "--minute", "15", which="/usr/bin/systemctl")
-        self.assertIn(".config/systemd/user/job-harness-ana.service", text)
+        self.assertIn(".config/systemd/user/job-harness-ana.service", fwd(text))
         self.assertIn("OnCalendar=*-*-* 06:15:00", text)
         self.assertIn("run_prepare.py", text)
         self.assertIn("systemctl --user enable --now job-harness-ana.timer", text)
@@ -133,15 +139,15 @@ class TestSchedulePrint(Base):
     def test_linux_without_systemd_prints_crontab_line(self):
         text = self.printed("linux", "install", "ana", "--hour", "6", "--minute", "15")
         self.assertIn("crontab -e", text)
-        self.assertRegex(text, r"15 6 \* \* \* cd .*run_prepare\.py ana")
+        self.assertRegex(fwd(text), r"15 6 \* \* \* cd .*run_prepare\.py'? ana")
 
     def test_agent_runner_points_at_run_daily(self):
         self.assertIn("run_daily.py", self.printed("win32", "install", "ana", "--runner", "agent"))
 
     def test_run_now_uses_our_interpreter_not_zsh(self):
         text = self.printed("linux", "run-now", "ana")
-        self.assertIn(sys.executable, text)
-        self.assertIn("run_prepare.py ana", text)
+        self.assertIn(fwd(sys.executable), fwd(text))
+        self.assertRegex(text, r"run_prepare\.py'? ana")
         self.assertNotIn("zsh", text)
 
     def test_status_and_uninstall_commands(self):
@@ -171,7 +177,7 @@ class TestRunPrepare(Base):
             return ok((results or {}).get(Path(cmd[1]).stem, 0))
         with mock.patch.object(self.rp.subprocess, "run", side_effect=fake):
             self.rp.guarded("ana", "prepare", self.rp.prepare)
-        return calls, self.log.read_text()
+        return calls, self.log.read_text(encoding="utf-8")
 
     def test_steps_run_in_order_and_failures_do_not_stop_the_run(self):
         calls, log = self.run_it({"discover": 1, "prepare": 2})
@@ -186,35 +192,35 @@ class TestRunPrepare(Base):
         self.assertIn("prepare end", log)
 
     def test_apply_only_in_easy_or_full_mode(self):
-        (self.d / "state.json").write_text(json.dumps({"mode": "easy"}))
+        (self.d / "state.json").write_text(json.dumps({"mode": "easy"}), encoding="utf-8")
         calls, _ = self.run_it({"apply": 1})
         self.assertEqual([c[0] for c in calls][3], "apply")
         self.assertEqual(len(calls), 7)
-        (self.d / "state.json").write_text(json.dumps({"mode": "dry-run"}))
+        (self.d / "state.json").write_text(json.dumps({"mode": "dry-run"}), encoding="utf-8")
         calls, _ = self.run_it()
         self.assertNotIn("apply", [c[0] for c in calls])
 
     def test_a_missing_script_runner_counts_as_a_failed_step(self):
         with mock.patch.object(self.rp.subprocess, "run", side_effect=FileNotFoundError):
             self.rp.guarded("ana", "prepare", self.rp.prepare)
-        self.assertIn("discover failed", self.log.read_text())
-        self.assertNotIn("report failed", self.log.read_text())
+        self.assertIn("discover failed", self.log.read_text(encoding="utf-8"))
+        self.assertNotIn("report failed", self.log.read_text(encoding="utf-8"))
 
     def test_stop_file_in_candidate_or_repo(self):
-        (self.d / "STOP").write_text("")
+        (self.d / "STOP").write_text("", encoding="utf-8")
         calls, log = self.run_it()
         self.assertEqual(calls, [])
         self.assertIn("STOP file present", log)
         (self.d / "STOP").unlink()
         (self.tmp / "no-repo-stop").mkdir()
-        (self.tmp / "no-repo-stop/STOP").write_text("")
+        (self.tmp / "no-repo-stop/STOP").write_text("", encoding="utf-8")
         calls, _ = self.run_it()
         self.assertEqual(calls, [])
 
     def test_lock_blocks_a_second_run_and_is_released(self):
         lock = self.rp.lock_path("ana")
         lock.parent.mkdir(exist_ok=True)
-        lock.write_text("1")
+        lock.write_text("1", encoding="utf-8")
         calls, log = self.run_it()
         self.assertEqual(calls, [])
         self.assertIn("another run is active", log)
@@ -227,7 +233,7 @@ class TestRunPrepare(Base):
     def test_stale_lock_is_taken_over(self):
         lock = self.rp.lock_path("ana")
         lock.parent.mkdir(exist_ok=True)
-        lock.write_text("1")
+        lock.write_text("1", encoding="utf-8")
         old = time.time() - (self.rp.STALE_HOURS + 1) * 3600
         os.utime(lock, (old, old))
         calls, _ = self.run_it()

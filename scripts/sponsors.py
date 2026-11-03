@@ -56,7 +56,7 @@ def import_lists(src: Path) -> dict[str, Any]:
     entries: dict[str, dict[str, Any]] = {}
     for fname, (table, kind) in SOURCES.items():
         inside = False
-        for line in (src / fname).read_text().splitlines():
+        for line in (src / fname).read_text(encoding="utf-8").splitlines():
             if line.startswith("insert into "):
                 inside = line.startswith(f"insert into {table} ")
                 continue

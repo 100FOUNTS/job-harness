@@ -36,9 +36,19 @@ TRANSIENT = ("over shortlist cap", "description unavailable")
 REPOST_SIMILARITY = 0.7          # RPS reposted with a longer company blurb: 0.77; same employer, other role: ≤ 0.65
 
 
+class Connection(sqlite3.Connection):
+    """`with connect(...)` commits (or rolls back) and also closes: Windows cannot delete a database that is still open."""
+    def __exit__(self, *exc: Any) -> Any:
+        try:
+            return super().__exit__(*exc)
+        finally:
+            self.close()
+
+
 def connect(slug: str, readonly: bool = False) -> sqlite3.Connection:
     p = cand_dir(slug) / "jobs.db"
-    con = sqlite3.connect(f"file:{p}?mode=ro", uri=True) if readonly else sqlite3.connect(p)
+    con = (sqlite3.connect(f"file:{p}?mode=ro", uri=True, factory=Connection) if readonly
+           else sqlite3.connect(p, factory=Connection))
     con.row_factory = sqlite3.Row
     if not readonly:
         con.executescript(SCHEMA)

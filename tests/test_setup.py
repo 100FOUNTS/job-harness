@@ -19,7 +19,7 @@ DOCS = ROOT / "templates/docs"
 
 def job(*args, **env):
     e = {**os.environ, **env}
-    return subprocess.run([sys.executable, str(ROOT / "bin/job"), *args], capture_output=True, text=True, env=e)
+    return subprocess.run([sys.executable, str(ROOT / "bin/job"), *args], capture_output=True, encoding="utf-8", env=e)
 
 
 @unittest.skipUnless(pdftext.node_ready() and (DOCS / "node_modules/pdfkit").exists(), "run `job setup` first")

@@ -102,7 +102,7 @@ exec "$PY" "$R/scripts/$S.py" "$@"
 def write_launcher(name: str) -> Path:
     f = launcher_path(name)
     f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text(launcher_text(name))
+    f.write_text(launcher_text(name), encoding="utf-8")
     f.chmod(0o755)
     remember_root()
     return f
@@ -174,7 +174,7 @@ def control_argv(action: str, slug: str, name: str) -> list[str]:
 
 def sh(argv: list[str]) -> subprocess.CompletedProcess:
     try:
-        return subprocess.run(argv, capture_output=True, text=True)
+        return subprocess.run(argv, capture_output=True, encoding="utf-8", errors="replace")
     except OSError as e:
         return subprocess.CompletedProcess(argv, 127, "", str(e))
 
@@ -219,7 +219,7 @@ def install(a: argparse.Namespace, name: str) -> None:
         write_launcher(name)
     for path, text in pl["files"].items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        path.write_text(text, encoding="utf-8")
     for argv, ignore in pl["cmds"]:
         r = sh(argv)
         if r.returncode and not ignore:

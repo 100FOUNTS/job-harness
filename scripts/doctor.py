@@ -38,7 +38,7 @@ def package_dir() -> Path:
 
 def node_version() -> int:
     try:
-        out = subprocess.run(["node", "-v"], capture_output=True, text=True, timeout=15).stdout
+        out = subprocess.run(["node", "-v"], capture_output=True, encoding="utf-8", errors="replace", timeout=15).stdout
         return int(re.match(r"v(\d+)", out.strip()).group(1))
     except Exception:
         return 0
@@ -72,7 +72,7 @@ def install_hint(tool: str) -> str:
 
 def chrome_flag() -> bool:
     try:
-        return "--chrome" in subprocess.run(["claude", "--help"], capture_output=True, text=True, timeout=15).stdout
+        return "--chrome" in subprocess.run(["claude", "--help"], capture_output=True, encoding="utf-8", errors="replace", timeout=15).stdout
     except Exception:
         return False
 

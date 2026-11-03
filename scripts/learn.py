@@ -37,7 +37,7 @@ def logs() -> list[Path]:
 
 def read_lines(path: Path) -> list[tuple[str, dict[str, Any]]]:
     out = []
-    for line in path.read_text().splitlines() if path.exists() else []:
+    for line in path.read_text(encoding="utf-8").splitlines() if path.exists() else []:
         if line.strip():
             out.append((line, json.loads(line)))
     return out
@@ -91,7 +91,7 @@ def main() -> None:
             o["pattern"] = a.pattern
         o["status"] = "active"
         own_log().parent.mkdir(parents=True, exist_ok=True)
-        with own_log().open("a") as f:
+        with own_log().open("a", encoding="utf-8") as f:
             f.write(json.dumps(o, ensure_ascii=False) + "\n")
         print("logged")
     elif a.cmd == "set-status":
@@ -107,7 +107,7 @@ def main() -> None:
             text = [raw for raw, _ in rows[n_shipped:]]
             for i in hit:
                 text[i - n_shipped] = json.dumps(rows[i][1] | {"status": a.status}, ensure_ascii=False)
-            own_log().write_text("\n".join(text) + "\n")
+            own_log().write_text("\n".join(text) + "\n", encoding="utf-8")
         print(f"{len(hit)} lesson(s) -> {a.status}")
     else:
         for i, (_, o) in enumerate(load_lines(), 1):

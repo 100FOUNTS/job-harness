@@ -32,7 +32,7 @@ def export_pdf(src: Path, kind: str, pdf: Path) -> Path | None:
     """PDF straight from the JSON with pdfkit (headless). Pages via osascript hung on an unseen dialog
     during an unattended run, so the daily cycle never depends on a GUI app."""
     r = subprocess.run(["node", str(ROOT / "templates/docs/generar_pdf.js"), kind, str(src), str(pdf)],
-                       capture_output=True, text=True, timeout=60, cwd=ROOT / "templates/docs", env=node_env())
+                       capture_output=True, encoding="utf-8", timeout=60, cwd=ROOT / "templates/docs", env=node_env())
     return pdf if r.returncode == 0 and pdf.exists() else None
 
 
@@ -51,7 +51,7 @@ def build(slug: str, src: Path, kind: str, out: Path | None, name: str | None) -
     out = (out or src.parent).resolve()          # the generator runs in templates/docs: paths must be absolute
     out.mkdir(parents=True, exist_ok=True)
     docx = out / f"{name or src.stem}.docx"
-    r = subprocess.run(["node", str(GEN[kind]), str(src), str(docx)], capture_output=True, text=True,
+    r = subprocess.run(["node", str(GEN[kind]), str(src), str(docx)], capture_output=True, encoding="utf-8",
                        cwd=GEN[kind].parent, env=node_env())
     if r.returncode != 0:
         raise SystemExit(f"generator failed: {r.stderr[-800:]}")

@@ -282,7 +282,7 @@ def rescue(slug: str, key: str) -> dict[str, Any]:
                    "track": track, "location": row["location"] or "", "summary": "rescued from the panel"})
         set_status(slug, key, "skipped", reason="rescued: waiting for its package")
     r = subprocess.run([*osutil.python(), str(Path(__file__).parent / "prepare.py"), slug, "--max", "99", "--requeue", key, "--only"],
-                       capture_output=True, text=True, timeout=300)
+                       capture_output=True, encoding="utf-8", timeout=300)
     return {"ok": r.returncode == 0, "error": r.stderr[-300:] if r.returncode else ""}
 
 
@@ -327,7 +327,7 @@ class Handler(BaseHTTPRequestHandler):
         if slug not in cands:
             return self.send(404, b"unknown candidate")
         if u.path == "/":
-            page = PAGE.read_text().replace("__DATA__", json.dumps(data(slug), ensure_ascii=False).replace("</", "<\\/"))
+            page = PAGE.read_text(encoding="utf-8").replace("__DATA__", json.dumps(data(slug), ensure_ascii=False).replace("</", "<\\/"))
             return self.send(200, page.replace("__TOKEN__", TOKEN).encode())
         if u.path == "/api/job":
             return self.json(detail(slug, q.get("key", [""])[0]))

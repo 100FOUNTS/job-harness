@@ -209,7 +209,7 @@ def main() -> None:
     else:
         out = cand_dir(a.slug) / "tracker.csv"
         cols = ["date", "status", "platform", "company", "title", "track", "fit", "url", "submitted", "summary", "reason"]
-        with out.open("w", newline="") as f:
+        with out.open("w", newline="", encoding="utf-8") as f:
             w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore"); w.writeheader(); w.writerows(load(a.slug))
         print(out)
 

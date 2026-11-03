@@ -4,6 +4,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,6 +23,11 @@ import run_prepare  # noqa: E402
 import schedule  # noqa: E402
 import setup  # noqa: E402
 import sponsors  # noqa: E402
+
+def fwd(s):
+    """Paths with forward slashes, so POSIX-shaped assertions hold when the suite runs on Windows."""
+    return re.sub(r"\\+", "/", str(s))
+
 
 HOME_KEYS = ("JOB_DATA_DIR", "JOB_CANDIDATES_DIR", "JOB_PACKAGE_DIR", "NODE_PATH", "JOB_NODE_MODULES")
 
@@ -46,7 +52,7 @@ class Base(unittest.TestCase):
     def candidate(self, slug="ana"):
         d = self.data / "candidates" / slug
         d.mkdir(parents=True)
-        (d / "intake.json").write_text(json.dumps({"name": "Ana Tester", "email": "ana@example.com"}))
+        (d / "intake.json").write_text(json.dumps({"name": "Ana Tester", "email": "ana@example.com"}), encoding="utf-8")
         return d
 
 
@@ -75,7 +81,7 @@ class TestPaths(Base):
         self.plugin()
         self.candidate()
         self.assertFalse(run_prepare.stopped("ana"))
-        self.data.joinpath("STOP").write_text("")
+        self.data.joinpath("STOP").write_text("", encoding="utf-8")
         self.assertTrue(run_prepare.stopped("ana"))
 
     def test_sponsors_import_writes_to_the_data_dir(self):
@@ -83,8 +89,8 @@ class TestPaths(Base):
         src = self.tmp / "mig"
         src.mkdir()
         (src / "0060_accredited_sponsors.sql").write_text(
-            "insert into accredited_sponsors (a) values\n('ACME PTY LTD','Acme Pty Ltd','2025-01-15'),\n")
-        (src / "0087_active_sponsors_reocr.sql").write_text("")
+            "insert into accredited_sponsors (a) values\n('ACME PTY LTD','Acme Pty Ltd','2025-01-15'),\n", encoding="utf-8")
+        (src / "0087_active_sponsors_reocr.sql").write_text("", encoding="utf-8")
         sponsors._index.cache_clear()
         r = sponsors.import_lists(src)
         self.assertEqual(r["file"], str(self.data / "data" / "sponsors.json"))
@@ -107,13 +113,13 @@ class TestPaths(Base):
         self.plugin()
         common.remember_root()
         f = self.data / ".harness_root"
-        self.assertEqual(f.read_text().strip(), str(self.cache))
+        self.assertEqual(f.read_text(encoding="utf-8").strip(), str(self.cache))
         with mock.patch.object(Path, "write_text") as w:         # already current: no write
             common.remember_root()
             w.assert_not_called()
         with mock.patch.object(common, "ROOT", self.tmp / "plugins/cache/new"):
             common.remember_root()
-        self.assertEqual(f.read_text().strip(), str(self.tmp / "plugins/cache/new"))
+        self.assertEqual(f.read_text(encoding="utf-8").strip(), str(self.tmp / "plugins/cache/new"))
 
 
 class TestLessons(Base):
@@ -121,7 +127,7 @@ class TestLessons(Base):
         super().setUp()
         (self.cache / "learn").mkdir()
         (self.cache / "learn/observations.jsonl").write_text(
-            json.dumps({"kind": "harness", "area": "docs", "lesson": "shipped rule", "candidate": ""}) + "\n")
+            json.dumps({"kind": "harness", "area": "docs", "lesson": "shipped rule", "candidate": ""}) + "\n", encoding="utf-8")
 
     def run_learn(self, *args):
         out = io.StringIO()
@@ -132,11 +138,11 @@ class TestLessons(Base):
     def test_plugin_reads_both_and_writes_only_the_persons_file(self):
         self.plugin()
         own = self.data / "learn" / "observations.jsonl"
-        shipped = (self.cache / "learn/observations.jsonl").read_text()
+        shipped = (self.cache / "learn/observations.jsonl").read_text(encoding="utf-8")
         self.assertEqual(learn.logs(), [self.cache / "learn/observations.jsonl", own])
         self.run_learn("log", "--kind", "platform", "--area", "seek", "--lesson", "my lesson")
-        self.assertEqual((self.cache / "learn/observations.jsonl").read_text(), shipped)
-        self.assertEqual([json.loads(l)["lesson"] for l in own.read_text().splitlines()], ["my lesson"])
+        self.assertEqual((self.cache / "learn/observations.jsonl").read_text(encoding="utf-8"), shipped)
+        self.assertEqual([json.loads(l)["lesson"] for l in own.read_text(encoding="utf-8").splitlines()], ["my lesson"])
         self.assertEqual([o["lesson"] for _, o in learn.load_lines()], ["shipped rule", "my lesson"])
         self.assertEqual(learn.relevant(["seek"]), ["my lesson", "shipped rule"])
         listing = self.run_learn("list")
@@ -146,11 +152,11 @@ class TestLessons(Base):
     def test_set_status_changes_only_the_persons_lessons(self):
         self.plugin()
         self.run_learn("log", "--kind", "platform", "--area", "seek", "--lesson", "mine")
-        shipped = (self.cache / "learn/observations.jsonl").read_text()
+        shipped = (self.cache / "learn/observations.jsonl").read_text(encoding="utf-8")
         self.assertIn("cannot be changed", self.run_learn("set-status", "1", "dismissed"))
-        self.assertEqual((self.cache / "learn/observations.jsonl").read_text(), shipped)
+        self.assertEqual((self.cache / "learn/observations.jsonl").read_text(encoding="utf-8"), shipped)
         self.assertIn("1 lesson(s) -> dismissed", self.run_learn("set-status", "2", "dismissed"))
-        self.assertEqual(json.loads((self.data / "learn/observations.jsonl").read_text())["status"], "dismissed")
+        self.assertEqual(json.loads((self.data / "learn/observations.jsonl").read_text(encoding="utf-8"))["status"], "dismissed")
 
     def test_clone_uses_the_single_repo_file(self):
         log = self.tmp / "obs.jsonl"
@@ -199,13 +205,13 @@ class TestSchedule(Base):
 
     def test_linux_systemd_and_cron_call_run_sh(self):
         self.plugin()
-        text = self.printed("linux", "install", "ana", which="/usr/bin/systemctl")
-        self.assertIn(f'ExecStart="{self.data / "run.sh"}" "ana"', text)
-        self.assertIn(f'WorkingDirectory="{self.data}"', text)
-        self.assertNotIn(str(self.cache), text)
-        cron = self.printed("linux", "install", "ana")
-        self.assertIn(str(self.data / "run.sh"), cron)
-        self.assertNotIn(str(self.cache), cron)
+        text = fwd(self.printed("linux", "install", "ana", which="/usr/bin/systemctl"))
+        self.assertIn(f'ExecStart="{fwd(self.data / "run.sh")}" "ana"', text)
+        self.assertIn(f'WorkingDirectory="{fwd(self.data)}"', text)
+        self.assertNotIn(fwd(self.cache), text)
+        cron = fwd(self.printed("linux", "install", "ana"))
+        self.assertIn(fwd(self.data / "run.sh"), cron)
+        self.assertNotIn(fwd(self.cache), cron)
 
     def test_clone_still_points_at_the_repo(self):
         with mock.patch.object(schedule, "cand_dir", return_value=self.tmp):
@@ -228,11 +234,11 @@ class TestLauncher(Base):
     def setUp(self):
         super().setUp()
         self.plugin()
-        (self.cache / "scripts/run_prepare.py").write_text("import sys; print('ran', *sys.argv[1:])\n")
-        (self.cache / "scripts/run_daily.py").write_text("import sys; print('daily', *sys.argv[1:])\n")
+        (self.cache / "scripts/run_prepare.py").write_text("import sys; print('ran', *sys.argv[1:])\n", encoding="utf-8")
+        (self.cache / "scripts/run_daily.py").write_text("import sys; print('daily', *sys.argv[1:])\n", encoding="utf-8")
 
     def run_launcher(self, *args):
-        return subprocess.run(["sh", str(self.data / "run.sh"), *args], capture_output=True, text=True)
+        return subprocess.run(["sh", str(self.data / "run.sh"), *args], capture_output=True, encoding="utf-8")
 
     def test_text_resolves_the_pointer_file(self):
         for name, ptr in (("mac", ".harness_root"), ("linux", ".harness_root"), ("win", ".harness_root")):
@@ -247,7 +253,7 @@ class TestLauncher(Base):
         self.assertEqual(self.run_launcher("--agent", "ana").stdout.strip(), "daily ana")
         new = self.tmp / ".claude/plugins/cache/100founts/job-harness/0.3.0"
         (new / "scripts").mkdir(parents=True)
-        (new / "scripts/run_prepare.py").write_text("print('new code')\n")
+        (new / "scripts/run_prepare.py").write_text("print('new code')\n", encoding="utf-8")
         with mock.patch.object(common, "ROOT", new):
             common.remember_root()                             # what `job setup` / status do after an update
         self.assertEqual(self.run_launcher("ana").stdout.strip(), "new code")
@@ -258,8 +264,8 @@ class TestLauncher(Base):
         r = self.run_launcher("ana")
         self.assertEqual(r.returncode, 1)
         self.assertIn("job setup", r.stderr)
-        self.assertIn("missing or gone", (self.data / "launcher.log").read_text())
-        (self.data / ".harness_root").write_text(str(self.tmp / "gone") + "\n")
+        self.assertIn("missing or gone", (self.data / "launcher.log").read_text(encoding="utf-8"))
+        (self.data / ".harness_root").write_text(str(self.tmp / "gone") + "\n", encoding="utf-8")
         self.assertEqual(self.run_launcher("ana").returncode, 1)
 
     def test_install_writes_the_launcher_and_the_pointer(self):
@@ -269,7 +275,7 @@ class TestLauncher(Base):
                 mock.patch.object(sys, "argv", ["schedule.py", "install", "ana"]), contextlib.redirect_stdout(io.StringIO()):
             schedule.main()
         self.assertTrue((self.data / "run.sh").is_file())
-        self.assertEqual((self.data / ".harness_root").read_text().strip(), str(self.cache))
+        self.assertEqual((self.data / ".harness_root").read_text(encoding="utf-8").strip(), str(self.cache))
         self.assertTrue((self.tmp / ".config/systemd/user/job-harness-ana.service").is_file())
 
 
@@ -284,8 +290,8 @@ class TestSetupTools(Base):
     def src(self, body="{}"):
         s = self.tmp / "src"
         s.mkdir(exist_ok=True)
-        (s / "package.json").write_text(body)
-        (s / "package-lock.json").write_text("{}")
+        (s / "package.json").write_text(body, encoding="utf-8")
+        (s / "package-lock.json").write_text("{}", encoding="utf-8")
         return s
 
     def test_plugin_installs_into_the_tools_dir_and_is_idempotent(self):
@@ -294,16 +300,16 @@ class TestSetupTools(Base):
         with mock.patch.object(setup, "npm", self.fake_npm(calls)), contextlib.redirect_stdout(io.StringIO()):
             self.assertTrue(setup.step_tools(dest, ("docx",), "Tools", False, ["--omit=optional"], src=src))
             self.assertEqual(calls, [("ci", dest)])
-            self.assertEqual((dest / "package.json").read_text(), "{}")
+            self.assertEqual((dest / "package.json").read_text(encoding="utf-8"), "{}")
             self.assertTrue((dest / setup.HASH).is_file())
             self.assertTrue(setup.step_tools(dest, ("docx",), "Tools", False, src=src))      # nothing changed: no npm
             self.assertEqual(len(calls), 1)
-            (src / "package.json").write_text('{"dependencies": {"docx": "^10"}}')            # an update changed the deps
+            (src / "package.json").write_text('{"dependencies": {"docx": "^10"}}', encoding="utf-8")            # an update changed the deps
             self.assertFalse(setup.step_tools(dest, ("docx",), "Tools", True, src=src))      # --check says so, changes nothing
             self.assertEqual(len(calls), 1)
             self.assertTrue(setup.step_tools(dest, ("docx",), "Tools", False, src=src))
             self.assertEqual([c[0] for c in calls], ["ci", "ci"])
-            self.assertIn("^10", (dest / "package.json").read_text())
+            self.assertIn("^10", (dest / "package.json").read_text(encoding="utf-8"))
 
     def test_falls_back_to_install_when_ci_fails(self):
         self.plugin()
@@ -337,7 +343,7 @@ class TestSetupTools(Base):
         self.assertEqual(st.call_args.args[0], self.data / "tools")
         self.assertEqual(st.call_args.kwargs["src"], setup.DOCS)
         pw.assert_called_once()
-        self.assertEqual((self.data / ".harness_root").read_text().strip(), str(self.cache))
+        self.assertEqual((self.data / ".harness_root").read_text(encoding="utf-8").strip(), str(self.cache))
         calls = []
         with mock.patch.object(setup, "npm", self.fake_npm(calls)), mock.patch("shutil.which", return_value=None), \
                 contextlib.redirect_stdout(io.StringIO()):
@@ -383,7 +389,7 @@ class TestNodeCalls(Base):
             captured.update(kw)
             return subprocess.CompletedProcess(cmd, 0, '{"outcome": "dry-run"}', "")
         cv, letter = self.tmp / "cv.pdf", self.tmp / "l.pdf"
-        cv.write_text(""); letter.write_text("")
+        cv.write_text("", encoding="utf-8"); letter.write_text("", encoding="utf-8")
         job = {"key": "seek:1", "status": "prepared", "platform": "seek", "cv": str(cv), "letter": str(letter), "title": "T"}
         with mock.patch.object(apply, "load_state", return_value={"mode": "dry-run"}), mock.patch.object(apply, "load", return_value=[job]), \
                 mock.patch.object(apply, "set_status"), mock.patch.object(apply, "quota", return_value={}), \

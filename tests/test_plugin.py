@@ -17,7 +17,7 @@ CACHE = Path("/home/x/.claude/plugins/cache/100founts/job-harness/0.1.0")
 
 
 def load(rel):
-    return json.loads((ROOT / rel).read_text())
+    return json.loads((ROOT / rel).read_text(encoding="utf-8"))
 
 
 class TestManifests(unittest.TestCase):
@@ -51,7 +51,7 @@ class TestManifests(unittest.TestCase):
         self.assertEqual(e["version"], common.HARNESS_VERSION)
 
     def test_start_skill(self):
-        t = (ROOT / ".claude/skills/job-start/SKILL.md").read_text()
+        t = (ROOT / ".claude/skills/job-start/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("name: job-start", t)
         for rule in ("Truthfulness", "Sealed approvals", "Dry-run by default", "Never delete"):
             self.assertIn(rule, t)
@@ -116,8 +116,8 @@ class TestSetting(Env):
         data, root = self.tmp / "data", self.tmp / "root"
         (root / ".claude").mkdir(parents=True)
         data.mkdir()
-        (root / ".claude/settings.local.json").write_text(json.dumps({"env": {"JOB_X": "repo", "JOB_Y": "repo"}}))
-        (data / "settings.json").write_text(json.dumps({"env": {"JOB_X": "data", "JOB_Z": "data"}}))
+        (root / ".claude/settings.local.json").write_text(json.dumps({"env": {"JOB_X": "repo", "JOB_Y": "repo"}}), encoding="utf-8")
+        (data / "settings.json").write_text(json.dumps({"env": {"JOB_X": "data", "JOB_Z": "data"}}), encoding="utf-8")
         os.environ["JOB_DATA_DIR"] = str(data)
         with unittest.mock.patch.object(common, "ROOT", root):
             self.assertEqual(common.setting("JOB_X", "d"), "data")      # data dir beats the repo's local settings
@@ -129,7 +129,7 @@ class TestSetting(Env):
     def test_clone_still_reads_local_settings(self):
         root = self.tmp / "root"
         (root / ".claude").mkdir(parents=True)
-        (root / ".claude/settings.local.json").write_text(json.dumps({"env": {"JOB_X": "repo"}}))
+        (root / ".claude/settings.local.json").write_text(json.dumps({"env": {"JOB_X": "repo"}}), encoding="utf-8")
         with unittest.mock.patch.object(common, "ROOT", root):
             self.assertEqual(common.setting("JOB_X", "d"), "repo")
 

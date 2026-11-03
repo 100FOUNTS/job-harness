@@ -6,11 +6,16 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import urllib.error
 import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
+
+for _s in (sys.stdout, sys.stderr):      # Windows defaults to cp1252 and crashes on arrows and emoji
+    if hasattr(_s, "reconfigure") and (_s.encoding or "").lower().replace("-", "") != "utf8":
+        _s.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parent.parent
 HARNESS_VERSION = "0.1.0"
@@ -107,9 +112,9 @@ def remember_root() -> None:
         return
     f = data_dir() / ".harness_root"
     try:
-        if not f.is_file() or f.read_text().strip() != str(ROOT):
+        if not f.is_file() or f.read_text(encoding="utf-8").strip() != str(ROOT):
             f.parent.mkdir(parents=True, exist_ok=True)
-            f.write_text(str(ROOT) + "\n")
+            f.write_text(str(ROOT) + "\n", encoding="utf-8")
     except OSError:
         pass
 
@@ -132,13 +137,13 @@ def read_json(path: Path, default: Any = None) -> Any:
         if default is not None:
             return default
         raise SystemExit(f"Missing file: {path}")
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def save_json(path: Path, data: Any) -> Path:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return path
 
 

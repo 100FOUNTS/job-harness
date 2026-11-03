@@ -26,13 +26,13 @@ def poppler_ready() -> bool:
 
 
 def _node(path: Path, mode: str) -> str:
-    r = subprocess.run(["node", str(DOCS / "pdftext.js"), str(path), mode], capture_output=True, text=True,
+    r = subprocess.run(["node", str(DOCS / "pdftext.js"), str(path), mode], capture_output=True, encoding="utf-8",
                        timeout=120, cwd=DOCS, env=node_env())
     return r.stdout if r.returncode == 0 else ""      # a corrupt or missing file reads as empty, like Poppler
 
 
 def _poppler(cmd: list[str]) -> str:
-    return subprocess.run(cmd, capture_output=True, text=True).stdout
+    return subprocess.run(cmd, capture_output=True, encoding="utf-8").stdout
 
 
 def pages(path: Path) -> int:

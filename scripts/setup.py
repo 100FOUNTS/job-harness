@@ -67,7 +67,7 @@ def step_tools(folder: Path, modules: tuple[str, ...], what: str, check: bool, e
     update changed the dependencies."""
     src = src or folder
     hf = folder / HASH
-    stale = folder != src and (not hf.is_file() or hf.read_text().strip() != pkg_hash(src))
+    stale = folder != src and (not hf.is_file() or hf.read_text(encoding="utf-8").strip() != pkg_hash(src))
     if all((folder / "node_modules" / m).exists() for m in modules) and not stale:
         return say(True, f"{what} installed")
     if check:
@@ -84,7 +84,7 @@ def step_tools(folder: Path, modules: tuple[str, ...], what: str, check: bool, e
                 shutil.copyfile(src / name, folder / name)
         ok = (src / "package-lock.json").is_file() and npm(["ci", *args], folder) or npm(["install", *args], folder)
         if ok:
-            hf.write_text(pkg_hash(src) + "\n")
+            hf.write_text(pkg_hash(src) + "\n", encoding="utf-8")
     return say(ok, f"{what} installed" if ok else f"{what}: npm install failed in {folder} (check your internet connection and retry)")
 
 

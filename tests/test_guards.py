@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def run_hook(payload, cwd=None):
     env = os.environ | {"CLAUDE_PROJECT_DIR": str(ROOT)}
     return subprocess.run([sys.executable, str(ROOT / "hooks/gate.py")], input=json.dumps(payload),
-                          capture_output=True, text=True, env=env, cwd=cwd or tempfile.gettempdir())
+                          capture_output=True, encoding="utf-8", env=env, cwd=cwd or tempfile.gettempdir())
 
 
 def bash(cmd):
@@ -88,13 +88,13 @@ class TestExistingBehaviours(unittest.TestCase):
 
     def test_garbage_input_does_not_crash(self):
         env = os.environ | {"CLAUDE_PROJECT_DIR": str(ROOT)}
-        r = subprocess.run([sys.executable, str(ROOT / "hooks/gate.py")], input="not json", capture_output=True, text=True, env=env)
+        r = subprocess.run([sys.executable, str(ROOT / "hooks/gate.py")], input="not json", capture_output=True, encoding="utf-8", env=env)
         self.assertEqual(r.returncode, 0)
 
 
 class TestSuggestedCommandsExist(unittest.TestCase):
     def test_every_job_subcommand_in_gate_messages_exists(self):
-        job = (ROOT / "bin/job").read_text()
+        job = (ROOT / "bin/job").read_text(encoding="utf-8")
         direct = set(re.findall(r'"(\w+)":\s*"\w+\.py"', job.split("DIRECT = ")[1].split("}")[0]))
         dispatched = set(re.findall(r'cmd == "(\w+)"', job))
         for tup in re.findall(r'cmd in \(([^)]*)\)', job):
@@ -102,12 +102,12 @@ class TestSuggestedCommandsExist(unittest.TestCase):
         known = direct | dispatched
         self.assertTrue({"sign", "gate", "state", "facts", "track", "doctor", "review"} <= known, known)
         for src in ("hooks/gate.py", "scripts/gates.py", "scripts/status.py", "scripts/state.py"):
-            for group in re.findall(r"(?:`(?:! )?(?:bin/)?|bin/)job ((?:[a-z]+\|)*[a-z]+)\b", (ROOT / src).read_text()):
+            for group in re.findall(r"(?:`(?:! )?(?:bin/)?|bin/)job ((?:[a-z]+\|)*[a-z]+)\b", (ROOT / src).read_text(encoding="utf-8")):
                 for sub in group.split("|"):
                     self.assertIn(sub, known, f"{src} suggests `job {sub}`")
 
     def test_bin_job_dispatches_to_existing_scripts(self):
-        job = (ROOT / "bin/job").read_text()
+        job = (ROOT / "bin/job").read_text(encoding="utf-8")
         for script in re.findall(r'"(\w+\.py)"', job):
             self.assertTrue((ROOT / "scripts" / script).exists(), script)
 
@@ -115,19 +115,19 @@ class TestSuggestedCommandsExist(unittest.TestCase):
 class TestLauncher(unittest.TestCase):
     @unittest.skipUnless(shutil.which("sh"), "sh not available")
     def test_py_sh_finds_an_interpreter(self):
-        r = subprocess.run(["sh", str(ROOT / "hooks/py.sh"), "-c", "print('ok')"], capture_output=True, text=True)
-        self.assertEqual((r.returncode, r.stdout.strip()), (0, "ok"), r.stderr)
+        r = subprocess.run(["sh", str(ROOT / "hooks/py.sh"), "-c", "print(6*7)"], capture_output=True, encoding="utf-8")      # no quotes: sh on Windows eats them
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, "42"), r.stderr)
 
     @unittest.skipUnless(shutil.which("sh"), "sh not available")
     def test_py_sh_runs_the_hook(self):
         env = os.environ | {"CLAUDE_PROJECT_DIR": str(ROOT)}
         payload = json.dumps({"tool_name": "Read", "tool_input": {"file_path": "/x/.env"}})
         r = subprocess.run(["sh", str(ROOT / "hooks/py.sh"), str(ROOT / "hooks/gate.py")], input=payload,
-                           capture_output=True, text=True, env=env)
+                           capture_output=True, encoding="utf-8", env=env)
         self.assertEqual(r.returncode, 2)
 
     def test_settings_point_to_the_launcher_and_files_exist(self):
-        s = json.loads((ROOT / ".claude/settings.json").read_text())
+        s = json.loads((ROOT / ".claude/settings.json").read_text(encoding="utf-8"))
         cmds = [h["command"] for ev in s["hooks"].values() for g in ev for h in g["hooks"]]
         self.assertTrue(cmds and all("hooks/py.sh" in c for c in cmds), cmds)
         self.assertIn("Read(./.browser/**)", s["permissions"]["deny"])
@@ -141,8 +141,8 @@ class TestApprovalEvidence(unittest.TestCase):
         os.environ["JOB_CANDIDATES_DIR"] = str(self.tmp)
         shutil.copytree(ROOT / "templates/candidate", self.tmp / "ana")
         (self.tmp / "ana/approvals").mkdir()
-        (self.tmp / "ana/facts.json").write_text(json.dumps({"claims": [], "allow": []}))
-        (self.tmp / "ana/cv.md").write_text("Environmental engineer. Reduced waste by 77%.")
+        (self.tmp / "ana/facts.json").write_text(json.dumps({"claims": [], "allow": []}), encoding="utf-8")
+        (self.tmp / "ana/cv.md").write_text("Environmental engineer. Reduced waste by 77%.", encoding="utf-8")
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -157,7 +157,7 @@ class TestApprovalEvidence(unittest.TestCase):
         text = gates.checklist("ana", g)
         self.assertIn("✓ cv.md: unchanged", text)
         self.assertIn("✗", text)                          # 77% is not in facts.json
-        (self.tmp / "ana/cv.md").write_text("edited")
+        (self.tmp / "ana/cv.md").write_text("edited", encoding="utf-8")
         self.assertIn("✗ cv.md: CHANGED", gates.checklist("ana", g))
         gates.request("ana", "report", ["cv.md"], "r")
         old = gates.find("ana", gid)

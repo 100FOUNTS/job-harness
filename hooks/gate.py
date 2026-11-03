@@ -30,6 +30,9 @@ from pathlib import Path
 HARNESS = Path(__file__).resolve().parent.parent
 ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR", HARNESS))
 sys.path.insert(0, str(HARNESS / "scripts"))
+for _s in (sys.stdin, sys.stdout, sys.stderr):      # Windows pipes default to cp1252: Claude Code speaks UTF-8
+    if hasattr(_s, "reconfigure") and (_s.encoding or "").lower().replace("-", "") != "utf8":
+        _s.reconfigure(encoding="utf-8", errors="replace")
 JOB_CMD = re.compile(r"(^|[\s;&|(])(\S*/)?job(\.cmd)?\s")
 
 BOOKKEEPING = re.compile(r"candidates/[^/]+/(state\.json|facts\.json|tracker\.json|jobs\.db|approvals/)")
@@ -136,10 +139,10 @@ def main() -> None:
         pass
 
     if tool in ("Read", "Grep", "Glob"):
-        target = str(inp.get("file_path") or inp.get("path") or inp.get("pattern") or "")
+        target = str(inp.get("file_path") or inp.get("path") or inp.get("pattern") or "").replace("\\", "/")
         if SECRET.search(target):
             block("Do not read secrets. Use `job doctor` to see what is configured.")
-        if any(SECRET_DIR.search(str(inp.get(k) or "")) for k in ("file_path", "path", "glob") + (("pattern",) if tool == "Glob" else ())):
+        if any(SECRET_DIR.search(str(inp.get(k) or "").replace("\\", "/")) for k in ("file_path", "path", "glob") + (("pattern",) if tool == "Glob" else ())):
             block("Do not read browser profiles or SSH/AWS keys: they hold session cookies and credentials.")
     if tool in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
         fp = str(inp.get("file_path") or inp.get("notebook_path") or "")
@@ -151,9 +154,10 @@ def main() -> None:
             block("Do not write a script that signs approvals: signatures are given by the person.")
     if tool == "Bash":
         cmd = str(inp.get("command", ""))
-        if SECRET.search(cmd) and re.search(r"\b(cat|less|head|tail|grep|source|env|printenv|open)\b", cmd):
+        slashed = cmd.replace("\\", "/")             # Windows paths
+        if SECRET.search(slashed) and re.search(r"\b(cat|less|head|tail|grep|source|env|printenv|open)\b", cmd):
             block("Do not read or dump secrets.")
-        if SECRET_DIR.search(cmd) and SECRET_DIR_READ.search(cmd):
+        if SECRET_DIR.search(slashed) and SECRET_DIR_READ.search(cmd):
             block("Do not read browser profiles or SSH/AWS keys: they hold session cookies and credentials.")
         if SIGN.search(cmd.replace("\\\n", " ")) and ("--by-agent" not in cmd or "--confirm" in cmd):
             block("Human signatures are given by the person: they run `job sign <slug> <id>` in their terminal, "

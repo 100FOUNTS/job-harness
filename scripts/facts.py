@@ -56,7 +56,7 @@ def extract_text(path: Path) -> str:
                 [walk(v) for v in x]
         walk(read_json(path))
         return "\n".join(out)
-    return path.read_text()
+    return path.read_text(encoding="utf-8")
 
 
 def known_values(f: dict[str, Any]) -> set[str]:

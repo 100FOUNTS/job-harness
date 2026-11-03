@@ -61,7 +61,7 @@ def main() -> None:
     day = a.date or today()
     md = build(a.slug, day)
     p = run_dir(a.slug, day) / "report.md"
-    p.write_text(md)
+    p.write_text(md, encoding="utf-8")
     print(p)
     if a.notify:
         apps = [x for x in load(a.slug) if x["date"] == day]

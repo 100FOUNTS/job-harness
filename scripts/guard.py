@@ -55,7 +55,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("file")
     a = ap.parse_args()
-    _, flags = clean(Path(a.file).read_text(errors="ignore"))
+    _, flags = clean(Path(a.file).read_text(errors="ignore", encoding="utf-8"))
     print(json.dumps({"flags": flags, "suspicious": suspicious(flags)}, indent=2))
 
 

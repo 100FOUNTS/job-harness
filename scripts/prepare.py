@@ -200,7 +200,7 @@ def fill_letter(tpl: dict[str, Any], job: dict[str, Any], hits: list[str], track
     source = "SEEK" if job["platform"] == "seek" else "LinkedIn"
     focus = focus_phrases(hits, job, track, role)
     strengths = track.get("letter_strengths", "practical experience, careful documentation and a reliable approach")
-    l["date"] = date.today().strftime("%-d %B %Y")
+    l["date"] = f"{date.today().day} {date.today():%B %Y}"
     l["recipient"] = ["Hiring Manager", company, job.get("location", "")]
     l["salutation"] = "Dear Hiring Manager"
     l["re"] = f"Re: {role}"
@@ -375,19 +375,19 @@ def write_index(pkg: Path, items: list[dict[str, Any]], slug: str) -> None:
             f"# {x['title']} — {x['company']}\n\n- {L['what']}: {n['role']}\n- {L['fits']}: {n['fits']}\n- {L['odds']}: {prob}\n"
             f"- {L['watch']}: {n['watch']}\n- {L['apply']}: {n['how']}\n"
             + (f"- {L['match']}: {n['coverage']}\n" if n.get("coverage") else "")
-            + (f"- {L['sponsor']}: {n['sponsor']}\n" if n.get("sponsor") else "") + f"- {L['ad']}: {x['url']}\n\n{L['upload']}\n")
+            + (f"- {L['sponsor']}: {n['sponsor']}\n" if n.get("sponsor") else "") + f"- {L['ad']}: {x['url']}\n\n{L['upload']}\n", encoding="utf-8")
         cards.append(f"<li style='margin-bottom:14px'><b>{x['n']}. {html.escape(x['title'])}</b> — {html.escape(x['company'])}"
                      f"<br><i>{html.escape(n['role'])}</i><br>✅ {html.escape(n['fits'])}<br>🎯 {L['odds']}: {html.escape(prob)}"
                      f"<br>⚠️ {html.escape(n['watch'])}"
                      + (f"<br>🔑 {L['match']}: {html.escape(n['coverage'])}" if n.get("coverage") else "")
                      + (f"<br>🛂 {L['sponsor']}: {html.escape(n['sponsor'])}" if n.get("sponsor") else "") +
                      f"<br>📝 {html.escape(n['how'])} · <a href='{x['url']}'>{L['open_ad']}</a> · <a href='{x['dir']}/'>{L['folder']}</a></li>")
-    pkg.joinpath(L["summary_file"]).write_text("\n".join(md))
+    pkg.joinpath(L["summary_file"]).write_text("\n".join(md), encoding="utf-8")
     pkg.joinpath("index.html").write_text(
         f"<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>{L['title']} {day}</title>"
         f"<body style='font-family:system-ui;max-width:760px;margin:auto;padding:16px'><h2>{L['title']} · {day}</h2>"
         f"<p>{html.escape(L['howto'])}</p>"
-        f"<ol style='list-style:none;padding:0;line-height:1.45'>{''.join(cards)}</ol></body>")
+        f"<ol style='list-style:none;padding:0;line-height:1.45'>{''.join(cards)}</ol></body>", encoding="utf-8")
 
 
 def main() -> None:

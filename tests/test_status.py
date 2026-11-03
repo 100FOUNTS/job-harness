@@ -48,7 +48,7 @@ class State(Base):
 
     def test_run_lock_means_working_and_a_stale_one_does_not(self):
         from run_prepare import lock_path
-        lock = lock_path("ana"); lock.parent.mkdir(exist_ok=True); lock.write_text("1")
+        lock = lock_path("ana"); lock.parent.mkdir(exist_ok=True); lock.write_text("1", encoding="utf-8")
         self.assertEqual(self.label()["label"], "Working")
         old = lock.stat().st_mtime - 7 * 3600
         os.utime(lock, (old, old))
@@ -74,7 +74,7 @@ class State(Base):
         d = panel.data("ana")
         self.assertEqual(d["state"]["label"], "Up to date")
         self.assertTrue(d["state"]["why"] and d["state"]["action"])
-        self.assertIn('id="state"', panel.PAGE.read_text())
+        self.assertIn('id="state"', panel.PAGE.read_text(encoding="utf-8"))
 
 
 class DocsErrors(Base):
@@ -104,7 +104,7 @@ class Lessons(Base):
         rows += [{"kind": "platform", "area": "seek", "lesson": "seek dismissed", "candidate": "", "status": "dismissed"},
                  {"kind": "harness", "area": "docs", "lesson": "docs rule", "candidate": ""},
                  {"kind": "candidate", "area": "seek", "lesson": "about a person", "candidate": "ana"}]
-        self.log.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
+        self.log.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
 
     def tearDown(self):
         self.patch.stop()
@@ -131,10 +131,10 @@ class Lessons(Base):
 
     def test_set_status_by_number_and_pattern_keeps_other_lines(self):
         import learn
-        before = self.log.read_text().splitlines()
+        before = self.log.read_text(encoding="utf-8").splitlines()
         with unittest.mock.patch.object(sys, "argv", ["learn", "set-status", "1", "applied"]), redirect_stdout(io.StringIO()):
             learn.main()
-        after = self.log.read_text().splitlines()
+        after = self.log.read_text(encoding="utf-8").splitlines()
         self.assertEqual(json.loads(after[0])["status"], "applied")
         self.assertEqual(after[1:], before[1:])
 
@@ -143,9 +143,9 @@ class Lessons(Base):
         with unittest.mock.patch.object(sys, "argv", ["learn", "log", "--kind", "harness", "--area", "docs", "--lesson", "x",
                                                       "--candidate", "ana", "--pattern", "p"]), redirect_stdout(io.StringIO()):
             learn.main()
-        last = json.loads(self.log.read_text().splitlines()[-1])
+        last = json.loads(self.log.read_text(encoding="utf-8").splitlines()[-1])
         self.assertEqual((last["candidate"], last["pattern"], last["status"]), ("", "p", "active"))
-        name = json.loads((self.d / "intake.json").read_text())["name"]
+        name = json.loads((self.d / "intake.json").read_text(encoding="utf-8"))["name"]
         if len(name) >= 5:
             with unittest.mock.patch.object(sys, "argv", ["learn", "log", "--kind", "harness", "--area", "docs",
                                                           "--lesson", f"{name} hated it"]):

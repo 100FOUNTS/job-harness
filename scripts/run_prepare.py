@@ -62,7 +62,7 @@ def acquire(path: Path, stale_hours: float = STALE_HOURS) -> bool:
             except OSError:
                 pass
             continue
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(str(os.getpid()))
         return True
     return False
