@@ -3,16 +3,20 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-22c55e.svg)](LICENSE)
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776ab.svg)
 ![Claude Code](https://img.shields.io/badge/built%20for-Claude%20Code-d97757.svg)
+![CI: macOS · Windows · Linux](https://github.com/100FOUNTS/job-harness/actions/workflows/ci.yml/badge.svg)
+[![Buy me a coffee](https://img.shields.io/badge/%E2%98%95%20Buy%20me%20a%20coffee-f06f3a.svg)](https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00)
 
 A **Claude Code** harness for job seekers in **Australia**. You give it a folder with your CV and certificates. It helps you build an honest profile and every day it finds new jobs on SEEK, LinkedIn and WA Government Jobs, ranks them, and prepares a CV and cover letter for the best ones. You open the folder (or a local board), click Apply on the ad and upload the files.
 
 New to the terminal? Start with **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)**. Prefer Spanish? **[docs/es/README.md](docs/es/README.md)**.
 
+<p align="center"><img src="docs/assets/panel.png" alt="The local panel: today's ads to apply to with their score, Open ad and I applied buttons; columns for Applied, Interview, Offer and Closed; a floating Buy me a coffee button. Sample data for the fictional candidate." width="900"><br><sub>The local panel (<code>job panel</code>), with sample data for the fictional candidate.</sub></p>
+
 <p align="center">
   <a href="https://100founts.github.io/job-harness/daily-run.html">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="docs/assets/daily-run-dark.png">
-      <img src="docs/assets/daily-run-light.png" alt="The daily run: a schedule starts the scripts at 09:00; Discover reads new ads from SEEK and LinkedIn; Triage applies the person's filters with the full ad text; Rank + prepare scores fit and odds; Document checks verify figures and rules; the Daily package goes to the person, who applies. Only in easy mode, a signed and intact go-live seal lets SEEK Quick Apply submit." width="900">
+      <img src="docs/assets/daily-run-light.png" alt="The daily run: a schedule starts the scripts at 09:00; Discover reads new ads from SEEK, LinkedIn and WA Government Jobs; Triage applies the person's filters with the full ad text; Rank + prepare scores fit and odds; Document checks verify figures and rules; the Daily package goes to the person, who applies. Only in easy mode, a signed and intact go-live seal lets SEEK Quick Apply submit." width="900">
     </picture>
   </a>
   <br>
@@ -22,12 +26,12 @@ New to the terminal? Start with **[docs/GETTING-STARTED.md](docs/GETTING-STARTED
 ## What it does
 Every day (at the hour you choose) it:
 1. **discovers** new jobs from your saved searches (SEEK's search JSON, LinkedIn's public guest pages, WA Government Jobs: no browser, no login, no AI),
-2. **filters** them by your rules (target titles, seniority, years asked, citizenship or clearance requirements, location),
-3. **ranks** them by **fit** (your keywords found in the ad) plus **odds** (title level, years asked, fields you are not in, credentials or licences you lack, preferred places),
+2. **filters** them by your rules (target titles, seniority, years asked, citizenship or clearance requirements, location). Titles match with small variations ("web developer" also finds "Web/UI Developer"), and when a title is too generic it reads the ad and keeps it if it names your core skills,
+3. **ranks** them by **fit** (your keywords found in the ad) plus **odds** (title level, years asked, fields you are not in, credentials or licences you lack, preferred places). A whole track, or some titles, can be moved down or up,
 4. **prepares** up to 15: a CV and cover letter (docx and PDF), each checked for invented figures and rule breaks,
 5. writes a **daily package** (`~/job-packages/<slug>/<date>/`) with a summary per job: what it is, why it fits, odds, what to watch, how to apply ([see a sample](docs/sample-package.md)).
 
-You open each link, click Apply and upload the two PDFs. Nothing is sent for you unless you choose a submitting mode and sign it yourself (see *Modes*).
+Ads it dropped stay visible in the panel, with the reason; the best near misses of the week are listed under *Maybe worth a look*, and rescuing one teaches the filter a new title. You open each link, click Apply and upload the two PDFs. Nothing is sent for you unless you choose a submitting mode and sign it yourself (see *Modes*).
 
 ## What it never does
 - It never solves captchas, creates accounts, types passwords or accepts new terms on your behalf. Those steps are left to you.
@@ -55,7 +59,7 @@ You open each link, click Apply and upload the two PDFs. Nothing is sent for you
 ## Install
 ### A. Claude desktop app (no terminal)
 1. Install the desktop app ([download links](https://code.claude.com/docs/en/desktop-quickstart)), sign in and open the **Code** tab. The app includes Claude Code.
-2. Add the marketplace and install the plugin. In the prompt box type `/plugin marketplace add 100FOUNTS/job-harness`, then `/plugin install job-harness@100founts`. You can also use **+ → Add plugins** to browse plugins from the marketplaces you added. *(The desktop docs describe the **+ → Add plugins** browser; they do not say whether typing `/plugin` commands works there. If it does not, run the two commands once in a terminal as in B; the terminal and the desktop app share the same plugin settings.)*
+2. Add the marketplace and install the plugin: type `/plugin marketplace add 100FOUNTS/job-harness`, then `/plugin install job-harness@100founts`, or use **+ → Add plugins**. If the app does not accept those commands, run them once in a terminal as in B: the terminal and the desktop app share the same plugins.
 3. Type `/job-harness:job-start`. Step by step: [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
 
 ### B. Claude Code in a terminal, as a plugin
@@ -64,6 +68,7 @@ claude plugin marketplace add 100FOUNTS/job-harness
 claude plugin install job-harness@100founts
 claude                      # then type: /job-harness:job-start
 ```
+Tested with Claude Code 2.1.317 on macOS.
 Installed as a plugin, the skills are namespaced: `/job-harness:job-start`, `/job-harness:job-onboard`, `/job-harness:job-daily`, `/job-harness:job-tailor`, `/job-harness:job-interview`, `/job-harness:job-learn`. The plugin's `bin/` folder is on the PATH of Claude's shell, so `job ...` works there. Your data lives outside the plugin, in `~/job-harness-data` (or `JOB_DATA_DIR`), so updates never touch it. Open Claude Code **in that folder** each time: the safety hooks only run there.
 
 ### C. Clone (developers and current users)
@@ -204,6 +209,11 @@ Candidate folders other than `example/` and `.claude/settings.local.json` are gi
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md): when something does not work
 - [docs/es/README.md](docs/es/README.md): guía rápida en español
 - [docs/sample-package.md](docs/sample-package.md): what a daily package looks like
+
+## Support
+job-harness is free, open source and uses no paid services. If it helped your job search, a coffee keeps it going.
+
+<p align="center"><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><img src="docs/assets/buy-me-a-coffee.png" alt="Buy me a coffee: support 100 FOUNTS, who build job-harness" width="180"></a><br><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><b>☕ Buy me a coffee</b></a></p>
 
 ## License
 MIT

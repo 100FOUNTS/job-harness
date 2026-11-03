@@ -161,7 +161,8 @@ def main() -> None:
             block("Do not read browser profiles or SSH/AWS keys: they hold session cookies and credentials.")
         if SIGN.search(cmd.replace("\\\n", " ")) and ("--by-agent" not in cmd or "--confirm" in cmd):
             block("Human signatures are given by the person: they run `job sign <slug> <id>` in their terminal, "
-                  "or `! bin/job sign <slug> <id> --confirm <slug>` in Claude Code. Show them the command and wait.")
+                  f"or `! {'job' if 'plugins' in HARNESS.parts else 'bin/job'} sign <slug> <id> --confirm <slug>` in Claude Code. "
+                  "Show them the command and wait.")
         if DELETE_SHELL.search(cmd):
             block("The harness never deletes candidate data.")
         touched = shell_writes(cmd)
