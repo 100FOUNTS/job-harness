@@ -4,11 +4,14 @@
   → data/<date>/shortlist.json  {shortlist: [...], rejected: [{key, title, reason}]}
 
 Rules (all from targets.json):
-- title must match one track's `title_include` → that track is assigned (first match wins, tracks in priority order)
+- title must match one track's `title_include` (all words of a phrase in order, up to 2 other words/separators between) → that track is assigned (first match wins, tracks in priority order)
 - title must not match `exclude_title` (seniority the candidate is not targeting)
 - text must not match `exclude_text` (citizenship/PR/clearance requirements)
 - location must match `locations_include`
 Shortlisted jobs get their full description (LinkedIn guest page, SEEK GraphQL; one request each, spaced) and are re-judged.
+Generic titles that a track's `description_include` could still claim are read too, best keyword overlap first, at most
+`max_detail_fetches` per run (default 60); the rest are rejected "not read: daily reading budget" (and judged again tomorrow).
+Rejected-by-title ads carry `hits` (track keywords found in the ad text) as a near-miss score.
 A description already in jobs.db is reused instead of fetched again. Every verdict, reason and description goes to jobs.db.
 """
 from __future__ import annotations
@@ -28,17 +31,41 @@ def rx(words: list[str]) -> re.Pattern[str] | None:
     return re.compile(r"\b(" + "|".join(re.escape(w) for w in words) + r")\b", re.I) if words else None
 
 
+SEP = r"[\s/&,|()\-–]+"
+GAP = SEP + r"(?:\w+" + SEP + r"){0,2}"          # up to 2 other words (or "and", "UI"...) between the words of a phrase
+
+
+def prx(phrases: list[str]) -> re.Pattern[str] | None:
+    """Phrase matcher for titles: all words of a phrase, in order, with up to 2 other words or separators between them
+    ("web developer" ~ "Web/UI Developer", "data integration" ~ "Data and Integration Specialist"). \\b at both ends."""
+    alts = ["(?:" + GAP.join(re.escape(w) for w in re.split(r"[\s/\-–]+", p.strip()) if w) + ")" for p in phrases if p.strip()]
+    return re.compile(r"\b(" + "|".join(alts) + r")\b", re.I) if alts else None
+
+
+def hits(text: str, targets: dict[str, Any], words: bool = False) -> int:
+    """Distinct track keywords (core + support, all tracks; + description_include words if `words`) found in the text."""
+    low = text.lower()
+    terms = {w.lower() for t in targets.get("tracks", []) for k in ("core", "support") for w in t.get("keywords", {}).get(k, [])}
+    if words:
+        terms |= {w.lower() for t in targets.get("tracks", []) for w in (t.get("description_include") or {}).get("words", [])}
+    return sum(1 for w in terms if re.search(r"(?<!\w)" + re.escape(w) + r"(?!\w)", low))
+
+
+def ad_text(j: dict[str, Any]) -> str:
+    return " ".join([j.get("title", ""), j.get("teaser", ""), " ".join(j.get("bullets", [])), j.get("description", "")])
+
+
 def assign_track(title: str, tracks: list[dict[str, Any]], text: str = "") -> str | None:
     """First track (priority order) whose title_include matches and whose own exclude_title does not.
     Then `description_include` {words, min, titles}: a generic title (e.g. "Fire Planning Officer") whose ad
     mentions the track's words at least `min` times."""
     for t in tracks:
-        r, ex = rx(t.get("title_include", [])), rx(t.get("exclude_title", []))
+        r, ex = prx(t.get("title_include", [])), rx(t.get("exclude_title", []))
         if r and r.search(title) and not (ex and ex.search(title)):
             return t["id"]
     for t in tracks:
         di, ex = t.get("description_include"), rx(t.get("exclude_title", []))
-        if not di or (ex and ex.search(title)) or not (rx(di.get("titles", [])) or re.compile("")).search(title):
+        if not di or (ex and ex.search(title)) or not (prx(di.get("titles", [])) or re.compile("")).search(title):
             continue
         if len(rx(di["words"]).findall(text)) >= di.get("min", 3):
             return t["id"]
@@ -98,37 +125,67 @@ def by_description_possible(title: str, targets: dict[str, Any]) -> bool:
     """A title that a track's `description_include` could still claim once the full ad is read."""
     for t in targets["tracks"]:
         di, ex = t.get("description_include"), rx(t.get("exclude_title", []))
-        if di and not (ex and ex.search(title)) and (not di.get("titles") or rx(di["titles"]).search(title)):
+        if di and not (ex and ex.search(title)) and (not di.get("titles") or prx(di["titles"]).search(title)):
             return True
     return False
 
 
 def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
-    from discover import linkedin_detail, seek_detail
+    from discover import linkedin_detail, seek_detail, wagov_detail
+    readers = {"seek": (seek_detail, (0.8, 1.8)), "wagov": (wagov_detail, (0.8, 1.8)), "linkedin": (linkedin_detail, (1.5, 3.5))}
     targets = read_json(cand_dir(slug) / "targets.json")
     jobs = read_json(run_dir(slug, day) / "jobs.json")["new_jobs"]
     known = descriptions(slug, [j["key"] for j in jobs])        # fetched on an earlier day: no second request
     for j in jobs:
         j["description"] = j.get("description") or known.get(j["key"], "")
     short, rejected = [], []
+
+    def reject(j: dict[str, Any], why: str) -> None:
+        r = {"key": j["key"], "title": j.get("title"), "company": j.get("company"), "reason": why}
+        if why.startswith("title does not match"):
+            r["hits"] = hits(ad_text(j), targets)             # near-miss score: track keywords the ad mentions anyway
+        rejected.append(r)
+
+    def read(j: dict[str, Any]) -> tuple[str | None, str]:
+        """One spaced request for the full ad (empty on failure: teaser + bullets still judged), then judged again."""
+        fn, (lo, hi) = readers[j["platform"]]
+        j["description"] = fn(j["id"])
+        time.sleep(random.uniform(lo, hi))
+        track, why = judge(j, targets)
+        if track and not j["description"] and j["platform"] == "linkedin":
+            track, why = None, "description unavailable (LinkedIn rate limit): retry tomorrow"
+        return track, why
+
+    direct, maybes = [], []
     for j in sorted(jobs, key=lambda x: x.get("listed", ""), reverse=True):
         track, why = judge(j, targets)
-        maybe = why.startswith("title does not match") and by_description_possible(j.get("title", ""), targets)
-        if (track or maybe) and len(short) < max_n:
-            if j["platform"] == "seek" and not j.get("description"):
-                j["description"] = seek_detail(j["id"])          # empty on failure: teaser + bullets still judged
-                time.sleep(random.uniform(0.8, 1.8))
-                track, why = judge(j, targets)
-            elif j["platform"] == "linkedin" and not j.get("description"):
-                j["description"] = linkedin_detail(j["id"])
-                time.sleep(random.uniform(1.5, 3.5))
-                track, why = judge(j, targets)            # re-check with the full text
-                if track and not j["description"]:
-                    track, why = None, "description unavailable (LinkedIn rate limit): retry tomorrow"
+        if (not track and why.startswith("title does not match") and not j.get("description")
+                and j["platform"] in readers and by_description_possible(j.get("title", ""), targets)):
+            maybes.append(j)
+        else:
+            direct.append((j, track, why))
+    for j, track, why in direct:                                # titles that already match a track: no reading budget
+        if track and len(short) < max_n:
+            if not j.get("description") and j["platform"] in readers:
+                track, why = read(j)
             if track:
                 short.append(j | {"track": track}); continue
-        rejected.append({"key": j["key"], "title": j.get("title"), "company": j.get("company"),
-                         "reason": why if not track else "over shortlist cap"})
+        reject(j, why if not track else "over shortlist cap")
+    # Generic titles whose ad might still qualify: most promising first, within the daily reading budget
+    budget = targets.get("max_detail_fetches", 60)
+    maybes.sort(key=lambda x: hits(ad_text(x), targets, words=True), reverse=True)     # stable: recency breaks ties
+    for j in maybes:
+        if len(short) >= max_n:
+            reject(j, "title does not match any target track")
+        elif budget <= 0:
+            reject(j, "title does not match any target track (not read: daily reading budget)")
+        else:
+            budget -= 1
+            track, why = read(j)
+            if track:
+                short.append(j | {"track": track})
+            else:
+                reject(j, why)
     # The same ad on the other platform can be shorter (SEEK often drops the eligibility paragraph LinkedIn keeps):
     # a twin excluded for a requirement takes its shortlisted copy with it.
     # Remembered across days: the readable twin may not be readable tomorrow (LinkedIn 429).

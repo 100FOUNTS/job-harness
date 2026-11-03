@@ -15,7 +15,8 @@ import subprocess
 import time
 from pathlib import Path
 
-from common import ROOT, cand_dir, today
+import osutil
+from common import ROOT, apply_tools_dir, browser_dir, cand_dir, node_env, today
 from gates import valid_approval
 from state import load_state
 from tracker import load, quota, set_status
@@ -24,14 +25,15 @@ APPLY = ROOT / "apply"
 
 
 def profile_dir(slug: str) -> Path:
-    d = ROOT / ".browser" / slug
+    d = browser_dir(slug)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
 def login(slug: str, site: str) -> None:
     url = {"seek": "https://www.seek.com.au/oauth/login", "linkedin": "https://www.linkedin.com/login"}[site]
-    subprocess.Popen(["open", "-na", "Google Chrome", "--args", f"--user-data-dir={profile_dir(slug)}", url])
+    if not osutil.open_chrome(url, profile_dir(slug)):
+        raise SystemExit("Google Chrome was not found on this machine. Install it, then run this again.")
     print(f"Chrome opened with the dedicated profile ({profile_dir(slug)}). The person logs in once; then close that window.")
 
 
@@ -48,7 +50,8 @@ def apply(slug: str, force_dry: bool) -> list[dict]:
         job_id = a["key"].split(":", 1)[1]
         r = subprocess.run(["node", str(APPLY / "apply_seek.js"), slug, job_id, a["cv"], a["letter"],
                             "submit" if live else "dry", str(profile_dir(slug)), a["key"]],
-                           capture_output=True, text=True, cwd=APPLY, timeout=600)
+                           capture_output=True, encoding="utf-8", cwd=APPLY, timeout=600,
+                           env=node_env(apply_tools_dir()))
         try:
             res = json.loads(r.stdout.strip().splitlines()[-1])
         except Exception:

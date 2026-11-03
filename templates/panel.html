@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applications</title>
+<style>
+/* Applications panel. Blue-grey ground, one blue for actions and selection, amber only for what closes or needs
+   action today, dark orange for gaps. System font (no network), tabular numerals. */
+:root {
+  --ground: #eef1f3; --surface: #ffffff; --sunken: #e3e8eb; --ink: #18232b; --muted: #5a6872; --faint: #8a969e;
+  --line: #d5dce1; --line-strong: #c3ccd2;
+  --accent: #1f5b8f; --accent-ink: #ffffff; --accent-soft: #e6eff7; --accent-hover: #174a75;
+  --urgent-bg: #fff4d6; --urgent-line: #e9c46a; --urgent-ink: #4d3800;
+  --gap: #8a4b00; --have: #2f6b3a; --closed-card: #f6f8f9;
+  --shadow: 0 1px 3px rgba(24,35,43,.08); --shadow-lift: 0 10px 28px rgba(24,35,43,.18);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #0f1519; --surface: #172026; --sunken: #1d2830; --ink: #e6ecef; --muted: #9aa8b1; --faint: #74838c;
+  --line: #2a3740; --line-strong: #3a4954;
+  --accent: #7fb3dd; --accent-ink: #0f1519; --accent-soft: #1b3346; --accent-hover: #a3c9e8;
+  --urgent-bg: #3a2c0f; --urgent-line: #8a6a1f; --urgent-ink: #f3d58a;
+  --gap: #f0a865; --have: #8fd19e; --closed-card: #141c21;
+  --shadow: 0 1px 3px rgba(0,0,0,.4); --shadow-lift: 0 10px 28px rgba(0,0,0,.5); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --ground: #0f1519; --surface: #172026; --sunken: #1d2830; --ink: #e6ecef; --muted: #9aa8b1; --faint: #74838c;
+  --line: #2a3740; --line-strong: #3a4954;
+  --accent: #7fb3dd; --accent-ink: #0f1519; --accent-soft: #1b3346; --accent-hover: #a3c9e8;
+  --urgent-bg: #3a2c0f; --urgent-line: #8a6a1f; --urgent-ink: #f3d58a;
+  --gap: #f0a865; --have: #8fd19e; --closed-card: #141c21;
+  --shadow: 0 1px 3px rgba(0,0,0,.4); --shadow-lift: 0 10px 28px rgba(0,0,0,.5); color-scheme: dark }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--ground); color: var(--ink); font: 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+::selection { background: var(--accent); color: var(--accent-ink); }
+a { color: var(--accent); text-underline-offset: 2px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.num { font-variant-numeric: tabular-nums; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Header */
+.top { background: var(--surface); border-bottom: 1px solid var(--line); padding: 12px 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; position: sticky; top: 0; z-index: 20; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.mark { width: 34px; height: 34px; border-radius: 8px; background: var(--ink); color: var(--ground); display: grid; place-items: center; font-weight: 800; letter-spacing: -.02em; }
+.brand b { display: block; font-size: 16px; }
+.brand small { display: block; color: var(--muted); font-size: 12px; }
+.field { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+select, .input { padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; border: 1px solid var(--line-strong); background: var(--sunken); color: var(--muted); cursor: help; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill[data-state="Working"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.pill[data-state="Needs your decision"] { background: var(--urgent-bg); color: var(--urgent-ink); border-color: var(--urgent-line); }
+.pill[data-state="Ready"] { background: color-mix(in srgb, var(--have) 16%, var(--surface)); color: var(--have); border-color: var(--have); }
+.pill[data-state="Up to date"] { background: var(--surface); color: var(--muted); }
+.tabs { display: flex; gap: 4px; background: var(--ground); padding: 4px; border-radius: 10px; }
+.tab { border: 0; background: transparent; padding: 7px 14px; border-radius: 7px; color: var(--muted); font-weight: 600; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+.tab .count { color: var(--faint); font-weight: 600; margin-left: 2px; }
+.search { flex: 1 1 240px; max-width: 380px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 0 10px; background: var(--surface); color: var(--muted); }
+.search input { border: 0; outline: 0; padding: 8px 0; flex: 1; min-width: 0; background: transparent; color: var(--ink); }
+.search:focus-within { border-color: var(--accent); }
+kbd { font: 11px/1 var(--font); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; color: var(--muted); background: var(--surface); }
+.icon-btn { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px; width: 36px; height: 36px; display: grid; place-items: center; cursor: pointer; color: var(--ink); }
+
+/* Filters */
+.filters { padding: 10px 28px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filters .lbl { font-size: 12px; color: var(--muted); }
+.sep { width: 1px; height: 20px; background: var(--line); }
+.chip { font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.range { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.range input { accent-color: var(--accent); }
+.range output { font-weight: 700; color: var(--ink); min-width: 2ch; }
+
+/* Today */
+.today { padding: 18px 28px 6px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer; }
+.tile:hover { border-color: var(--line-strong); }
+.tile .k { font-size: 13px; color: var(--muted); }
+.tile .v { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+.tile .d { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.urgent { background: var(--urgent-bg); border-color: var(--urgent-line); }
+.tile.urgent .k, .tile.urgent .d, .tile.urgent .v { color: var(--urgent-ink); }
+
+/* Board */
+.board-wrap { padding: 12px 28px 28px; overflow-x: auto; }
+.board { display: grid; grid-template-columns: repeat(5, minmax(250px, 1fr)); gap: 14px; align-items: start; min-width: 1300px; }
+.col { background: var(--sunken); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-height: 120px; transition: box-shadow .15s ease, background .15s ease; }
+.col.drop { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-soft); }
+.col h2 { margin: 2px 4px; font-size: 13px; display: flex; justify-content: space-between; }
+.col h2 span { color: var(--muted); }
+.col h3.sub { margin: 6px 4px 0; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; display: flex; justify-content: space-between; border-top: 1px solid var(--line-strong); padding-top: 8px; }
+.col h3.sub:first-of-type { border-top: 0; padding-top: 0; }
+.empty { border: 1px dashed var(--line-strong); border-radius: 10px; padding: 14px 12px; font-size: 13px; color: var(--muted); text-align: center; }
+.more { border: 0; background: transparent; color: var(--accent); font-weight: 600; padding: 6px; cursor: pointer; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow); cursor: grab; position: relative; }
+.card:hover { border-color: var(--line-strong); }
+.card.focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.card.dragging { opacity: .45; }
+.card.soon { border-color: var(--urgent-line); }
+.card.done { background: var(--closed-card); box-shadow: none; }
+.card .head { display: flex; gap: 10px; align-items: flex-start; }
+.card .who { flex: 1; min-width: 0; }
+.card .t { font-weight: 700; font-size: 15px; line-height: 1.25; }
+.card .c { font-size: 13px; color: var(--muted); }
+.score { width: 40px; height: 40px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 800; flex: none; }
+.score.mid { background: var(--accent-soft); color: var(--accent); }
+.score.low { background: var(--sunken); color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.tag { padding: 2px 8px; border-radius: 999px; background: var(--ground); color: var(--muted); }
+.tag.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.meter { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.meter .row { display: flex; justify-content: space-between; }
+.meter .row b { color: var(--ink); }
+.bar { height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.bar.warn i { background: var(--urgent-line); }
+.gapline { font-size: 12px; color: var(--gap); }
+.when { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.when.urgent { color: var(--urgent-ink); background: var(--urgent-bg); border-radius: 6px; padding: 5px 8px; font-weight: 700; }
+.actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn { white-space: nowrap; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink); }
+.btn:hover { border-color: var(--faint); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.warn { background: var(--urgent-bg); border-color: var(--urgent-line); color: var(--urgent-ink); }
+.btn:disabled { opacity: .5; cursor: default; }
+.grip { margin-left: auto; color: var(--faint); border: 0; background: transparent; padding: 4px; cursor: grab; }
+
+.keys { padding: 0 28px 28px; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+
+/* Detail drawer */
+.scrim { position: fixed; inset: 0; background: rgba(15,21,25,.35); z-index: 30; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); background: var(--surface); z-index: 31; box-shadow: var(--shadow-lift); display: flex; flex-direction: column; animation: slide .18s ease-out; }
+@keyframes slide { from { transform: translateX(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+.drawer header { padding: 22px 26px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+.drawer h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+.drawer .sub { color: var(--muted); }
+.drawer .big { width: 56px; height: 56px; font-size: 20px; border-radius: 10px; }
+.dtabs { display: flex; gap: 2px; margin: 0 -26px; padding: 0 26px; }
+.dtab { border: 0; background: transparent; padding: 10px 14px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; }
+.dtab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.dbody { padding: 20px 26px 32px; overflow: auto; display: flex; flex-direction: column; gap: 22px; }
+.dbody h2 { margin: 0 0 8px; font-size: 15px; }
+.cov { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; font-size: 13px; }
+.cov div { border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+.cov b.c1 { color: var(--accent); } .cov b.c2 { color: var(--have); } .cov b.c3 { color: var(--gap); }
+.cov .gapbox { border-color: var(--urgent-line); background: var(--urgent-bg); }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; font-size: 13px; }
+.facts span { display: block; color: var(--muted); }
+.docs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.doc { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; gap: 10px; align-items: center; text-decoration: none; color: var(--ink); }
+.doc:hover { border-color: var(--accent); }
+.doc small { display: block; color: var(--muted); font-size: 12px; }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.timeline li { display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; padding-bottom: 14px; position: relative; }
+.timeline li::before { content: ""; position: absolute; left: 5px; top: 18px; bottom: 0; width: 2px; background: var(--line); }
+.timeline li:last-child::before { display: none; }
+.dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent); margin-top: 4px; background: var(--surface); position: relative; z-index: 1; }
+.timeline li:first-child .dot { background: var(--accent); }
+.timeline small { color: var(--muted); }
+.desc { white-space: pre-wrap; font-size: 14px; line-height: 1.6; max-width: 70ch; }
+textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); resize: vertical; min-height: 140px; }
+.skeleton { height: 14px; border-radius: 4px; background: var(--sunken); }
+
+/* Funnel and dropped */
+.page { max-width: 1240px; margin: 0 auto; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 20px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { margin: 0; font-size: 17px; }
+.stage { display: grid; grid-template-columns: 140px 1fr 150px; gap: 14px; align-items: center; }
+.stage .fill { height: 28px; border-radius: 6px; background: var(--accent); min-width: 4px; }
+.stage:nth-child(1) .fill { opacity: .3; } .stage:nth-child(2) .fill { opacity: .55; } .stage:nth-child(3) .fill { opacity: .8; }
+.note { padding: 12px 14px; background: var(--urgent-bg); color: var(--urgent-ink); border-radius: 8px; font-size: 13px; margin: 0; }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 8px 6px 0; }
+td { border-top: 1px solid var(--line); padding: 8px 8px 8px 0; vertical-align: top; }
+td.r, th.r { text-align: right; }
+.scroll { overflow-x: auto; }
+.banner { margin: 0; padding: 12px 14px; background: var(--accent-soft); color: var(--ink); border: 1px solid var(--accent); border-radius: 8px; font-size: 13px; }
+.maybe { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.maybe li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+.maybe li:first-child { border-top: 0; }
+.maybe .who { min-width: 0; }
+.maybe .who > a { font-weight: 600; }
+.maybe .who > span { color: var(--muted); font-size: 13px; }
+.maybe .kw { grid-column: 1; display: flex; flex-wrap: wrap; gap: 4px; }
+.maybe .kw .tag { font-size: 11px; padding: 1px 7px; }
+.maybe .btn { grid-column: 2; grid-row: 1 / span 2; }
+
+.coffee { position: fixed; right: 20px; bottom: 20px; z-index: 25; display: inline-flex; align-items: center; gap: 10px; padding: 11px 20px 11px 14px; border-radius: 999px; background: linear-gradient(135deg, #ffb36b, #f06f3a 55%, #e2553a); color: #fff; border: 0; box-shadow: 0 8px 22px rgba(240,111,58,.45), 0 2px 6px rgba(0,0,0,.18); font-weight: 800; font-size: 14px; letter-spacing: .01em; text-decoration: none; transition: transform .18s ease, box-shadow .18s ease; animation: coffee-bob 6s ease-in-out 2s infinite; }
+.coffee:hover, .coffee:focus-visible { transform: translateY(-3px) scale(1.04); box-shadow: 0 12px 30px rgba(240,111,58,.6), 0 0 0 4px rgba(255,179,107,.35); animation: none; }
+.coffee:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.coffee .mug { position: relative; width: 32px; height: 32px; display: grid; place-items: center; background: #fff; border-radius: 50%; font-size: 20px; line-height: 1; box-shadow: inset 0 -2px 0 rgba(0,0,0,.08); font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.coffee .steam { position: absolute; top: -10px; left: 50%; width: 12px; height: 10px; transform: translateX(-50%); }
+.coffee .steam i { position: absolute; bottom: 0; width: 3px; height: 8px; border-radius: 3px; background: #fff; opacity: 0; animation: coffee-steam 2.4s ease-out infinite; }
+.coffee .steam i:nth-child(1) { left: 1px; } .coffee .steam i:nth-child(2) { left: 6px; animation-delay: .8s; } .coffee .steam i:nth-child(3) { left: 11px; animation-delay: 1.6s; }
+.coffee small { display: block; font-size: 11px; font-weight: 600; opacity: .9; letter-spacing: 0; }
+@keyframes coffee-steam { 0% { opacity: 0; transform: translateY(2px) scaleY(.6); } 40% { opacity: .9; } 100% { opacity: 0; transform: translateY(-8px) scaleY(1.2); } }
+@keyframes coffee-bob { 0%, 88%, 100% { transform: none; } 91% { transform: translateY(-6px) rotate(-3deg); } 94% { transform: translateY(0) rotate(2deg); } 97% { transform: translateY(-3px); } }
+@media (max-width: 900px) { .coffee > span:last-child { display: none; } .coffee { padding: 12px; right: 14px; bottom: 14px; } }
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding: 10px 16px; border-radius: 8px; z-index: 50; box-shadow: var(--shadow-lift); }
+.help { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(15,21,25,.4); z-index: 40; }
+.help > div { background: var(--surface); border-radius: 12px; padding: 22px 26px; width: min(440px, 92vw); display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; align-items: center; }
+.help h2 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 17px; }
+
+@media (max-width: 900px) {
+  .top, .filters, .today, .board-wrap, .keys { padding-left: 16px; padding-right: 16px; }
+  .today { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .board { grid-template-columns: 1fr; min-width: 0; }
+  .range { margin-left: 0; flex-wrap: wrap; }
+  .range input { width: 140px; }
+  .tabs { max-width: 100%; overflow-x: auto; }
+  .tab { white-space: nowrap; }
+  .top > * { min-width: 0; }
+  .search { max-width: none; flex-basis: 100%; }
+  .page { padding-left: 16px; padding-right: 16px; }
+  .drawer .actions .field { margin-left: 0; }
+  .three, .cov, .docs, .facts { grid-template-columns: 1fr; }
+  .stage { grid-template-columns: 90px 1fr 90px; }
+  .keys { display: none; }
+  .btn, .chip, .tab { min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="mark" aria-hidden="true">jh</div><div><b>Applications</b><small id="sub"></small></div></div>
+  <label class="field">Candidate <select id="cand"></select></label>
+  <span class="pill" id="state" role="status" tabindex="0"></span>
+  <div class="tabs" role="tablist" aria-label="Views">
+    <button class="tab" role="tab" id="tab-board" data-view="board">Board</button>
+    <button class="tab" role="tab" id="tab-funnel" data-view="funnel">Funnel</button>
+    <button class="tab" role="tab" id="tab-companies" data-view="companies">Companies</button>
+    <button class="tab" role="tab" id="tab-dropped" data-view="dropped">Dropped <span class="count num" id="dropcount"></span></button>
+  </div>
+  <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <span class="sr">Search</span><input id="q" type="search" placeholder="Search company, role or keyword" autocomplete="off"><kbd>/</kbd></label>
+  <button class="icon-btn" id="theme" aria-label="Switch light or dark theme"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <button class="icon-btn" id="helpbtn" aria-label="Keyboard shortcuts"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
+</header>
+
+<div class="filters" id="filters" aria-label="Filters"></div>
+<section class="today" id="today" aria-label="Today"></section>
+<main id="main"></main>
+<div class="keys" id="keys"></div>
+<div id="drawer-root"></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<div id="help-root"></div>
+<div id="coffee-root"></div>
+
+<script>
+const D = __DATA__, TOKEN = "__TOKEN__";
+const COLS = [["todo", "To apply"], ["sent", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["closed", "Closed"]];
+const COL_NAME = Object.fromEntries(COLS);
+const STATUS = {shortlisted: "Shortlisted", prepared: "Package prepared", "dry-run": "Filled, not sent", "manual-review": "Needs a person",
+  submitted: "Sent by the harness", applied: "Applied", interview: "Interview", offer: "Offer", hired: "Hired",
+  rejected: "Rejected", "no-response": "No response", withdrawn: "Withdrawn", closed: "Ad closed", skipped: "Dropped", failed: "Failed"};
+const PLAT = {seek: "SEEK", linkedin: "LinkedIn", wagov: "WA Gov"};
+const PER_COL = 12;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const daysTo = iso => iso ? Math.round((new Date(iso + "T00:00:00") - today) / 864e5) : null;
+const fmt = iso => iso ? new Date(iso + "T00:00:00").toLocaleDateString("en-AU", {day: "numeric", month: "short"}) : "";
+const icon = {
+  cal: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  clock: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  ext: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+  folder: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  doc: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:var(--accent)"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+  grip: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="fill:currentColor;stroke:none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
+  x: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+};
+
+/* ---------- state ---------- */
+const S = {view: "board", city: "", plat: "", track: "", min: 0, q: "", focus: null, open: null, expanded: {}, tab: "resumen"};
+try { Object.assign(S, JSON.parse(localStorage.getItem("panel-v2") || "{}"), {open: null, focus: null, q: ""}); } catch (e) {}
+const HASH = {"#tablero": "board", "#embudo": "funnel", "#empresas": "companies", "#descartados": "dropped"};
+if (HASH[location.hash]) S.view = HASH[location.hash];
+const save = () => { try { localStorage.setItem("panel-v2", JSON.stringify({view: S.view, city: S.city, plat: S.plat, track: S.track, min: S.min, csort: S.csort, noagency: S.noagency})); } catch (e) {} };
+try { const t = localStorage.getItem("panel-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2800); }
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json", "X-Panel-Token": TOKEN}, body: JSON.stringify({slug: D.slug, ...body})});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.ok === false) throw new Error(j.error || ("error " + r.status));
+  return j;
+}
+
+/* ---------- header, filters, today ---------- */
+function header() {
+  $("#sub").textContent = `${D.name} · data as of ${D.generated}`;
+  $("#cand").innerHTML = D.candidates.map(c => `<option ${c === D.slug ? "selected" : ""}>${esc(c)}</option>`).join("");
+  const st = D.state || {};
+  $("#state").hidden = !st.label;
+  $("#state").dataset.state = st.label || "";
+  $("#state").textContent = st.label || "";
+  $("#state").title = $("#state").dataset.tip = [st.why, st.action && st.action.replace(/`/g, "")].filter(Boolean).join(" ");
+  $("#state").setAttribute("aria-label", "Status: " + (st.label || "") + ". " + $("#state").title);
+  $("#dropcount").textContent = D.dropped.length;
+  document.querySelectorAll(".tab").forEach(t => { t.setAttribute("aria-selected", t.dataset.view === S.view); t.tabIndex = t.dataset.view === S.view ? 0 : -1; });
+}
+function filters() {
+  const tracks = [...new Set(D.apps.map(a => a.track).filter(Boolean))];
+  const chip = (group, val, label) => `<button class="chip" data-f="${group}" data-v="${esc(val)}" aria-pressed="${S[group] === val}">${esc(label)}</button>`;
+  $("#filters").innerHTML = `<span class="lbl">Filter</span>${chip("city", "Perth", "Perth")}${chip("city", "Adelaide", "Adelaide")}<span class="sep"></span>`
+    + Object.entries(PLAT).map(([k, v]) => chip("plat", k, v)).join("") + `<span class="sep"></span>`
+    + tracks.map(t => chip("track", t, t.length <= 2 ? t.toUpperCase() : t[0].toUpperCase() + t.slice(1))).join("")
+    + `<label class="range">Minimum score <input id="min" type="range" min="0" max="100" step="5" value="${S.min}"><output class="num" for="min">${S.min}</output></label>`;
+}
+function todayTiles() {
+  const T = D.today, soon = T.closing_soon.map(k => D.apps.find(a => a.key === k)).filter(Boolean);
+  const f = T.followups[0];
+  $("#today").innerHTML = `
+    <button class="tile" data-go="todo"><span class="k">To apply</span><span class="v num">${T.to_apply}</span><span class="d">${T.new ? T.new + " new today" : "Nothing new today"}</span></button>
+    <button class="tile ${soon.length ? "urgent" : ""}" data-go="soon"><span class="k">Closing in 3 days</span><span class="v num">${soon.length}</span><span class="d">${soon[0] ? esc(soon[0].company + " · " + soon[0].title) : "None"}</span></button>
+    <button class="tile ${T.followups.length ? "urgent" : ""}" data-go="quiet"><span class="k">Follow-ups</span><span class="v num">${T.followups.length}</span><span class="d">${f ? esc(f.company + ", sent " + fmt(f.sent)) : "Nothing due"}</span></button>
+    <div class="tile" style="cursor:default"><span class="k">Answers to confirm</span><span class="v num">${T.pending_answers}</span><span class="d">${T.pending_answers ? "job answer " + esc(D.slug) + " pending" : "All confirmed"}</span></div>`;
+}
+
+/* ---------- board ---------- */
+function visible(a) {
+  const loc = a.location.toLowerCase();
+  if (S.city && !loc.includes(S.city.toLowerCase())) return false;
+  if (S.plat && a.platform !== S.plat) return false;
+  if (S.track && a.track !== S.track) return false;
+  if (a.col === "todo" && (a.fit ?? 0) < S.min) return false;
+  if (S.q && !(a.title + " " + a.company + " " + a.location + " " + a.gaps.join(" ")).toLowerCase().includes(S.q.toLowerCase())) return false;
+  return true;
+}
+function scoreCls(f) { return f == null ? "low" : f >= 60 ? "" : f >= 30 ? "mid" : "low"; }
+function card(a) {
+  const d = daysTo(a.closes), soon = a.col === "todo" && d != null && d >= 0 && d <= 3;
+  const tags = [`<span class="tag">${PLAT[a.platform] || esc(a.platform)}</span>`, a.track ? `<span class="tag">${esc(a.track)}</span>` : "",
+    a.tailored ? `<span class="tag on">Tailored</span>` : "", a.notes ? `<span class="tag">Has notes</span>` : "", a.new ? `<span class="tag on">New</span>` : ""].join("");
+  let body = "";
+  if (a.col === "todo") {
+    if (a.match != null) body += `<div class="meter"><div class="row"><span>Keywords</span><b class="num">${a.match}%</b></div><div class="bar"><i style="width:${a.match}%"></i></div>`
+      + (a.gaps.length ? `<span class="gapline">Missing: ${esc(a.gaps.join(", "))}</span>` : "") + `</div>`;
+    if (a.closes) body += `<div class="when ${soon ? "urgent" : ""}">${soon ? icon.clock : icon.cal}${d < 0 ? "Closed " + fmt(a.closes) : d === 0 ? "Closes today" : soon ? `Closes in ${d} day${d === 1 ? "" : "s"}` : `Closes ${fmt(a.closes)} · ${d} days`}</div>`;
+  } else if (a.col === "sent" && a.sent) {
+    const n = -daysTo(a.sent), late = n >= 10;
+    body += `<div class="meter"><div class="row"><span>Sent ${fmt(a.sent)}</span><b class="num" style="color:${late ? "var(--gap)" : "inherit"}">${n} day${n === 1 ? "" : "s"}</b></div><div class="bar ${late ? "warn" : ""}"><i style="width:${Math.min(100, n / 30 * 100)}%"></i></div></div>`;
+  } else {
+    body += `<div class="c">${esc(STATUS[a.status] || a.status)}</div>`;
+  }
+  const primary = a.col === "todo" ? `<button class="btn primary" data-act="applied" data-k="${esc(a.key)}">I applied</button>`
+    : a.col === "sent" && a.sent && -daysTo(a.sent) >= 10 ? `<button class="btn warn" data-open="${esc(a.key)}" data-tab="resumen">Follow up</button>` : "";
+  return `<article class="card ${soon ? "soon" : ""} ${a.col === "closed" ? "done" : ""} ${S.focus === a.key ? "focus" : ""}" draggable="true" data-key="${esc(a.key)}" tabindex="${S.focus === a.key ? 0 : -1}" aria-label="${esc(a.title + ", " + a.company + ", " + COL_NAME[a.col])}">
+    <div class="head"><div class="who"><div class="t">${esc(a.title)}</div><div class="c">${esc(a.company)}${a.location ? " · " + esc(a.location.split(",")[0]) : ""}</div></div>
+      ${a.fit != null ? `<div class="score num ${scoreCls(a.fit)}" title="Score">${a.fit}</div>` : ""}</div>
+    <div class="tags">${tags}</div>${body}
+    <div class="actions">${primary}${a.url ? `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener" draggable="false" aria-label="Open the ad for ${esc(a.title)} in a new tab">Open ad ${icon.ext}</a>` : ""}<button class="btn" data-open="${esc(a.key)}">Details</button>
+      <button class="grip" aria-label="Move ${esc(a.title)}: select the card and press 1 to 5" title="Drag to another column, or press 1 to 5" tabindex="-1">${icon.grip}</button></div>
+  </article>`;
+}
+function board() {
+  const apps = D.apps.filter(visible).sort((x, y) => x.col === "sent" ? (x.sent > y.sent ? 1 : -1) : (y.fit ?? 0) - (x.fit ?? 0));
+  const cols = COLS.map(([id, name]) => {
+    const g = apps.filter(a => a.col === id), lim = S.expanded[id] ? g.length : PER_COL;
+    const empty = {todo: "No ads match these filters.", sent: "Drag here what you have sent.", interview: "When they call you, move the card here.",
+      offer: "When an offer arrives, move the card here.", closed: "Rejections, no responses and closed ads end up here."}[id];
+    if (id === "todo") {                      /* today's package by default; a selector shows any earlier day */
+      const days = [...new Set(g.map(a => a.date))].sort().reverse();
+      const pick = S.todoDay || "today", todayIso = new Date().toISOString().slice(0, 10);
+      const shown = pick === "today" ? g.filter(a => a.new) : pick === "all" ? g : g.filter(a => a.date === pick);
+      const slim = S.expanded.todo ? shown.length : PER_COL;
+      const opt = (v, label, n) => `<option value="${v}" ${pick === v ? "selected" : ""}>${label} (${n})</option>`;
+      const select = `<label class="field" style="font-size:12px">Showing <select id="tododay" aria-label="Which day's ads">`
+        + opt("today", "Today", g.filter(a => a.new).length)
+        + days.filter(d => d !== todayIso).map(d => opt(d, fmt(d), g.filter(a => a.date === d).length)).join("")
+        + opt("all", "All days", g.length) + `</select></label>`;
+      const emptyMsg = pick === "today" ? "Today's run left no new ads with these filters. Pick another day above." : "No ads for that day with these filters.";
+      return `<section class="col" data-col="todo" aria-label="${name}"><h2>${name} <span class="num">${g.length}</span></h2>
+        ${select}
+        ${shown.slice(0, slim).map(card).join("") || `<div class="empty">${emptyMsg}</div>`}
+        ${shown.length > slim ? `<button class="more" data-more="todo">Show ${shown.length - slim} more</button>` : ""}</section>`;
+    }
+    return `<section class="col" data-col="${id}" aria-label="${name}"><h2>${name} <span class="num">${g.length}</span></h2>
+      ${g.slice(0, lim).map(card).join("") || `<div class="empty">${empty}</div>`}
+      ${g.length > lim ? `<button class="more" data-more="${id}">Show ${g.length - lim} more</button>` : ""}</section>`;
+  }).join("");
+  $("#main").innerHTML = `<div class="board-wrap"><div class="board" id="board">${cols}</div></div>`;
+  $("#keys").innerHTML = `<b style="color:var(--ink)">Shortcuts</b><span><kbd>/</kbd> search</span><span><kbd>J</kbd> <kbd>K</kbd> move</span><span><kbd>Enter</kbd> details</span><span><kbd>A</kbd> I applied</span><span><kbd>1</kbd>–<kbd>5</kbd> move to column</span><span><kbd>O</kbd> open folder</span><span><kbd>T</kbd> <kbd>E</kbd> <kbd>C</kbd> <kbd>D</kbd> views</span><span><kbd>?</kbd> help</span>`;
+}
+
+/* ---------- funnel ---------- */
+function funnel() {
+  const F = D.funnel, max = Math.max(1, ...F.stages.map(s => s[1]));
+  const sent = F.stages[1][1];
+  const stages = F.stages.map(([n, v], i) => `<div class="stage"><b>${n}</b><div><div class="fill" style="width:${v / max * 100}%"></div></div>
+    <span class="num">${v}${i === 1 && F.stages[0][1] ? ` <span style="color:var(--muted)">${Math.round(v / F.stages[0][1] * 100)}%</span>` : i > 1 && sent ? ` <span style="color:var(--muted)">${Math.round(v / sent * 100)}% of sent</span>` : ""}</span></div>`).join("");
+  const rows = obj => Object.entries(obj).map(([k, r]) => `<tr><td>${esc(PLAT[k] || k)}</td><td class="r num">${r.sent}</td><td class="r num">${r.interviews}</td><td class="r num"><b>${r.interview_rate == null ? "—" : Math.round(r.interview_rate * 100) + "%"}</b></td></tr>`).join("")
+    || `<tr><td colspan="4" style="color:var(--muted)">No applications sent yet.</td></tr>`;
+  const table = (title, obj, first) => `<section class="panel"><h2>${title}</h2><div class="scroll"><table><thead><tr><th>${first}</th><th class="r">Sent</th><th class="r">Interviews</th><th class="r">Rate</th></tr></thead><tbody>${rows(obj)}</tbody></table></div></section>`;
+  const quiet = D.today.followups.map(f => `<tr><td><b>${esc(f.title)}</b> · ${esc(f.company || "")}</td><td class="num">${fmt(f.sent)}</td>
+    <td>${f.action === "follow up" ? `<button class="btn warn" data-open="${esc(f.key)}">Write a follow-up</button>` : `<button class="btn" data-act="no-response" data-k="${esc(f.key)}">Mark no response</button>`}</td></tr>`).join("")
+    || `<tr><td colspan="3" style="color:var(--muted)">Nobody has been quiet for more than 10 days.</td></tr>`;
+  $("#main").innerHTML = `<div class="page">
+    <section class="panel"><h2>From package to offer</h2>${stages}
+      <p class="note">${F.known < 10 ? `${F.known} known outcome${F.known === 1 ? "" : "s"}. Under 10 the score cannot be calibrated yet: mark on the board what happened to each application.` : "Compare the interview rate by score band: if high scores do not win, the ranking needs adjusting."}${F.avg_wait != null ? ` Average time to a response: ${F.avg_wait} days.` : ""}</p></section>
+    <div class="three">${table("Does the score predict interviews?", F.by_fit, "Score")}${table("By track", F.by_track, "Track")}${table("By source", F.by_platform, "Source")}</div>
+    <section class="panel" id="quiet"><h2>No response</h2><div class="scroll"><table><thead><tr><th>Application</th><th>Sent</th><th>Action</th></tr></thead><tbody>${quiet}</tbody></table></div></section></div>`;
+  $("#keys").innerHTML = "";
+}
+
+/* ---------- companies ---------- */
+const SPONSOR = {exact: "Yes", likely: "Likely", possible: "Possible"};
+function companiesView() {
+  const q = S.q.toLowerCase(), sort = ["value", "fit", "sponsor"].includes(S.csort) ? S.csort : "value";
+  const rank = {exact: 0, likely: 1, possible: 2};
+  /* the same filters as the board, applied to each company's qualifying ads, then counted again */
+  let rows = D.companies.map(g => {
+    const js = g.jobs.filter(j => (!S.city || j.city === S.city) && (!S.plat || j.platform === S.plat)
+      && (!S.track || j.track === S.track) && (j.fit ?? 0) >= S.min);
+    if (!js.length) return null;
+    const best = js.reduce((b, j) => j.fit != null && (b == null || j.fit > b.fit) ? j : b, null);
+    return {...g, ads: js.length, best: best?.fit ?? null, best_url: best?.url || "", titles: [...new Set(js.map(j => j.title))].slice(0, 4),
+      cities: [...new Set(js.map(j => j.city).filter(Boolean))], last: js.reduce((m, j) => j.seen > m ? j.seen : m, "")};
+  }).filter(g => g && (!q || (g.company + " " + g.titles.join(" ")).toLowerCase().includes(q)) && (!S.noagency || !g.agency));
+  if (sort === "value") rows.sort((a, b) => b.ads - a.ads || (b.best ?? 0) - (a.best ?? 0) || (rank[a.sponsor] ?? 3) - (rank[b.sponsor] ?? 3));
+  else if (sort === "fit") rows = rows.filter(g => g.best != null).sort((a, b) => b.best - a.best || b.ads - a.ads);
+  else rows = rows.filter(g => g.sponsor).sort((a, b) => rank[a.sponsor] - rank[b.sponsor] || b.ads - a.ads || (b.best ?? 0) - (a.best ?? 0));
+  const seg = (v, l) => `<button class="chip" data-csort="${v}" aria-pressed="${sort === v}">${l}</button>`;
+  const li = c => "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(c + " talent acquisition");
+  $("#main").innerHTML = `<div class="page"><section class="panel"><h2>Companies to contact</h2>
+    <p style="margin:0;color:var(--muted);font-size:13px">Only ads that passed your rules in the last 60 days count, and the filters above (city, source, track, minimum score) apply here too. Order: most qualifying ads, then best score, then whether the employer is on a sponsor list.</p>
+    <div class="actions">${seg("value", "By value")}${seg("fit", "Score only")}${seg("sponsor", "Sponsors only")}
+      <label class="field" style="margin-left:auto"><input type="checkbox" id="noagency" ${S.noagency ? "checked" : ""}> Hide recruitment agencies</label></div>
+    <div class="scroll"><table><thead><tr><th>Company</th><th class="r">Qualifying ads</th><th class="r">Best score</th><th>Sponsor lists (for you only)</th><th>Roles</th><th></th></tr></thead><tbody>
+    ${rows.slice(0, 60).map(g => `<tr><td><b>${esc(g.company)}</b>${g.agency ? ` <span class="tag">Agency</span>` : ""}<br><small style="color:var(--muted)">${esc(g.cities.join(", ") || "—")} · seen ${fmt(g.last)}</small></td>
+      <td class="r num"><b>${g.ads}</b></td>
+      <td class="r">${g.best != null ? `<span class="score num ${scoreCls(g.best)}" style="width:34px;height:30px;display:inline-grid">${g.best}</span>` : "—"}</td>
+      <td>${g.sponsor ? `<b>${SPONSOR[g.sponsor]}</b><br><small style="color:var(--muted)">${esc(g.sponsor_name)}</small>` : `<span style="color:var(--muted)">Not listed</span>`}</td>
+      <td style="max-width:300px">${esc(g.titles.join(" · "))}</td>
+      <td><div class="actions" style="flex-wrap:nowrap"><a class="btn" href="${li(g.company)}" target="_blank" rel="noopener">Find a contact ${icon.ext}</a>${g.best_url ? `<a class="btn" href="${esc(g.best_url)}" target="_blank" rel="noopener">Best ad</a>` : ""}</div></td></tr>`).join("")
+      || `<tr><td colspan="6" style="color:var(--muted)">No company has qualifying ads with these filters.</td></tr>`}
+    </tbody></table></div>
+    <p style="margin:0;font-size:12px;color:var(--muted)">"Sponsor lists" matches the name against the Home Affairs lists (2023 and 2025). Not being listed does not mean the employer does not sponsor. Never goes in a CV or letter.</p></section></div>`;
+  $("#keys").innerHTML = "";
+}
+
+/* ---------- dropped ---------- */
+function droppedView() {
+  const q = S.q.toLowerCase();
+  const rows = D.dropped.filter(d => !q || (d.title + " " + d.company + " " + d.reason).toLowerCase().includes(q));
+  const maybes = (D.maybes || []).filter(m => !q || (m.title + " " + m.company + " " + m.keywords.join(" ")).toLowerCase().includes(q));
+  const sugg = D.suggestions || [];
+  const banner = sugg.length ? `<p class="banner" role="status">From your rescues, the filter could also accept: <b>${sugg.map(x => esc(x.phrase) + (x.track ? " (" + esc(x.track) + ")" : "")).join(", ")}</b>. Ask Claude to add them to your targets.</p>` : "";
+  const maybeBox = maybes.length ? `<section class="panel" id="maybe"><h2>Maybe worth a look</h2>
+    <p style="margin:0;color:var(--muted);font-size:13px">Dropped only because the title matched none of your tracks, but the ad mentions your keywords. Best matches from the last 7 days.</p>
+    <ul class="maybe">${maybes.map(m => `<li><div class="who"><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a> <span>· ${esc(m.company)}${m.day ? " · " + fmt(m.day) : ""}</span></div>
+      <div class="kw">${m.keywords.map(k => `<span class="tag on">${esc(k)}</span>`).join("")}</div>
+      <button class="btn" data-rescue="${esc(m.key)}" data-track="${esc(m.track)}">Rescue</button></li>`).join("")}</ul></section>` : "";
+  $("#main").innerHTML = `<div class="page">${banner}${maybeBox}<section class="panel"><h2>Dropped by the rules, last 7 days</h2>
+    <p style="margin:0;color:var(--muted);font-size:13px">Each ad shows the rule that dropped it. If you disagree, rescue it: its package is built right away.</p>
+    <div class="scroll"><table><thead><tr><th>Seen</th><th>Role</th><th>Company</th><th>Reason</th><th></th></tr></thead><tbody>
+    ${rows.slice(0, 200).map(d => `<tr><td class="num">${fmt(d.day)}</td><td><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a></td><td>${esc(d.company)}</td><td>${esc(d.reason)}</td>
+      <td><button class="btn" data-rescue="${esc(d.key)}">Rescue</button></td></tr>`).join("") || `<tr><td colspan="5" style="color:var(--muted)">Nothing dropped matches that search.</td></tr>`}
+    </tbody></table></div></section></div>`;
+  $("#keys").innerHTML = "";
+}
+
+/* ---------- detail drawer ---------- */
+async function openDetail(key, tab) {
+  S.open = key; S.tab = tab || "resumen"; S.focus = key;
+  const root = $("#drawer-root");
+  root.innerHTML = `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="Details"><div class="dbody"><div class="skeleton" style="width:60%"></div><div class="skeleton"></div><div class="skeleton" style="width:80%"></div></div></aside>`;
+  try {
+    const r = await fetch(`/api/job?slug=${encodeURIComponent(D.slug)}&key=${encodeURIComponent(key)}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    S.job = j; drawer();
+  } catch (e) { root.innerHTML = ""; toast("Could not open the details: " + e.message); }
+}
+function drawer() {
+  const j = S.job, c = j.coverage, d = daysTo(j.closes);
+  const tabs = [["resumen", "Summary"], ["aviso", "Full ad"], ["docs", "Documents"], ["notas", "Notes"]];
+  const move = `<label class="field" style="margin-left:auto">Move to <select id="moveto">${COLS.map(([id, n]) => `<option value="${id}" ${id === j.col ? "selected" : ""}>${n}</option>`).join("")}</select></label>`;
+  let body = "";
+  if (S.tab === "resumen") {
+    body += c ? `<section><h2>Why it fits</h2><div class="meter" style="margin-bottom:10px"><div class="row"><span>Ad keywords the CV covers</span><b class="num">${c.match_pct ?? "—"}%</b></div><div class="bar"><i style="width:${c.match_pct || 0}%"></i></div></div>
+      <div class="cov"><div><b class="c1">In the CV · ${c.terms.filter(t => t.status === "covered").length}</b><span>${esc(c.terms.filter(t => t.status === "covered").map(t => t.term).join(", ")) || "—"}</span></div>
+      <div><b class="c2">You have it · ${c.have_it.length}</b><span>${c.have_it.length ? esc(c.have_it.join(", ")) + ". In your profile: add it where it is true." : "—"}</span></div>
+      <div class="${c.gaps.length ? "gapbox" : ""}"><b class="c3">Gap · ${c.gaps.length}</b><span>${c.gaps.length ? esc(c.gaps.join(", ")) + ". Never added to the CV." : "None found."}</span></div></div></section>`
+      : `<section><h2>Why it fits</h2><p style="margin:0;color:var(--muted)">No saved description to compare with the CV.</p></section>`;
+    body += `<section class="facts">
+      <div><span>Closes</span><b>${j.closes ? fmt(j.closes) + (d >= 0 ? ` · ${d} days left` : " · closed") : "No date published"}</b></div>
+      <div><span>Experience asked</span><b>${j.years ? j.years + "+ years" : "Not stated"}</b></div>
+      <div><span>How to apply</span><b>${esc(j.how || PLAT[j.platform] || j.platform)}</b></div>
+      <div><span>Sponsor lists (for you only)</span><b>${esc(j.sponsor || "No data")}</b></div>
+      ${j.salary ? `<div><span>Salary</span><b>${esc(j.salary)}</b></div>` : ""}<div><span>Track</span><b>${esc(j.track || "—")}</b></div></section>`;
+    body += `<section><h2>History</h2><ol class="timeline">${j.history.map(h => `<li><span class="dot"></span><span><b>${esc(STATUS[h.status] || h.status)}</b>${h.note && h.note !== "from the panel" ? `<br><small>${esc(h.note)}</small>` : ""}</span><small class="num">${fmt(h.date)}</small></li>`).join("")}</ol></section>`;
+  } else if (S.tab === "aviso") {
+    body = j.description ? `<section><div class="desc">${esc(j.description)}</div></section>` : `<p style="color:var(--muted)">No saved description. Open the ad on the site.</p>`;
+  } else if (S.tab === "docs") {
+    body = `<section><h2>${j.tailored ? "Documents tailored to this ad" : "Documents in this package"}</h2>${j.docs.length ? `<div class="docs">${j.docs.map(f => `<a class="doc" href="${f.url}" target="_blank" rel="noopener">${icon.doc}<span><b>${f.kind === "cv" ? "CV" : f.kind === "letter" ? "Cover letter" : "Employer notes"}</b><small>${esc(f.name)}</small></span></a>`).join("")}</div>` : `<p style="color:var(--muted)">This application has no documents in the package folder.</p>`}</section>
+      ${j.has_folder ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Open folder in Finder</button>` : ""}`;
+  } else {
+    body = `<section><label for="notes" style="font-weight:700;font-size:15px;display:block;margin-bottom:8px">Notes</label><textarea id="notes" placeholder="Anything to remember: who you wrote to, what they asked, what to prepare.">${esc(j.notes)}</textarea>
+      <div class="actions" style="margin-top:8px"><button class="btn primary" id="savenote">Save notes</button><span style="font-size:12px;color:var(--muted)">Saved on this application only.</span></div></section>`;
+  }
+  const primary = j.col === "todo" ? `<button class="btn primary" data-act="applied" data-k="${esc(j.key)}">I applied</button>` : "";
+  $("#drawer-root").innerHTML = `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dt">
+    <header><div style="display:flex;gap:14px;align-items:flex-start"><div style="flex:1;min-width:0"><h1 id="dt">${esc(j.title)}</h1>
+      <div class="sub">${esc(j.company)}${j.location ? " · " + esc(j.location) : ""} · ${PLAT[j.platform] || esc(j.platform)}</div></div>
+      ${j.fit != null ? `<div class="score big num ${scoreCls(j.fit)}" title="Score">${j.fit}</div>` : ""}
+      <button class="icon-btn" data-close aria-label="Close details">${icon.x}</button></div>
+      <div class="actions">${primary}<a class="btn" href="${esc(j.url)}" target="_blank" rel="noopener">Open ad ${icon.ext}</a>
+        ${j.has_folder ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Open folder</button>` : ""}
+        ${j.col === "todo" ? `<button class="btn" data-act="skipped" data-k="${esc(j.key)}">Drop</button>` : ""}${move}</div>
+      <div class="dtabs" role="tablist">${tabs.map(([id, n]) => `<button class="dtab" role="tab" data-dtab="${id}" aria-selected="${S.tab === id}">${n}</button>`).join("")}</div></header>
+    <div class="dbody">${body}</div></aside>`;
+  const first = $("#drawer-root .drawer [data-close]"); if (first) first.focus();
+}
+function closeDetail() { S.open = null; $("#drawer-root").innerHTML = ""; render(); const el = document.querySelector(`.card[data-key="${CSS.escape(S.focus || "")}"]`); if (el) el.focus(); }
+
+/* ---------- actions ---------- */
+async function setStatus(key, opts) {
+  const a = D.apps.find(x => x.key === key), before = a && {...a};
+  try {
+    const r = await post("/status", {key, ...opts});
+    if (a) { a.status = r.status; a.col = Object.entries({todo: ["prepared", "dry-run", "manual-review", "shortlisted"], sent: ["applied", "submitted"], interview: ["interview"], offer: ["offer", "hired"], closed: ["closed", "rejected", "no-response", "withdrawn"]}).find(([, v]) => v.includes(r.status))?.[0] || null;
+      if (a.col === "sent" && !a.sent) a.sent = new Date().toISOString().slice(0, 10); if (!a.col) D.apps = D.apps.filter(x => x !== a); }
+    toast(`${a ? a.title : "Application"}: ${STATUS[r.status] || r.status}`);
+    if (S.open === key) { S.job.col = a?.col; S.job.status = r.status; await openDetail(key, S.tab); }
+    render();
+  } catch (e) { if (a && before) Object.assign(a, before); toast("Could not change it: " + e.message); render(); }
+}
+function render() {
+  header(); filters(); todayTiles();
+  if (S.view === "board") board(); else if (S.view === "funnel") funnel(); else if (S.view === "companies") companiesView(); else droppedView();
+  $("#today").hidden = S.view === "dropped" || S.view === "companies";
+  $("#filters").hidden = S.view !== "board" && S.view !== "companies";
+}
+function cardsInOrder() { return [...document.querySelectorAll(".card")].map(c => c.dataset.key); }
+function focusCard(key) { S.focus = key; document.querySelectorAll(".card").forEach(c => { const on = c.dataset.key === key; c.classList.toggle("focus", on); c.tabIndex = on ? 0 : -1; if (on) { c.focus(); c.scrollIntoView({block: "nearest"}); } }); }
+
+document.addEventListener("click", async e => {
+  const t = e.target.closest("button, [data-close], a"); if (!t) return;
+  if (t.dataset.view) { S.view = t.dataset.view; save(); render(); return; }
+  if (t.hasAttribute("data-close")) { closeDetail(); return; }
+  if (t.dataset.f) { S[t.dataset.f] = S[t.dataset.f] === t.dataset.v ? "" : t.dataset.v; save(); render(); return; }  /* board and companies share these */
+  if (t.dataset.csort) { S.csort = t.dataset.csort; save(); companiesView(); return; }
+  if (t.dataset.more) { S.expanded[t.dataset.more] = true; render(); return; }
+  if (t.dataset.open) { openDetail(t.dataset.open, t.dataset.tab); return; }
+  if (t.dataset.act) { t.disabled = true; await setStatus(t.dataset.k, {status: t.dataset.act}); return; }
+  if (t.dataset.dtab) { S.tab = t.dataset.dtab; drawer(); return; }
+  if (t.dataset.folder) { try { await post("/open", {key: t.dataset.folder}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
+  if (t.dataset.rescue) { t.disabled = true; t.textContent = "Preparing…"; try { const r = await post("/rescue", {key: t.dataset.rescue, track: t.dataset.track || undefined}); toast(r.suggested ? `Package built. Filter suggestion saved: ${r.suggested}` : "Package built. Reloading…"); setTimeout(() => location.reload(), r.suggested ? 1800 : 700); } catch (err) { toast("Could not do it: " + err.message); t.disabled = false; t.textContent = "Rescue"; } return; }
+  if (t.id === "savenote") { try { await post("/note", {key: S.job.key, text: $("#notes").value}); S.job.notes = $("#notes").value; const a = D.apps.find(x => x.key === S.job.key); if (a) a.notes = !!S.job.notes; toast("Notes saved"); } catch (err) { toast("Could not save: " + err.message); } return; }
+  if (t.id === "theme") { const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); const next = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; try { localStorage.setItem("panel-theme", next); } catch (err) {} return; }
+  if (t.id === "helpbtn") { help(); return; }
+  if (t.classList.contains("tile") && t.dataset.go) {
+    if (t.dataset.go === "quiet") { S.view = "funnel"; render(); setTimeout(() => $("#quiet")?.scrollIntoView({behavior: "smooth"}), 50); }
+    else { S.view = "board"; render(); const k = t.dataset.go === "soon" ? D.today.closing_soon[0] : cardsInOrder()[0]; if (k) focusCard(k); }
+  }
+});
+document.addEventListener("click", e => { const c = e.target.closest(".card"); if (c && !e.target.closest("button, a")) focusCard(c.dataset.key); });
+document.addEventListener("dblclick", e => { const c = e.target.closest(".card"); if (c && !e.target.closest("button, a")) openDetail(c.dataset.key); });
+document.addEventListener("input", e => {
+  if (e.target.id === "q") { S.q = e.target.value; if (S.view === "board") board(); else if (S.view === "dropped") droppedView(); else if (S.view === "companies") companiesView(); }
+  if (e.target.id === "min") { S.min = +e.target.value; e.target.nextElementSibling.textContent = S.min; save(); S.view === "companies" ? companiesView() : board(); }
+});
+document.addEventListener("change", async e => {
+  if (e.target.id === "tododay") { S.todoDay = e.target.value; S.expanded.todo = false; board(); return; }
+  if (e.target.id === "noagency") { S.noagency = e.target.checked; save(); companiesView(); return; }
+  if (e.target.id === "cand") location.search = "?slug=" + encodeURIComponent(e.target.value);
+  if (e.target.id === "moveto" && S.job) await setStatus(S.job.key, {column: e.target.value});
+});
+
+/* drag and drop between columns */
+document.addEventListener("dragstart", e => { const c = e.target.closest(".card"); if (!c) return; e.dataTransfer.setData("text/plain", c.dataset.key); e.dataTransfer.effectAllowed = "move"; c.classList.add("dragging"); });
+document.addEventListener("dragend", e => { e.target.closest?.(".card")?.classList.remove("dragging"); document.querySelectorAll(".col.drop").forEach(c => c.classList.remove("drop")); });
+document.addEventListener("dragover", e => { const col = e.target.closest(".col"); if (!col) return; e.preventDefault(); document.querySelectorAll(".col.drop").forEach(c => c !== col && c.classList.remove("drop")); col.classList.add("drop"); });
+document.addEventListener("drop", async e => {
+  const col = e.target.closest(".col"); if (!col) return; e.preventDefault(); col.classList.remove("drop");
+  const key = e.dataTransfer.getData("text/plain"), a = D.apps.find(x => x.key === key);
+  if (a && a.col !== col.dataset.col) await setStatus(key, {column: col.dataset.col});
+});
+
+/* keyboard */
+function help() {
+  const rows = [["/", "Search"], ["J  K", "Next and previous card"], ["Enter", "Open details"], ["A", "Mark as applied"], ["1 to 5", "Move to To apply, Applied, Interview, Offer, Closed"],
+    ["O", "Open the package folder in Finder"], ["T  E  C  D", "Board, Funnel, Companies, Dropped"], ["Esc", "Close"], ["?", "This help"]];
+  $("#help-root").innerHTML = `<div class="help" data-close-help><div role="dialog" aria-modal="true" aria-labelledby="ht"><h2 id="ht">Keyboard shortcuts</h2>${rows.map(([k, v]) => `<kbd>${k}</kbd><span>${v}</span>`).join("")}<button class="btn" data-close-help style="grid-column:1/-1;justify-self:end">Close</button></div></div>`;
+  $("#help-root button").focus();
+}
+document.addEventListener("click", e => { if (e.target.matches("[data-close-help]")) $("#help-root").innerHTML = ""; });
+document.addEventListener("keydown", async e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const typing = e.target.closest("input, textarea, select");
+  if (e.key === "Escape") { if ($("#help-root").innerHTML) { $("#help-root").innerHTML = ""; return; } if (S.open) { closeDetail(); return; } if (typing) { e.target.blur(); return; } }
+  if (typing) return;
+  if (e.key === "/") { e.preventDefault(); $("#q").focus(); return; }
+  if (e.key === "?") { help(); return; }
+  if (S.open) return;
+  const k = e.key.toLowerCase();
+  if ("tecd".includes(k) && k.length === 1) { S.view = {t: "board", e: "funnel", c: "companies", d: "dropped"}[k]; save(); render(); return; }
+  if (S.view !== "board") return;
+  const order = cardsInOrder(); if (!order.length) return;
+  const i = order.indexOf(S.focus);
+  if (k === "j" || e.key === "ArrowDown") { e.preventDefault(); focusCard(order[Math.min(order.length - 1, i + 1)] || order[0]); return; }
+  if (k === "k" || e.key === "ArrowUp") { e.preventDefault(); focusCard(order[Math.max(0, i - 1)] || order[0]); return; }
+  if (!S.focus) return;
+  if (e.key === "Enter") { openDetail(S.focus); return; }
+  if (k === "a") { const a = D.apps.find(x => x.key === S.focus); if (a?.col === "todo") await setStatus(S.focus, {status: "applied"}); return; }
+  if (k === "o") { try { await post("/open", {key: S.focus}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
+  if (/^[1-5]$/.test(k)) { const col = COLS[+k - 1][0], a = D.apps.find(x => x.key === S.focus); if (a && a.col !== col) { await setStatus(S.focus, {column: col}); focusCard(S.focus); } }
+});
+
+if (/^https:\/\//.test(D.support_url || "")) $("#coffee-root").innerHTML = `<a class="coffee" href="${esc(D.support_url)}" target="_blank" rel="noopener" aria-label="Buy me a coffee: support 100 FOUNTS, who build this harness" title="job-harness is free. A coffee keeps it going.">
+  <span class="mug" aria-hidden="true"><span class="steam"><i></i><i></i><i></i></span>☕</span><span>Buy me a coffee<small>Keep job-harness free</small></span></a>`;
+render();
+</script>
+</body>
+</html>

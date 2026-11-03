@@ -6,12 +6,32 @@
       "Bash(./bin/job *)",
       "Bash(job *)",
       "Bash(python3 -m unittest *)",
+      "Bash(python scripts/*)",
+      "Bash(py -3 scripts/*)",
+      "Bash(bin\\job *)",
+      "Bash(python -m unittest *)",
+      "Bash(py -3 -m unittest *)",
       "Read(./candidates/**)",
       "Read(./templates/**)",
       "Read(./learn/**)"
     ],
+    "ask": [
+      "Edit(./hooks/**)",
+      "Edit(./scripts/gates.py)",
+      "Edit(./bin/**)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./.claude/settings.local.json)",
+      "Write(./hooks/**)",
+      "Write(./scripts/gates.py)",
+      "Write(./bin/**)",
+      "Write(./.claude/settings.json)",
+      "Write(./.claude/settings.local.json)"
+    ],
     "deny": [
-      "Read(./.env)"
+      "Read(./.env)",
+      "Read(./.browser/**)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)"
     ]
   },
   "hooks": {
@@ -20,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/status.py\" --context",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/scripts/status.py\" --context",
             "timeout": 15
           }
         ]
@@ -32,7 +52,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/hooks/gate.py\"",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/hooks/py.sh\" \"$CLAUDE_PROJECT_DIR/hooks/gate.py\"",
             "timeout": 10
           }
         ]

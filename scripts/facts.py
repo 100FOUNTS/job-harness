@@ -12,12 +12,12 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 import zipfile
 from pathlib import Path
 from typing import Any
 
+import pdftext
 from common import cand_dir, now_iso, read_json, save_json
 
 NUM = re.compile(r"\$\s?\d[\d,]*(?:\.\d+)?\s?[KkMm]?|\d+(?:\.\d+)?\s?%|\b\d[\d,]*(?:\.\d+)?\b")
@@ -43,7 +43,7 @@ def extract_text(path: Path) -> str:
             xml = z.read("word/document.xml").decode("utf-8", "ignore")
         return re.sub(r"<[^>]+>", " ", xml.replace("</w:p>", "\n"))
     if path.suffix == ".pdf":
-        return subprocess.run(["pdftotext", "-layout", str(path), "-"], capture_output=True, text=True).stdout
+        return pdftext.text(path)
     if path.suffix == ".json":
         out: list[str] = []
 
@@ -56,7 +56,7 @@ def extract_text(path: Path) -> str:
                 [walk(v) for v in x]
         walk(read_json(path))
         return "\n".join(out)
-    return path.read_text()
+    return path.read_text(encoding="utf-8")
 
 
 def known_values(f: dict[str, Any]) -> set[str]:
@@ -98,7 +98,10 @@ def main() -> None:
                             "status": "approved", "date": now_iso()})
         save_json(cand_dir(a.slug) / "facts.json", f); print(f"claim {a.id} = {a.value}")
     else:
-        r = verify(a.slug, Path(a.file))
+        try:
+            r = verify(a.slug, Path(a.file))
+        except RuntimeError as e:
+            sys.exit(str(e))
         print(json.dumps(r, ensure_ascii=False, indent=2))
         sys.exit(0 if r["ok"] else 1)
 

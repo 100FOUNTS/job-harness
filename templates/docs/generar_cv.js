@@ -9,6 +9,9 @@ const {
 const [, , input = "cv.json", output = "Resume.docx"] = process.argv;
 const cv = JSON.parse(fs.readFileSync(input, "utf8"));
 
+// Date ranges with an ASCII hyphen: some ATS imports (Workday) drop a date joined by an en dash.
+const asciiDates = (s) => String(s ?? "").replace(/\s*[\u2010-\u2015\u2212]\s*/g, " - ");
+
 const FONT = "Arial";
 const SIZE = 20; // 10 pt
 const LINE = 276; // 1.15 line spacing
@@ -60,7 +63,7 @@ const entry = (e, i) => {
     new Paragraph({
       spacing: { after: 100 },
       keepNext: true,
-      children: [new TextRun({ text: e.dates ? `${e.org}  |  ${e.dates}` : e.org, italics: true, size: SIZE, font: FONT })],
+      children: [new TextRun({ text: e.dates ? `${e.org}  |  ${asciiDates(e.dates)}` : e.org, italics: true, size: SIZE, font: FONT })],
     }),
   ];
   e.bullets.forEach((b) => out.push(bullet(b)));
@@ -101,7 +104,7 @@ cv.education.forEach(([q, inst, year], i) => children.push(...(i > 0 ? [spacer(5
   spacing: { after: 40, line: LINE },
   children: [
     new TextRun({ text: q, bold: true, size: SIZE, font: FONT }),
-    new TextRun({ text: `${inst}  |  ${year}`, italics: true, size: SIZE, font: FONT, break: 1 }),
+    new TextRun({ text: `${inst}  |  ${asciiDates(year)}`, italics: true, size: SIZE, font: FONT, break: 1 }),
   ],
 })));
 

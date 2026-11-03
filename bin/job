@@ -2,9 +2,11 @@
 """job — single entry point to the job-harness.
 
   job status [slug] [--json]                   where every candidate is, and the exact next step
-  job doctor                                   what this machine can run
+  job setup [--check] [--apply-tools]          get this machine ready: tools, `job` on your PATH, package folder
+  job doctor [--json]                          what this machine can run, and how to fix what is missing
   job new <slug> --name "..."                  create a candidate
   job discover <slug>                          new jobs from the saved searches (no browser, no LLM)
+  job suggest <slug> list|clear [phrase]       title words the filter could accept, learnt from your rescues
   job triage <slug>                            deterministic pre-filter → shortlist.json
   job db <slug> import|stats|show <key>|sql "<SELECT>"   every ad ever listed (jobs.db): verdicts, reposts, market
   job prepare <slug> [--max 15]                ranked top jobs → CV + filled cover letter + daily package (no LLM)
@@ -23,6 +25,10 @@
   job sign <slug> <id>                         human signature (your terminal, typed confirmation)
   job schedule install|uninstall|status <slug> [--hour 9 --minute 0]
   job learn log|list ...                       harness memory
+  job panel [--port 8765]                      local board: every application, buttons to change status
+  job coverage <slug> <cv> --job <key>         ad keywords: covered / have it / gap (Jobscan-style match %)
+  job guard <file>                             hidden or AI-aimed text in a saved ad
+  job sponsors import --from <dir> | check "<company>"   visa sponsor lists (package only, never in documents)
   job test                                     test suite
 
 Install on your PATH:  ln -s "$PWD/bin/job" ~/.local/bin/job
@@ -33,9 +39,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 S = ROOT / "scripts"
-DIRECT = {"status": "status.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
+DIRECT = {"status": "status.py", "setup": "setup.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
           "triage": "triage.py", "db": "jobdb.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
-          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py"}
+          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "panel": "panel.py", "suggest": "suggest.py"}
 
 
 def run(script, args):

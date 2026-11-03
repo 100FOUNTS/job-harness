@@ -11,32 +11,48 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from common import ROOT, cand_dir
+from common import ROOT, cand_dir, node_env, tools_dir
 from facts import verify
 from lint import lint
 
 GEN = {"cv": ROOT / "templates/docs/generar_cv.js", "letter": ROOT / "templates/docs/generar_carta.js"}
 
 
+def need_node() -> None:
+    if not shutil.which("node") or not (tools_dir() / "node_modules").is_dir():
+        raise SystemExit("Can't build documents: run `job setup` (needs Node.js 20+).")
+
+
 def export_pdf(src: Path, kind: str, pdf: Path) -> Path | None:
     """PDF straight from the JSON with pdfkit (headless). Pages via osascript hung on an unseen dialog
     during an unattended run, so the daily cycle never depends on a GUI app."""
     r = subprocess.run(["node", str(ROOT / "templates/docs/generar_pdf.js"), kind, str(src), str(pdf)],
-                       capture_output=True, text=True, timeout=60, cwd=ROOT / "templates/docs")
+                       capture_output=True, encoding="utf-8", timeout=60, cwd=ROOT / "templates/docs", env=node_env())
     return pdf if r.returncode == 0 and pdf.exists() else None
 
 
+def _in_candidate(slug: str, p: Path) -> Path:
+    """Relative paths are relative to the candidate folder; one written from the repo root
+    ("candidates/<slug>/docs/master") means the same folder, not candidates/<slug>/candidates/<slug>/... (2026-11-03)."""
+    if p.is_absolute():
+        return p
+    parts = p.parts[2:] if p.parts[:2] == ("candidates", slug) else p.parts
+    return cand_dir(slug).joinpath(*parts)
+
+
 def build(slug: str, src: Path, kind: str, out: Path | None, name: str | None) -> dict:
-    src = (src if src.is_absolute() else cand_dir(slug) / src).resolve()
-    out = (src.parent if out is None else out if out.is_absolute() else cand_dir(slug) / out).resolve()  # same base as src; the generator runs in templates/docs: paths must be absolute
+    need_node()
+    src, out = (_in_candidate(slug, p) if p is not None else None for p in (src, out))
+    out = (out or src.parent).resolve()          # the generator runs in templates/docs: paths must be absolute
     out.mkdir(parents=True, exist_ok=True)
     docx = out / f"{name or src.stem}.docx"
-    r = subprocess.run(["node", str(GEN[kind]), str(src), str(docx)], capture_output=True, text=True,
-                       cwd=GEN[kind].parent)
+    r = subprocess.run(["node", str(GEN[kind]), str(src), str(docx)], capture_output=True, encoding="utf-8",
+                       cwd=GEN[kind].parent, env=node_env())
     if r.returncode != 0:
         raise SystemExit(f"generator failed: {r.stderr[-800:]}")
     pdf = export_pdf(src, kind, docx.with_suffix(".pdf"))

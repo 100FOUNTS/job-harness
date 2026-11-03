@@ -1,11 +1,13 @@
 ---
 name: job-daily
-description: Runs the daily job-application cycle for a job-harness candidate: discover new jobs, pre-filter, judge fit, tailor CV and cover letter, apply (or dry-run) within limits, and write the daily report. Use for "/job-daily ana", "run today's applications", or when launchd calls it.
+description: Runs the daily job-application cycle for a job-harness candidate: discover new jobs, pre-filter, judge fit, tailor CV and cover letter, apply (or dry-run) within limits, and write the daily report. Use for "/job-daily ana", "run today's applications", "corre el ciclo diario", or when the agent-driven daily schedule calls it (`job schedule install <slug> --runner agent`).
 argument-hint: "<slug>"
 arguments: [slug]
 ---
 
 # Daily cycle — candidate **$slug**
+
+This is the agent-driven cycle (modes `dry-run`/`live`, with Claude in Chrome). The default daily schedule (mode `prepare`) does not use it: that run is scripts only (no AI, no browser) and ends with the package for the person to apply from. Under the plugin the command is `/job-harness:job-daily`.
 
 Run unattended. No questions to the user: anything uncertain becomes `manual-review` with a reason. Stay cheap: scripts do data, you only judge and write.
 

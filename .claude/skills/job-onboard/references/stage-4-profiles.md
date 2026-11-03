@@ -6,11 +6,11 @@ Goal: profiles consistent with the master CV, findable by recruiters, without pu
 Use the `profile-auditor` agent. It writes `candidates/<slug>/profiles/proposal.md`: problems by priority + exact texts to paste. Typical findings: no default resumé on SEEK (CV invisible), old resumé with wrong dates, no summary/salary, missing roles, misspelt companies, hospitality skills only, headline typos, missing sections.
 
 ## 4b. Apply approved changes
-Only after the user approves (gate `profile-changes`, human). One tab, closed at the end.
+Only after the user approves (gate `profile-changes`: signed by you after their OK in the chat). One tab, closed at the end.
 
 SEEK (au.seek.com/profile/me)
 - Upload the master PDF as `<First_Last>_Resume.pdf` and make it default. SEEK then re-parses it and shows "Found in resumé" suggestions: add the correct ones, "Don't include" the rest.
-- Combobox fields (company, qualification): click → cmd+a → type → click the dialog title to close suggestions. **Escape discards the whole form.**
+- Combobox fields (company, qualification): click → select all (Cmd+A on Mac, Ctrl+A on Windows/Linux) → type → click the dialog title to close suggestions. **Escape discards the whole form.**
 - Summary has a character limit (~600): watch the counter.
 - Role titles/locations autocomplete: type all but the last character, wait 1 s, type the last one, then pick the exact option.
 - Leave "Right to work" as the candidate set it; do not add it if empty (rule: only when a form asks).
