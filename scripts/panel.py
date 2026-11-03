@@ -14,8 +14,8 @@ GET  /api/job?slug=&key=        one application in full: description, keyword co
 GET  /files/<slug>/<path>       a file from the candidate's package folder (CV, letter)
 POST /status {slug,key,status}  POST /note {slug,key,text}  POST /rescue {slug,key}  POST /open {slug,key}
 Every POST must carry the token the page was served with, so another site open in the browser cannot post to it.
-JOB_SUPPORT_URL (env or .claude/settings.local.json): a "Buy me a coffee" link, e.g. a Stripe Payment Link where the
-customer chooses the amount; the floating button only shows when it is set.
+JOB_SUPPORT_URL (env or .claude/settings.local.json): the floating "Buy me a coffee" button. Defaults to 100 FOUNTS'
+Stripe donation link (they build the harness); point it elsewhere, or set it to "" to hide the button.
 """
 from __future__ import annotations
 
@@ -39,6 +39,7 @@ from status import summary
 from tracker import OUTCOMES, PENDING, SENT, calibrate, followups, load, set_note, set_status
 
 TOKEN = secrets.token_urlsafe(24)
+SUPPORT_URL = "https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"
 PAGE = Path(__file__).resolve().parent.parent / "templates" / "panel.html"
 COLUMNS = [("todo", PENDING), ("sent", SENT), ("interview", {"interview"}), ("offer", {"offer", "hired"}),
            ("closed", {"closed", "rejected", "no-response", "withdrawn"})]
@@ -231,7 +232,7 @@ def data(slug: str) -> dict[str, Any]:
                       "followups": [f for f in followups(slug) if f["action"] != "waiting (already chased)"],
                       "pending_answers": pending_answers},
             "funnel": funnel(slug, all_apps), "dropped": dropped(slug), "companies": companies(slug),
-            "candidates": list_candidates(), "support_url": setting("JOB_SUPPORT_URL", ""),
+            "candidates": list_candidates(), "support_url": setting("JOB_SUPPORT_URL", SUPPORT_URL),
             "generated": datetime.now().strftime("%H:%M")}
 
 

@@ -76,6 +76,13 @@ class State(Base):
         self.assertTrue(d["state"]["why"] and d["state"]["action"])
         self.assertIn('id="state"', panel.PAGE.read_text(encoding="utf-8"))
 
+    def test_coffee_button_defaults_to_100founts_and_can_be_hidden(self):
+        import panel
+        with unittest.mock.patch.object(panel, "setting", lambda name, default: default):
+            self.assertTrue(panel.data("ana")["support_url"].startswith("https://donate.stripe.com/"))
+        with unittest.mock.patch.dict(os.environ, {"JOB_SUPPORT_URL": ""}):
+            self.assertEqual(panel.data("ana")["support_url"], "")
+
 
 class DocsErrors(Base):
     def test_missing_node_gives_one_line(self):

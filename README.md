@@ -186,7 +186,7 @@ Candidate folders other than `example/` and `.claude/settings.local.json` are gi
 ```json
 { "env": { "JOB_PACKAGE_DIR": "/Users/you/Applications-packages", "JOB_HUMAN_SIGN": "go-live" } }
 ```
-`JOB_PACKAGE_DIR` moves the daily packages. `JOB_HUMAN_SIGN=""` lets Claude sign every approval after your explicit OK (the default: `go-live` needs your own signature). `JOB_SUPPORT_URL` shows a floating "Buy me a coffee" button in the panel (for example a payment link); it stays hidden when not set.
+`JOB_PACKAGE_DIR` moves the daily packages. `JOB_HUMAN_SIGN=""` lets Claude sign every approval after your explicit OK (the default: `go-live` needs your own signature). The panel shows a small "Buy me a coffee" button that supports 100 FOUNTS, who build job-harness; `JOB_SUPPORT_URL` points it elsewhere, and `JOB_SUPPORT_URL=""` hides it.
 
 ## Honest limits
 - **Australia only** as built: SEEK AU, LinkedIn with Australian locations, WA Government Jobs, Australian work-rights questions. Another country needs its own discovery and question rules.
