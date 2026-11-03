@@ -78,6 +78,42 @@ def learn_dir() -> Path:
     return data_dir() / "learn"
 
 
+def tools_dir() -> Path:
+    """Where the document/PDF Node tools (node_modules) live. Plugin: in the data dir, so a plugin update (which replaces
+    the code folder) never removes them. Clone: next to the generators, as always."""
+    return data_dir() / "tools" if plugin_mode() else ROOT / "templates" / "docs"
+
+
+def apply_tools_dir() -> Path:
+    return data_dir() / "tools" / "apply" if plugin_mode() else ROOT / "apply"
+
+
+def node_env(tools: Path | None = None) -> dict[str, str] | None:
+    """Environment for every `node` child. Plugin: NODE_PATH (CommonJS require) and JOB_NODE_MODULES (ESM import, which
+    ignores NODE_PATH) point at the tools folder. Clone: None, i.e. inherit, exactly as before."""
+    if not plugin_mode():
+        return None
+    mods = str((tools or tools_dir()) / "node_modules")
+    env = dict(os.environ)
+    env["NODE_PATH"] = os.pathsep.join(x for x in (mods, env.get("NODE_PATH", "")) if x)
+    env["JOB_NODE_MODULES"] = mods
+    return env
+
+
+def remember_root() -> None:
+    """Plugin: note where the current harness code is in <data dir>/.harness_root, which the schedule launcher reads,
+    so a schedule keeps working after a plugin update moves the code. Cheap, never raises; no-op in a clone."""
+    if not plugin_mode():
+        return
+    f = data_dir() / ".harness_root"
+    try:
+        if not f.is_file() or f.read_text().strip() != str(ROOT):
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(str(ROOT) + "\n")
+    except OSError:
+        pass
+
+
 def cand_dir(slug: str) -> Path:
     d = candidates_dir() / slug
     if not d.exists():

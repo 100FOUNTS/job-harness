@@ -4,13 +4,17 @@
 //   --lines  JSON [{height, lines: [{top, bottom, text}]}] per page, top-down like `pdftotext -bbox`
 //   --text   plain text in reading order, pages separated by a form feed
 const fs = require("fs");
+const path = require("path");
+const { pathToFileURL } = require("url");
 
 const ASCENT = 0.72, DESCENT = 0.21; // Helvetica metrics: what pdftotext -bbox reports around the baseline
 
 async function load(file) {
   const log = console.log;
   console.log = () => {}; // pdf.js prints canvas polyfill warnings on stdout at import; text extraction needs no canvas
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  // ESM import ignores NODE_PATH: as a plugin the modules live outside this folder, so JOB_NODE_MODULES says where
+  const nm = process.env.JOB_NODE_MODULES, rel = "pdfjs-dist/legacy/build/pdf.mjs";
+  const pdfjs = await import(nm && fs.existsSync(path.join(nm, rel)) ? pathToFileURL(path.join(nm, rel)).href : rel);
   console.log = log;
   const data = new Uint8Array(fs.readFileSync(file));
   return pdfjs.getDocument({ data, verbosity: 0, useSystemFonts: true, isEvalSupported: false }).promise;

@@ -15,6 +15,7 @@ import time
 from typing import TextIO
 
 import osutil
+from common import data_dir, plugin_mode
 from run_prepare import guarded, py, setup_env, step
 
 TOOLS = ("Agent Bash(python3 scripts/*) Bash(python scripts/*) Bash(py -3 scripts/*) Bash(bin/job *) Bash(./bin/job *) "
@@ -23,9 +24,11 @@ TOOLS = ("Agent Bash(python3 scripts/*) Bash(python scripts/*) Bash(py -3 script
 
 def claude_cmd(slug: str) -> list[str]:
     keep_awake = ["caffeinate", "-i"] if osutil.os_name() == "mac" and shutil.which("caffeinate") else []
-    return [*keep_awake, shutil.which("claude") or "claude", "-p", f"/job-daily {slug}", "--chrome",
+    skill = "/job-harness:job-daily" if plugin_mode() else "/job-daily"
+    tools = TOOLS + " Bash(job *)" if plugin_mode() else TOOLS
+    return [*keep_awake, shutil.which("claude") or "claude", "-p", f"{skill} {slug}", "--chrome",
             "--model", os.environ.get("JOB_MODEL") or "sonnet",     # a cheaper model is enough here
-            "--permission-mode", "acceptEdits", "--allowedTools", TOOLS, "--output-format", "text"]
+            "--permission-mode", "acceptEdits", "--allowedTools", tools, "--output-format", "text"]
 
 
 def daily(slug: str, out: TextIO) -> None:
@@ -33,7 +36,7 @@ def daily(slug: str, out: TextIO) -> None:
         time.sleep(random.randrange(1200))
     step(out, "discover", py("discover", slug))
     step(out, "triage", py("triage", slug))
-    step(out, "claude run", claude_cmd(slug))
+    step(out, "claude run", claude_cmd(slug), cwd=data_dir())       # plugin: the data folder is the workspace the hooks guard
     step(out, "report", py("report", slug, "--notify"), quiet=True)
 
 

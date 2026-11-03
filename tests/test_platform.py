@@ -159,7 +159,7 @@ class TestRunPrepare(Base):
         env = mock.patch.dict(os.environ, {"JOB_PREPARE_MAX": "7"})
         env.start()
         self.addCleanup(env.stop)
-        root = mock.patch.object(run_prepare, "ROOT", self.tmp / "no-repo-stop")
+        root = mock.patch.object(run_prepare, "stop_file", return_value=self.tmp / "no-repo-stop" / "STOP")
         root.start()
         self.addCleanup(root.stop)
 

@@ -22,10 +22,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from common import ROOT, read_json, save_json
+from common import read_json, save_json, sponsors_file
 
-DATA = ROOT / "data" / "sponsors.json"
 # migration file → table whose rows are read; every row starts with ('<normalized>','<as printed>','<YYYY-MM-DD>'
+DATA: Path | None = None     # override of the data file (tests); None = common.sponsors_file()
 SOURCES = {"0060_accredited_sponsors.sql": ("accredited_sponsors", "accredited"),
            "0087_active_sponsors_reocr.sql": ("active_sponsor_lists", "active")}
 FORMS = [(r"\bPTY\.?\s*LIMITED\b", "PTY LTD"), (r"\bPROPRIETARY\s+LIMITED\b", "PTY LTD"),
@@ -34,6 +34,10 @@ FORMS = [(r"\bPTY\.?\s*LIMITED\b", "PTY LTD"), (r"\bPROPRIETARY\s+LIMITED\b", "P
 GENERIC = {"PTY", "LTD", "INC", "CO", "CORP", "CORPORATION", "GROUP", "HOLDINGS", "AUSTRALIA", "AUSTRALIAN", "AU",
            "THE", "AND"}
 ROW = re.compile(r"^\('((?:[^']|'')*)','((?:[^']|'')*)','(\d{4}-\d{2}-\d{2})'")
+
+
+def data_file() -> Path:
+    return DATA or sponsors_file()
 
 
 def normalize(raw: str) -> str:
@@ -63,13 +67,13 @@ def import_lists(src: Path) -> dict[str, Any]:
                 if tag not in e["lists"]:
                     e["lists"].append(tag)
     data = {"source": str(src), "lists": sorted({t for e in entries.values() for t in e["lists"]}), "entries": entries}
-    save_json(DATA, data)
-    return {"companies": len(entries), "lists": data["lists"], "file": str(DATA)}
+    save_json(data_file(), data)
+    return {"companies": len(entries), "lists": data["lists"], "file": str(data_file())}
 
 
 @lru_cache(maxsize=1)
 def _index() -> tuple[dict[str, Any], dict[str, list[str]]]:
-    entries = read_json(DATA, {}).get("entries", {})
+    entries = read_json(data_file(), {}).get("entries", {})
     by_core: dict[str, list[str]] = {}
     for norm in entries:
         by_core.setdefault(core(norm), []).append(norm)

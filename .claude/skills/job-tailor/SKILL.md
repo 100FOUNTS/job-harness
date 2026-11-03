@@ -1,11 +1,13 @@
 ---
 name: job-tailor
-description: Tailors the CV and cover letter of the best jobs in today's package (default top 3) with a writer and a separate reviewer, then rebuilds and re-checks them. Use for "/job-tailor ana", "adapta las mejores de hoy", "tailor today's top jobs".
+description: Tailors the CV and cover letter of the best jobs in today's package (default top 3) with a writer and a separate reviewer, then rebuilds and re-checks them. Use for "/job-tailor ana", "adapta las mejores de hoy", "adapta mi CV a este trabajo", "tailor today's top jobs", "tailor my CV for the best jobs", "improve the documents for this ad".
 argument-hint: "<slug> [--top 3] [--date YYYY-MM-DD] [--job <key>]"
 arguments: [slug]
 ---
 
 # Tailor the best of today's package — candidate **$slug**
+
+Under the plugin this command is `/job-harness:job-tailor`. The package folder is shown by `job panel` and printed by `job schedule install` and `job schedule run-now`; the default is `~/job-packages/<slug>/<date>/`.
 
 The daily run (no LLM) builds every package with the track's master CV and a filled letter template. This step spends judgment only where it pays: the top jobs by fit.
 

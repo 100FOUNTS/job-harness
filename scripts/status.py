@@ -14,7 +14,7 @@ import os
 import time
 from typing import Any
 
-from common import cand_dir, list_candidates, plugin_mode, read_json, today, workspace
+from common import cand_dir, list_candidates, plugin_mode, read_json, remember_root, today, workspace
 from gates import load_all, seals_ok, valid_approval
 from learn import relevant
 from run_prepare import STALE_HOURS, lock_path
@@ -100,6 +100,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__); ap.add_argument("slug", nargs="?")
     ap.add_argument("--json", action="store_true"); ap.add_argument("--context", action="store_true")
     a = ap.parse_args()
+    remember_root()                       # plugin updates move the code; the schedule's launcher follows this pointer
     if a.context and plugin_mode() and not workspace(os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()):
         return
     slugs =[a.slug] if a.slug else list_candidates()

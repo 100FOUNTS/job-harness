@@ -16,9 +16,8 @@ import urllib.request
 from pathlib import Path
 
 import pdftext
-from common import ROOT, UA, setting
+from common import UA, apply_tools_dir, plugin_mode, setting, tools_dir
 
-DOCS = ROOT / "templates/docs"
 MIN_PY, MIN_NODE = (3, 9), 20
 
 
@@ -79,7 +78,7 @@ def chrome_flag() -> bool:
 
 
 def gather() -> dict:
-    nv, mods = node_version(), {m: (DOCS / "node_modules" / m).exists() for m in ("docx", "pdfkit", "pdfjs-dist")}
+    nv, mods = node_version(), {m: (tools_dir() / "node_modules" / m).exists() for m in ("docx", "pdfkit", "pdfjs-dist")}
     pkg = package_dir()
     plists = sorted(p.name for p in (Path.home() / "Library/LaunchAgents").glob("com.jobharness.daily.*.plist"))
     return {
@@ -97,7 +96,7 @@ def gather() -> dict:
         "package_dir_writable": writable(pkg),
         "claude_cli": bool(shutil.which("claude")),
         "claude --chrome flag": chrome_flag(),
-        "playwright (apply/)": (ROOT / "apply/node_modules/playwright").exists(),
+        "playwright (apply/)": (apply_tools_dir() / "node_modules/playwright").exists(),
         "launchd schedules": plists,
         "network: seek search": reach("https://www.seek.com.au/"),
     }
@@ -110,7 +109,7 @@ def report(r: dict) -> tuple[list[tuple[bool, str, str]], list[tuple[bool, str, 
     required = [
         (r["python_ok"], f"Python {r['python']} (3.9 or newer)", install_hint("python")),
         (r["node_ok"], f"Node.js {r['node_major']} (20 or newer)" if r["node"] else "Node.js (20 or newer)", node_fix),
-        (docs_ok, "Document tools installed (templates/docs/node_modules)", "job setup"),
+        (docs_ok, "Document tools installed (" + (f"{tools_dir()}/node_modules" if plugin_mode() else "templates/docs/node_modules") + ")", "job setup"),
         (bool(r["pdf_reader"]), f"PDF reader works ({r['pdf_reader']})" if r["pdf_reader"] else "PDF reader works", "job setup"),
         (r["package_dir_writable"], f"Can write to the package folder {r['package_dir']}",
          "pick a folder you own: set JOB_PACKAGE_DIR in .claude/settings.local.json"),

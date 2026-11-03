@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 import osutil
-from common import ROOT, cand_dir, today
+from common import ROOT, apply_tools_dir, browser_dir, cand_dir, node_env, today
 from gates import valid_approval
 from state import load_state
 from tracker import load, quota, set_status
@@ -25,7 +25,7 @@ APPLY = ROOT / "apply"
 
 
 def profile_dir(slug: str) -> Path:
-    d = ROOT / ".browser" / slug
+    d = browser_dir(slug)
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -50,7 +50,8 @@ def apply(slug: str, force_dry: bool) -> list[dict]:
         job_id = a["key"].split(":", 1)[1]
         r = subprocess.run(["node", str(APPLY / "apply_seek.js"), slug, job_id, a["cv"], a["letter"],
                             "submit" if live else "dry", str(profile_dir(slug)), a["key"]],
-                           capture_output=True, text=True, cwd=APPLY, timeout=600)
+                           capture_output=True, text=True, cwd=APPLY, timeout=600,
+                           env=node_env(apply_tools_dir()))
         try:
             res = json.loads(r.stdout.strip().splitlines()[-1])
         except Exception:

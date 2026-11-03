@@ -6,9 +6,9 @@ Format (Australian, ATS): one column, no tables/text boxes/images/headers/footer
 
 1. Write the JSON (schema = `templates/docs` generators; see an existing candidate's `docs/`). Bullets: action verb + task + how + result, figures only from `facts.json`.
 2. `job docs <slug> build docs/cv_<track>.json --kind cv --out candidates/<slug>/docs/master --name <First_Last>_Resume[_TRACK]`. It writes docx + pdf and runs lint + facts verify on both. Fix until `ok: true`.
-3. Look at the PDF (`pdftoppm -r 60` on page 1–2) once for spacing. Do not iterate more than needed: the generators already encode the layout.
+3. Look at the built PDF once for spacing (open pages 1–2 with the Read tool and its `pages` option). Do not iterate more than needed: the generators already encode the layout.
 4. Cover letter JSON: 5 paragraphs (purpose, why this company, technical evidence, Australian/transferable experience, closing with availability), `{{placeholders}}` for company-specific parts, one page.
-5. Gate `master-docs` (human): files = the JSONs + built PDFs. Show `job review` / `job sign` and wait.
+5. Gate `master-docs`: files = the JSONs + built PDFs. Show the person what they approve (`job review`), ask for their OK in the chat, then sign with `--by-agent` and their words in `--note`.
 
 Lessons (all codified in the generators/lint)
 - Calibri/Cambria break PDF text extraction ("restora on") → Arial in docx, Helvetica in the PDF.

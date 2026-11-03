@@ -88,7 +88,7 @@ class DocsErrors(Base):
     def test_missing_node_modules_gives_the_same_line(self):
         import docs
         with unittest.mock.patch("docs.shutil.which", return_value="/usr/bin/node"), \
-                unittest.mock.patch("docs.ROOT", self.tmp):
+                unittest.mock.patch("docs.tools_dir", return_value=self.tmp):
             with self.assertRaises(SystemExit) as c:
                 docs.need_node()
         self.assertIn("run `job setup`", str(c.exception))

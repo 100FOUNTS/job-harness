@@ -11,14 +11,14 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from common import ROOT
+from common import ROOT, node_env, tools_dir
 
 DOCS = ROOT / "templates/docs"
 NO_READER = "Can't read PDFs: run `job setup` (needs Node.js)"
 
 
 def node_ready() -> bool:
-    return bool(shutil.which("node")) and (DOCS / "node_modules/pdfjs-dist").exists()
+    return bool(shutil.which("node")) and (tools_dir() / "node_modules/pdfjs-dist").exists()
 
 
 def poppler_ready() -> bool:
@@ -27,7 +27,7 @@ def poppler_ready() -> bool:
 
 def _node(path: Path, mode: str) -> str:
     r = subprocess.run(["node", str(DOCS / "pdftext.js"), str(path), mode], capture_output=True, text=True,
-                       timeout=120, cwd=DOCS)
+                       timeout=120, cwd=DOCS, env=node_env())
     return r.stdout if r.returncode == 0 else ""      # a corrupt or missing file reads as empty, like Poppler
 
 

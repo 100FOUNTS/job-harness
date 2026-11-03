@@ -16,10 +16,10 @@ job-harness takes a candidate from "here is my folder" to daily, rule-abiding jo
 A local, free, rule-bound harness rather than a hosted job board or a mass auto-applier: truth checks on every document (no invented experience or figures), sealed approvals before anything is sent, explicit limits, and the person's own judgment at every send.
 
 ## Operating Context
-- Runs on the operator's Mac; the panel is served by a Python standard-library server on 127.0.0.1, opened in the browser. No network resources: no CDNs, no web fonts, no external scripts.
+- Runs on the operator's own computer (macOS, Windows or Linux); the panel is served by a Python standard-library server on 127.0.0.1, opened in the browser. No network resources: no CDNs, no web fonts, no external scripts.
 - Data comes from the harness files: tracker.json (statuses and history), the daily packages (items.json, PDFs), jobs.db (every ad ever seen, verdicts, reasons, descriptions).
 - Status changes go through the tracker's own rules (limits, history) via token-protected POSTs.
-- UI language follows the candidate's `ui_language` (Spanish today).
+- The panel is in English. The candidate's `ui_language` (`en` or `es`) sets the language of the daily package and of the sponsor-list notes.
 
 ## Capabilities and Constraints
 - Statuses: prepared / dry-run / manual-review (to apply), applied / submitted (sent), interview, offer, hired, rejected, no-response, withdrawn, closed, skipped.

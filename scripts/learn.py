@@ -8,26 +8,44 @@ Optional fields per line: pattern (short key that groups recurring lessons), sta
 Lessons are public in the repo: write the rule, never a person's data. A harness or platform lesson never carries a
 candidate, and one that names a known candidate (name or email) is refused.
 `job status --context` shows up to 5 active lessons relevant to the next step.
+Plugin mode: new lessons go to <data dir>/learn/observations.jsonl (the plugin folder is replaced on every update);
+the lessons shipped with the plugin (learn/ in the plugin) are read from there too, read-only.
 """
 from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 from typing import Any
 
-from common import ROOT, cand_dir, list_candidates, now_iso, read_json
+import common
+from common import cand_dir, learn_dir, list_candidates, now_iso, plugin_mode, read_json
 
-LOG = ROOT / "learn" / "observations.jsonl"
+LOG: Path | None = None       # the person's lessons file; None = <data dir>/learn/observations.jsonl
 STATUSES = ("active", "applied", "dismissed")
+
+
+def own_log() -> Path:
+    return LOG or learn_dir() / "observations.jsonl"
+
+
+def logs() -> list[Path]:
+    """Lesson files, read in order. Clone: the one file in the repo. Plugin: the shipped lessons, then the person's."""
+    bundled = common.ROOT / "learn" / "observations.jsonl"
+    return [bundled, own_log()] if plugin_mode() and bundled != own_log() else [own_log()]
+
+
+def read_lines(path: Path) -> list[tuple[str, dict[str, Any]]]:
+    out = []
+    for line in path.read_text().splitlines() if path.exists() else []:
+        if line.strip():
+            out.append((line, json.loads(line)))
+    return out
 
 
 def load_lines() -> list[tuple[str, dict[str, Any]]]:
     """(raw line, parsed) for every lesson; the raw text is kept so a status change rewrites only its own line."""
-    out = []
-    for line in LOG.read_text().splitlines() if LOG.exists() else []:
-        if line.strip():
-            out.append((line, json.loads(line)))
-    return out
+    return [row for f in logs() for row in read_lines(f)]
 
 
 def personal(lesson: str) -> str:
@@ -72,8 +90,8 @@ def main() -> None:
         if a.pattern:
             o["pattern"] = a.pattern
         o["status"] = "active"
-        LOG.parent.mkdir(exist_ok=True)
-        with LOG.open("a") as f:
+        own_log().parent.mkdir(parents=True, exist_ok=True)
+        with own_log().open("a") as f:
             f.write(json.dumps(o, ensure_ascii=False) + "\n")
         print("logged")
     elif a.cmd == "set-status":
@@ -81,10 +99,15 @@ def main() -> None:
         hit = [i for i, (_, o) in enumerate(rows) if (str(i + 1) == a.which or o.get("pattern") == a.which)]
         if not hit:
             raise SystemExit(f"No lesson numbered or patterned {a.which!r}: see `job learn list`.")
-        text = [raw for raw, _ in rows]
-        for i in hit:
-            text[i] = json.dumps(rows[i][1] | {"status": a.status}, ensure_ascii=False)
-        LOG.write_text("\n".join(text) + "\n")
+        n_shipped = len(rows) - len(read_lines(own_log()))     # shipped lessons come first and are read-only
+        if any(i < n_shipped for i in hit) and plugin_mode():
+            print(f"{sum(i < n_shipped for i in hit)} lesson(s) ship with the plugin and cannot be changed")
+            hit = [i for i in hit if i >= n_shipped]
+        if hit:
+            text = [raw for raw, _ in rows[n_shipped:]]
+            for i in hit:
+                text[i - n_shipped] = json.dumps(rows[i][1] | {"status": a.status}, ensure_ascii=False)
+            own_log().write_text("\n".join(text) + "\n")
         print(f"{len(hit)} lesson(s) -> {a.status}")
     else:
         for i, (_, o) in enumerate(load_lines(), 1):

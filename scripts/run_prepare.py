@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Callable, TextIO
 
 import osutil
-from common import ROOT, cand_dir, read_json, setting, today
+from common import ROOT, cand_dir, read_json, setting, stop_file, today
 
 STALE_HOURS = 6
 UNIX_PATH = [str(Path.home() / ".local/bin"), "/opt/homebrew/bin", "/usr/local/bin"]
@@ -42,7 +42,7 @@ def setup_env(pairs: list[str]) -> None:
 
 
 def stopped(slug: str) -> bool:
-    return (ROOT / "STOP").exists() or (cand_dir(slug) / "STOP").exists()
+    return stop_file().exists() or (cand_dir(slug) / "STOP").exists()
 
 
 def lock_path(slug: str) -> Path:
@@ -72,10 +72,10 @@ def py(script: str, *args: str) -> list[str]:
     return [*osutil.python(), str(ROOT / "scripts" / f"{script}.py"), *args]
 
 
-def step(out: TextIO, label: str, cmd: list[str], quiet: bool = False) -> bool:
+def step(out: TextIO, label: str, cmd: list[str], quiet: bool = False, cwd: Path = ROOT) -> bool:
     out.flush()
     try:
-        ok = subprocess.run(cmd, cwd=ROOT, stdout=out, stderr=subprocess.STDOUT).returncode == 0
+        ok = subprocess.run(cmd, cwd=cwd, stdout=out, stderr=subprocess.STDOUT).returncode == 0
     except OSError:
         ok = False
     if not ok and not quiet:

@@ -6,6 +6,9 @@ Windows Task Scheduler (schtasks), Linux systemd user timer (a crontab line is p
   job schedule status <slug>
   job schedule run-now <slug>          one run immediately, without the random delay (for testing)
   add --print to any of them to see what would be installed or run, without doing it
+
+Installed as a plugin, the OS scheduler never points at the plugin folder (a plugin update replaces it): it calls a
+small launcher in the data folder (run.sh / run.cmd) that reads the current code folder from <data dir>/.harness_root.
 """
 from __future__ import annotations
 
@@ -17,7 +20,7 @@ import subprocess
 from pathlib import Path
 
 import osutil
-from common import ROOT, cand_dir, setting, today
+from common import ROOT, cand_dir, data_dir, plugin_mode, remember_root, setting, today
 
 LABEL = "com.jobharness.daily.{slug}"
 TASK = "JobHarness-{slug}"
@@ -45,10 +48,77 @@ def runner_py(runner: str) -> Path:
     return ROOT / "scripts" / ("run_prepare.py" if runner == "prepare" else "run_daily.py")
 
 
-def run_argv(slug: str, runner: str, with_env: bool = False) -> list[str]:
-    """Our own interpreter + runner; Task Scheduler has no environment, so JOB_* travel as --env arguments."""
+def launcher_path(name: str) -> Path:
+    return data_dir() / ("run.cmd" if name == "win" else "run.sh")
+
+
+def launcher_text(name: str) -> str:
+    """run.sh / run.cmd: `run [--agent] <slug> [args]` runs the runner of the code folder named in .harness_root."""
+    py = osutil.python()[0]
+    if name == "win":
+        return f"""@echo off
+rem job-harness launcher: finds the current plugin folder, so a plugin update never breaks the schedule.
+set "D=%~dp0"
+set "ROOT="
+if exist "%D%.harness_root" set /p ROOT=<"%D%.harness_root"
+set "S=run_prepare"
+if "%~1"=="--agent" (set "S=run_daily" & shift)
+if not defined ROOT goto missing
+if not exist "%ROOT%\\scripts\\%S%.py" goto missing
+set A=
+:next
+if "%~1"=="" goto run
+set A=%A% "%~1"
+shift
+goto next
+:run
+"{py}" "%ROOT%\\scripts\\%S%.py" %A%
+exit /b %errorlevel%
+:missing
+echo %date% %time% job-harness: the plugin folder in "%D%.harness_root" is missing or gone. Open Claude Code and run `job setup`. >> "%D%launcher.log"
+echo job-harness: the plugin folder in "%D%.harness_root" is missing or gone. Open Claude Code and run `job setup`. 1>&2
+exit /b 1
+"""
+    return f"""#!/bin/sh
+# job-harness launcher: finds the current plugin folder, so a plugin update never breaks the schedule.
+D="$(cd "$(dirname "$0")" && pwd)"
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+R="$(cat "$D/.harness_root" 2>/dev/null)"
+S=run_prepare
+if [ "$1" = "--agent" ]; then S=run_daily; shift; fi
+if [ -z "$R" ] || [ ! -f "$R/scripts/$S.py" ]; then
+  m="job-harness: the plugin folder in $D/.harness_root is missing or gone. Open Claude Code and run: job setup"
+  echo "$(date '+%a %d %b %Y %H:%M:%S') $m" >> "$D/launcher.log"
+  echo "$m" >&2
+  exit 1
+fi
+cd "$R" || exit 1
+PY={shlex.quote(py)}
+[ -x "$PY" ] || PY=python3
+exec "$PY" "$R/scripts/$S.py" "$@"
+"""
+
+
+def write_launcher(name: str) -> Path:
+    f = launcher_path(name)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(launcher_text(name))
+    f.chmod(0o755)
+    remember_root()
+    return f
+
+
+def run_argv(slug: str, runner: str, with_env: bool = False, scheduled: bool = False) -> list[str]:
+    """Our own interpreter + runner; Task Scheduler has no environment, so JOB_* travel as --env arguments.
+    scheduled + plugin: the launcher in the data folder instead (the code path changes with every plugin update)."""
     env = [x for k, v in sorted(job_env().items()) if k.startswith("JOB_") for x in ("--env", f"{k}={v}")] if with_env else []
+    if scheduled and plugin_mode():
+        return [str(launcher_path(osutil.os_name())), *(["--agent"] if runner == "agent" else []), slug, *env]
     return [*osutil.python(), str(runner_py(runner)), slug, *env]
+
+
+def workdir() -> Path:
+    return data_dir() if plugin_mode() else ROOT
 
 
 def sd_quote(s: str) -> str:
@@ -58,8 +128,8 @@ def sd_quote(s: str) -> str:
 def systemd_units(slug: str, hour: int, minute: int, runner: str) -> dict[Path, str]:
     d = Path.home() / ".config/systemd/user"
     env = "".join(f"Environment={sd_quote(f'{k}={v}')}\n" for k, v in sorted(job_env().items()))
-    service = f"[Unit]\nDescription=job-harness daily run ({slug})\n\n[Service]\nType=oneshot\nWorkingDirectory={sd_quote(str(ROOT))}\n" \
-              f"ExecStart={' '.join(sd_quote(x) for x in run_argv(slug, runner))}\n{env}"
+    service = f"[Unit]\nDescription=job-harness daily run ({slug})\n\n[Service]\nType=oneshot\nWorkingDirectory={sd_quote(str(workdir()))}\n" \
+              f"ExecStart={' '.join(sd_quote(x) for x in run_argv(slug, runner, scheduled=True))}\n{env}"
     timer = f"[Unit]\nDescription=job-harness daily timer ({slug})\n\n[Timer]\nOnCalendar=*-*-* {hour:02d}:{minute:02d}:00\n" \
             "Persistent=true\n\n[Install]\nWantedBy=timers.target\n"
     return {d / f"{UNIT.format(slug=slug)}.service": service, d / f"{UNIT.format(slug=slug)}.timer": timer}
@@ -67,7 +137,7 @@ def systemd_units(slug: str, hour: int, minute: int, runner: str) -> dict[Path, 
 
 def crontab_line(slug: str, hour: int, minute: int, runner: str) -> str:
     env = " ".join(f"{k}={shlex.quote(v)}" for k, v in sorted(job_env().items()) if k.startswith("JOB_"))
-    return f"{minute} {hour} * * * cd {shlex.quote(str(ROOT))} && {env + ' ' if env else ''}{shlex.join(run_argv(slug, runner))}"
+    return f"{minute} {hour} * * * cd {shlex.quote(str(workdir()))} && {env + ' ' if env else ''}{shlex.join(run_argv(slug, runner, scheduled=True))}"
 
 
 def plan_install(slug: str, hour: int, minute: int, runner: str, name: str) -> dict:
@@ -79,7 +149,7 @@ def plan_install(slug: str, hour: int, minute: int, runner: str, name: str) -> d
         return {"files": {p: plist(slug, hour, minute, runner)}, "where": str(p), "note": "",
                 "cmds": [(["launchctl", "bootout", f"gui/{uid}", str(p)], True), (["launchctl", "bootstrap", f"gui/{uid}", str(p)], False)]}
     if name == "win":
-        tr = subprocess.list2cmdline(run_argv(slug, runner, with_env=True))
+        tr = subprocess.list2cmdline(run_argv(slug, runner, with_env=True, scheduled=True))
         return {"files": {}, "where": f"task {TASK.format(slug=slug)}", "note": "",
                 "cmds": [(["schtasks", "/Create", "/SC", "DAILY", "/ST", f"{hour:02d}:{minute:02d}", "/TN", TASK.format(slug=slug), "/TR", tr, "/F"], False)]}
     if shutil.which("systemctl"):
@@ -120,11 +190,14 @@ def package_hint(slug: str) -> str:
 
 def plist(slug: str, hour: int, minute: int, runner: str = "prepare") -> str:
     script = ROOT / ("scripts/run_prepare.sh" if runner == "prepare" else "scripts/run_daily.sh")
+    args = f"<string>/bin/zsh</string><string>{script}</string><string>{slug}</string>"
+    if plugin_mode():
+        args = "".join(f"<string>{x}</string>" for x in ["/bin/sh", *run_argv(slug, runner, scheduled=True)])
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>{LABEL.format(slug=slug)}</string>
-  <key>ProgramArguments</key><array><string>/bin/zsh</string><string>{script}</string><string>{slug}</string></array>
+  <key>ProgramArguments</key><array>{args}</array>
   <key>StartCalendarInterval</key><dict><key>Hour</key><integer>{hour}</integer><key>Minute</key><integer>{minute}</integer></dict>
   <key>StandardOutPath</key><string>{cand_dir(slug)}/logs/launchd.out</string>
   <key>StandardErrorPath</key><string>{cand_dir(slug)}/logs/launchd.err</string>
@@ -142,6 +215,8 @@ def install(a: argparse.Namespace, name: str) -> None:
             print("$", show(argv))
         return print(pl["note"]) if pl["note"] else None
     (cand_dir(a.slug) / "logs").mkdir(exist_ok=True)
+    if plugin_mode():
+        write_launcher(name)
     for path, text in pl["files"].items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)

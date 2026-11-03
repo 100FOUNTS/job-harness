@@ -1,6 +1,6 @@
 ---
 name: job-learn
-description: Reviews the job-harness lessons (learn/observations.jsonl) and proposes concrete improvements to scripts, references, agents or tests. Use for "/job-learn", "what did we learn", "improve the harness".
+description: Reviews the job-harness lessons (learn/observations.jsonl) and proposes concrete improvements to scripts, references, agents or tests. Use for "/job-learn", "what did we learn", "qué aprendimos", "improve the harness". Under the plugin: `/job-harness:job-learn`.
 ---
 
 1. `job learn list` and the last daily logs (`candidates/*/logs/*.log`, reports with many manual-review items).
