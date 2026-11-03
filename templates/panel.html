@@ -52,6 +52,12 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
 .brand small { display: block; color: var(--muted); font-size: 12px; }
 .field { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
 select, .input { padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; border: 1px solid var(--line-strong); background: var(--sunken); color: var(--muted); cursor: help; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill[data-state="Working"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.pill[data-state="Needs your decision"] { background: var(--urgent-bg); color: var(--urgent-ink); border-color: var(--urgent-line); }
+.pill[data-state="Ready"] { background: color-mix(in srgb, var(--have) 16%, var(--surface)); color: var(--have); border-color: var(--have); }
+.pill[data-state="Up to date"] { background: var(--surface); color: var(--muted); }
 .tabs { display: flex; gap: 4px; background: var(--ground); padding: 4px; border-radius: 10px; }
 .tab { border: 0; background: transparent; padding: 7px 14px; border-radius: 7px; color: var(--muted); font-weight: 600; cursor: pointer; }
 .tab[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
@@ -212,6 +218,7 @@ td.r, th.r { text-align: right; }
 <header class="top">
   <div class="brand"><div class="mark" aria-hidden="true">jh</div><div><b>Applications</b><small id="sub"></small></div></div>
   <label class="field">Candidate <select id="cand"></select></label>
+  <span class="pill" id="state" role="status" tabindex="0"></span>
   <div class="tabs" role="tablist" aria-label="Views">
     <button class="tab" role="tab" id="tab-board" data-view="board">Board</button>
     <button class="tab" role="tab" id="tab-funnel" data-view="funnel">Funnel</button>
@@ -277,6 +284,12 @@ async function post(path, body) {
 function header() {
   $("#sub").textContent = `${D.name} · data as of ${D.generated}`;
   $("#cand").innerHTML = D.candidates.map(c => `<option ${c === D.slug ? "selected" : ""}>${esc(c)}</option>`).join("");
+  const st = D.state || {};
+  $("#state").hidden = !st.label;
+  $("#state").dataset.state = st.label || "";
+  $("#state").textContent = st.label || "";
+  $("#state").title = $("#state").dataset.tip = [st.why, st.action && st.action.replace(/`/g, "")].filter(Boolean).join(" ");
+  $("#state").setAttribute("aria-label", "Status: " + (st.label || "") + ". " + $("#state").title);
   $("#dropcount").textContent = D.dropped.length;
   document.querySelectorAll(".tab").forEach(t => { t.setAttribute("aria-selected", t.dataset.view === S.view); t.tabIndex = t.dataset.view === S.view ? 0 : -1; });
 }

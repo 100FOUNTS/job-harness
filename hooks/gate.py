@@ -27,8 +27,10 @@ import shlex
 import sys
 from pathlib import Path
 
-ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR", Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(ROOT / "scripts"))
+HARNESS = Path(__file__).resolve().parent.parent
+ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR", HARNESS))
+sys.path.insert(0, str(HARNESS / "scripts"))
+JOB_CMD = re.compile(r"(^|[\s;&|(])(\S*/)?job(\.cmd)?\s")
 
 BOOKKEEPING = re.compile(r"candidates/[^/]+/(state\.json|facts\.json|tracker\.json|jobs\.db|approvals/)")
 SECRET = re.compile(r"(^|[/\s'\"])\.env(\b|$)|credentials|\.netrc|id_rsa", re.I)
@@ -126,6 +128,12 @@ def main() -> None:
         sys.exit(0)
     tool, inp = data.get("tool_name", ""), data.get("tool_input", {}) or {}
     touched = ""
+    try:                                   # installed as a plugin: other projects are left alone, but `job ...` is always gated
+        from common import plugin_mode, workspace
+        if plugin_mode() and not workspace(ROOT) and not (tool == "Bash" and JOB_CMD.search(str(inp.get("command", "")))):
+            sys.exit(0)
+    except ImportError:
+        pass
 
     if tool in ("Read", "Grep", "Glob"):
         target = str(inp.get("file_path") or inp.get("path") or inp.get("pattern") or "")

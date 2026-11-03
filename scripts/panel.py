@@ -35,6 +35,7 @@ from typing import Any
 
 import osutil
 from common import cand_dir, list_candidates, read_json, setting
+from status import summary
 from tracker import OUTCOMES, PENDING, SENT, calibrate, followups, load, set_note, set_status
 
 TOKEN = secrets.token_urlsafe(24)
@@ -223,6 +224,7 @@ def data(slug: str) -> dict[str, Any]:
                      "new": a["date"] == today})
     pending_answers = len(read_json(cand_dir(slug) / "pending_questions.json", {"questions": []}).get("questions", []))
     return {"slug": slug, "name": read_json(cand_dir(slug) / "intake.json")["name"], "apps": apps,
+            "state": summary(slug)["state"],
             "today": {"to_apply": sum(a["col"] == "todo" for a in apps), "new": sum(a["new"] for a in apps),
                       "closing_soon": [a["key"] for a in apps if a["col"] == "todo" and a["closes"]
                                        and today <= a["closes"] <= soon],

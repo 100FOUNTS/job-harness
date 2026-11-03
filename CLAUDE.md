@@ -2,6 +2,8 @@
 
 A Claude Code harness that takes a candidate from "here is my folder" to daily, rule-abiding job applications in Australia: intake → profile and gaps → target tracks → master documents → SEEK/LinkedIn profiles → alerts → daily cycle (dry-run, then live) with a daily report.
 
+New here, or installed as a plugin (CLAUDE.md is not loaded then)? The `job-start` skill carries these rules and the first-run flow.
+
 ## Language
 Code, keys and internal notes in English. Answer the user in their language. Candidate documents are in the intake's `docs_language` (en-AU: organise, licence, modelling…).
 

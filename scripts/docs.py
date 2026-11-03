@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +21,11 @@ from facts import verify
 from lint import lint
 
 GEN = {"cv": ROOT / "templates/docs/generar_cv.js", "letter": ROOT / "templates/docs/generar_carta.js"}
+
+
+def need_node() -> None:
+    if not shutil.which("node") or not (ROOT / "templates/docs/node_modules").is_dir():
+        raise SystemExit("Can't build documents: run `job setup` (needs Node.js 20+).")
 
 
 def export_pdf(src: Path, kind: str, pdf: Path) -> Path | None:
@@ -40,6 +46,7 @@ def _in_candidate(slug: str, p: Path) -> Path:
 
 
 def build(slug: str, src: Path, kind: str, out: Path | None, name: str | None) -> dict:
+    need_node()
     src, out = (_in_candidate(slug, p) if p is not None else None for p in (src, out))
     out = (out or src.parent).resolve()          # the generator runs in templates/docs: paths must be absolute
     out.mkdir(parents=True, exist_ok=True)
