@@ -25,3 +25,4 @@ STOP
 .DS_Store
 # Visa sponsor lists imported with `job sponsors import` (third-party data, rebuilt locally)
 /data/
+/.cache/

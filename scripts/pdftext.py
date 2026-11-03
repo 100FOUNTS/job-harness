@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import re
@@ -11,7 +12,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from common import ROOT, node_env, tools_dir
+from common import ROOT, data_dir, node_env, tools_dir
 
 DOCS = ROOT / "templates/docs"
 NO_READER = "Can't read PDFs: run `job setup` (needs Node.js)"
@@ -65,9 +66,28 @@ def lines(path: Path) -> list[tuple[float, list[tuple[float, float, str]]]]:
     raise RuntimeError(NO_READER)
 
 
+def _cached(path: Path) -> Path | None:
+    """The text of a PDF is kept per (path, size, mtime): the panel reads dozens of CVs on every load."""
+    try:
+        st = Path(path).stat()
+    except OSError:
+        return None
+    key = hashlib.sha1(f"{Path(path).resolve()}|{st.st_size}|{st.st_mtime_ns}".encode()).hexdigest()
+    return data_dir() / ".cache" / "pdftext" / f"{key}.txt"
+
+
 def text(path: Path) -> str:
     if node_ready():
-        return _node(path, "--text")
+        c = _cached(path)
+        if c and c.exists():
+            return c.read_text(encoding="utf-8")
+        out = _node(path, "--text")
+        if c and out:
+            try:
+                c.parent.mkdir(parents=True, exist_ok=True); c.write_text(out, encoding="utf-8")
+            except OSError:
+                pass
+        return out
     if poppler_ready():
         return _poppler(["pdftotext", "-layout", str(path), "-"])
     raise RuntimeError(NO_READER)

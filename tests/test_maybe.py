@@ -83,7 +83,7 @@ class Maybe(Base):
         with connect("ana") as con:
             con.executemany("INSERT INTO jobs (key, title, company, url, teaser, description, last_seen, verdict, reason) "
                             "VALUES (?, ?, 'Co', 'u', '', ?, ?, 'rejected', ?)",
-                            [(f"x:{i}", f"Role {i}", "lorem ipsum dolor sit amet " * 300 + (" python react sql" if i % 50 == 0 else ""),
+                            [(f"x:{i}", f"Role {i}", ("python react sql " if i % 50 == 0 else "") + "lorem ipsum dolor sit amet " * 300,
                               self.day, NO_MATCH) for i in range(3000)])
         t = time.time()
         r = panel.maybes("ana")

@@ -182,7 +182,7 @@ def maybes(slug: str, days: int = 7, n: int = 10) -> list[dict[str, Any]]:
     for key, title, company, url, seen, teaser, bullets, desc in rows:
         if key in tracked or not title or any(x.search(title) for x in ex):
             continue
-        found = m.found(" ".join(filter(None, [title, teaser, bullets, desc])))
+        found = m.found(" ".join(filter(None, [title, teaser, bullets, (desc or "")[:6000]])))   # an ad's first pages say what it is
         score = m.score(found)
         if score >= suggest.MIN_SCORE:
             out.append({"key": key, "title": title, "company": company or "", "url": url or "", "day": seen, "score": score,
