@@ -89,6 +89,8 @@ kbd { font: 11px/1 var(--font); border: 1px solid var(--line-strong); border-bot
 .col.drop { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-soft); }
 .col h2 { margin: 2px 4px; font-size: 13px; display: flex; justify-content: space-between; }
 .col h2 span { color: var(--muted); }
+.col h3.sub { margin: 6px 4px 0; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; display: flex; justify-content: space-between; border-top: 1px solid var(--line-strong); padding-top: 8px; }
+.col h3.sub:first-of-type { border-top: 0; padding-top: 0; }
 .empty { border: 1px dashed var(--line-strong); border-radius: 10px; padding: 14px 12px; font-size: 13px; color: var(--muted); text-align: center; }
 .more { border: 0; background: transparent; color: var(--accent); font-weight: 600; padding: 6px; cursor: pointer; }
 
@@ -333,6 +335,15 @@ function board() {
     const g = apps.filter(a => a.col === id), lim = S.expanded[id] ? g.length : PER_COL;
     const empty = {todo: "No hay avisos con estos filtros.", sent: "Arrastra aquí lo que ya enviaste.", interview: "Cuando te llamen, mueve la tarjeta aquí.",
       offer: "Cuando llegue una oferta, mueve la tarjeta aquí.", closed: "Aquí quedan los rechazos, sin respuesta y avisos cerrados."}[id];
+    if (id === "todo") {                      /* today's package first, then what is still waiting from earlier days */
+      const fresh = g.filter(a => a.new), old = g.filter(a => !a.new), olim = S.expanded.todo ? old.length : PER_COL;
+      return `<section class="col" data-col="todo" aria-label="${name}"><h2>${name} <span class="num">${g.length}</span></h2>
+        <h3 class="sub">Hoy <span class="num">${fresh.length}</span></h3>
+        ${fresh.map(card).join("") || `<div class="empty">La corrida de hoy no dejó avisos nuevos con estos filtros.</div>`}
+        <h3 class="sub">Días anteriores <span class="num">${old.length}</span></h3>
+        ${old.slice(0, olim).map(card).join("") || `<div class="empty">No queda nada pendiente de días anteriores.</div>`}
+        ${old.length > olim ? `<button class="more" data-more="todo">Ver ${old.length - olim} más</button>` : ""}</section>`;
+    }
     return `<section class="col" data-col="${id}" aria-label="${name}"><h2>${name} <span class="num">${g.length}</span></h2>
       ${g.slice(0, lim).map(card).join("") || `<div class="empty">${empty}</div>`}
       ${g.length > lim ? `<button class="more" data-more="${id}">Ver ${g.length - lim} más</button>` : ""}</section>`;
