@@ -249,7 +249,7 @@ Bug reports, broken-site reports, new sources and new countries are welcome. Sta
 ## Support
 job-harness is free, open source and uses no paid services. If it helped your job search, a coffee keeps it going.
 
-<p align="center"><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><img src="docs/assets/buy-me-a-coffee.png" alt="Buy me a coffee: support 100 FOUNTS, who build job-harness" width="180"></a><br><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><b>☕ Buy me a coffee</b></a></p>
+<p align="center"><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><img src="docs/assets/buy-me-a-coffee.png" alt="Buy me a coffee: support 100 FOUNTS, who build job-harness" width="180"></a><br><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><b>☕ Buy me a coffee</b></a><br>Prefer a monthly sponsorship? <a href="https://github.com/sponsors/100FOUNTS">Sponsor 100FOUNTS on GitHub</a>.</p>
 
 ## License
 MIT

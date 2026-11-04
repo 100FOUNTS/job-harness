@@ -84,4 +84,4 @@ Una página corta con lo esencial: [100founts.github.io/job-harness](https://100
 ## Apoya el proyecto
 job-harness es gratis, de código abierto y no usa servicios pagos. Si te ayudó en tu búsqueda, un café ayuda a mantenerlo.
 
-<p align="center"><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><img src="../assets/buy-me-a-coffee.png" alt="Buy me a coffee: apoya a 100 FOUNTS, que construye job-harness" width="180"></a><br><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><b>☕ Buy me a coffee</b></a></p>
+<p align="center"><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><img src="../assets/buy-me-a-coffee.png" alt="Buy me a coffee: apoya a 100 FOUNTS, que construye job-harness" width="180"></a><br><a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><b>☕ Buy me a coffee</b></a><br>¿Prefieres un aporte mensual? <a href="https://github.com/sponsors/100FOUNTS">Patrocina a 100FOUNTS en GitHub</a>.</p>
