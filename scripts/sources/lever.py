@@ -10,6 +10,7 @@ from typing import Any
 from sources import base
 
 NAME, COUNTRY, NEEDS_LOGIN = "lever", "*", False
+APPLY = ("external", "lever")                    # the public posting is the application page: no account usually
 DESCRIPTION = "Lever company postings (public Postings API, one company per search)"
 KEYS = "company, name, location, max_age_days"
 

@@ -11,6 +11,7 @@ from typing import Any
 from sources import base
 
 NAME, COUNTRY, NEEDS_LOGIN = "greenhouse", "*", False
+APPLY = ("external", "greenhouse")                    # the public posting is the application page: no account usually
 DESCRIPTION = "Greenhouse company job boards (public Job Board API, one company per search)"
 KEYS = "board, name, location, max_age_days"
 

@@ -35,6 +35,9 @@ Success → `job track $slug set <key> prepared --cv <pdf> --letter <pdf>`.
 
 ## 4. Apply (agent `form-filler`, browser) — one job at a time
 Pass: the job URL, the PDFs, `answers.json`, `intake.json`, and the effective mode.
+- Before the first job: `job routes $slug --hosts` and put the sites it lists in the report's "allow these in Chrome" line (Claude in Chrome asks per site; a refused site stops that job half way). `job answer $slug gaps` lists the common questions with no answer yet: every one of them stops a form that asks it.
+- Order: ready jobs first (`job routes $slug --queue`: `ready_to_fill`), then `to_probe` (the form-filler clicks Apply and records the gate). A host already known as `login` is not probed again: the job goes to the login queue.
+- At the end, put `login_queue` in the report: one line per portal ("sign in once to <host>: N jobs"). When the person says they signed in, run the form-filler again for those jobs.
 - Before each submission in live mode: `job track $slug quota --platform <p>`; if 0 left, stop applying.
 - Outcome → `job track $slug set <key> submitted|dry-run|manual-review|failed --note "..."`.
 - Wait 4–12 minutes (random) between applications in live mode; in dry-run 30–60 s is enough.
@@ -50,6 +53,5 @@ Pass: the job URL, the PDFs, `answers.json`, `intake.json`, and the effective mo
 
 ## Rules
 - Never answer a form field with something not in answers.json/intake.json → manual-review.
-- Never create accounts (Workday/PageUp/etc.), enter passwords, solve captchas or accept new terms → manual-review.
 - Never mention visa/sponsorship outside a field that explicitly asks. Never write free text beyond the tailored cover letter.
 - A step failing twice → record and continue with the next job. Never loop.

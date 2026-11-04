@@ -15,6 +15,7 @@ DETAIL_DELAY = (1.5, 3.5)
 
 SEARCH = "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search"
 POSTING = "https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/"
+_APPLY: dict[str, str] = {}                      # job id → "quick" | "external", noted while reading the guest page
 
 
 def search(search: dict[str, Any], max_age_days: int) -> list[dict[str, Any]]:
@@ -43,9 +44,29 @@ def search(search: dict[str, Any], max_age_days: int) -> list[dict[str, Any]]:
 def detail(job_id: str) -> str:
     """Full description of a LinkedIn job (public guest endpoint). Used for the shortlist only."""
     code, body = base.http_get(POSTING + job_id)
+    if code == 200:
+        _note(job_id, body)
     m = re.search(r"show-more-less-html__markup[^>]*>(.*)</div>\s*<button", body, re.S) if code == 200 else None
     m = m or (re.search(r"show-more-less-html__markup[^>]*>(.*?)</div>", body, re.S) if code == 200 else None)
     return base.guarded(m.group(1)) if m else ""
+
+
+def _note(job_id: str, page: str) -> None:
+    """The guest page's apply link says where the application happens: `apply-link-onsite` is Easy Apply (on LinkedIn),
+    `apply-link-offsite` the employer's own site (seen 2026-11-05). A page with neither (closed, trimmed) says nothing."""
+    if "apply-link-offsite" in page:
+        _APPLY[job_id] = "external"
+    elif "apply-link-onsite" in page:
+        _APPLY[job_id] = "quick"
+
+
+def route(job_id: str) -> tuple[str, str] | None:
+    """"quick" (Easy Apply) or "external" (the employer's site): free when detail() just read the page, else one request."""
+    if job_id not in _APPLY:
+        code, body = base.http_get(POSTING + job_id)
+        if code == 200:
+            _note(job_id, body)
+    return (_APPLY[job_id], "") if job_id in _APPLY else None
 
 
 def alive(job_id: str) -> tuple[bool | None, str | None]:

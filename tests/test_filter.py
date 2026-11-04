@@ -71,8 +71,20 @@ class TestBudget(unittest.TestCase):
         def fake(job_id):
             calls.append(job_id)
             return "We use python and python daily."
-        with unittest.mock.patch.object(sources.seek, "detail", fake), unittest.mock.patch("time.sleep"):
+        with unittest.mock.patch.object(sources.seek, "detail", fake), unittest.mock.patch.object(
+                sources.seek, "route", lambda i: ("quick", "")), unittest.mock.patch("time.sleep"):
             return triage("ana", "2026-01-01", 40), calls
+
+    def test_the_apply_route_is_kept_on_the_shortlisted_job_and_in_jobs_db(self):
+        from jobdb import record_seen
+        record_seen("ana", [self.job(1, "Python Developer") | {"tracks": []}], "2026-01-01")          # discover has done this by triage time
+        out, _ = self.run_triage([self.job(1, "Python Developer")])
+        self.assertEqual([(j["apply_route"], j["apply_ats"]) for j in out["shortlist"]], [("quick", "")])
+        saved = json.loads((self.tmp / "ana" / "data" / "2026-01-01" / "shortlist.json").read_text(encoding="utf-8"))
+        self.assertEqual(saved["shortlist"][0]["apply_route"], "quick")
+        from jobdb import connect
+        with connect("ana", readonly=True) as con:
+            self.assertEqual(con.execute("SELECT apply_route FROM jobs WHERE key='seek:1'").fetchone()[0], "quick")
 
     def job(self, i, title, listed="2026-01-01", teaser=""):
         return {"key": f"seek:{i}", "id": str(i), "platform": "seek", "title": title, "company": "Co", "location": "Perth WA",

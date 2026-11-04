@@ -4,6 +4,17 @@ All notable changes to job-harness. Format: [Keep a Changelog](https://keepachan
 
 The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `HARNESS_VERSION` in `scripts/common.py`) must go up for plugin installs to pick up a change. See [docs/RELEASING.md](docs/RELEASING.md).
 
+## [Unreleased]
+
+### Added
+- How each job is applied for. Triage now reads, with no extra request for SEEK and LinkedIn, whether a job is applied for on the portal itself (SEEK's own form, LinkedIn Easy Apply) or on the employer's site, and the company feeds (Greenhouse, Lever, Ashby, Workable, SmartRecruiters) are known public forms. It is kept in `jobs.db` (`apply_route`, `apply_ats`; older databases get the columns on first use), shown as a tag on board cards and in the detail, and used by the package's "how to apply" line, which until now guessed.
+- `job routes <slug> [--refresh]`: counts the board's open jobs by how they are applied for (portal form, public form, account per employer, employer's site, not known), and fills in the ones not known yet. `job routes <slug> --set <key> --url <page>` records where an Apply button really led, naming the system (Greenhouse, Workday...).
+- Sources may define `route(job_id)` or `APPLY` (docs/ADDING-A-SOURCE.md).
+- The Apply button is now actually clicked before a job is called fillable. The form-filler probes an employer's site (cookie banner declined, then what loads) and records the gate: `open` (a form with nothing in front, filled up to the review page), `login` (left to the person: no sign-in clicks, no passwords, no accounts), `captcha`, or `blocked` (Claude in Chrome not allowed on that site). `job routes <slug> --set <key> --url <page> --gate <gate>` records it with the employer's host, and `--known <url>` answers from an earlier probe so an employer is not probed twice.
+- `job routes <slug> --queue`: ready to fill, still to probe, and the logins grouped by portal (one sign-in per portal, then the form-filler goes on for every ad there). `--hosts` lists the sites Claude in Chrome has to be allowed on before a run, because a site refused after the Apply click stops that job half way. Board cards show the gate ("Form ready", "Needs your login", "Captcha: yours", "Site not allowed").
+- `job answer <slug> gaps`: the common form questions in `answers.json` that still have no answer. Each one stops a form that asks it; the onboarding now asks for them.
+- The daily-run guide tells the agent to list the hosts to allow first, fill the ready jobs, probe the rest and end with the login queue.
+
 ## [0.2.3] - 2026-11-04
 
 ### Added

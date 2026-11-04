@@ -63,7 +63,7 @@ Also:
 Ads it dropped stay visible in the panel, with the reason; the best near misses of the week are listed under *Maybe worth a look*, and rescuing one teaches the filter a new title. You open each link, click Apply and upload the two PDFs. Nothing is sent for you unless you choose a submitting mode and sign it yourself (see *Modes*).
 
 ## What it never does
-- It never solves captchas, creates accounts, types passwords or accepts new terms on your behalf. Those steps are left to you.
+- Claude does not solve captchas, create accounts or type passwords. That is a limit of Claude itself, not a setting of this harness, so a job that needs one of those steps is marked `manual-review` for you to finish.
 - It never submits an application without your own signature on a **go-live** approval.
 - It never invents experience, dates or figures: every number in a CV or letter must come from your own `facts.json`.
 - It never uses a paid service or API (no Apify, no paid credits).

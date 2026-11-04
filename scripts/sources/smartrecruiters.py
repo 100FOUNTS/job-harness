@@ -14,6 +14,7 @@ from typing import Any
 from sources import base
 
 NAME, COUNTRY, NEEDS_LOGIN = "smartrecruiters", "*", False
+APPLY = ("external", "smartrecruiters")                    # the public posting is the application page: no account usually
 DESCRIPTION = "SmartRecruiters company postings (public Posting API, one company per search)"
 KEYS = "company, name, location, country, pages, max_age_days"
 DETAIL_DELAY = (0.8, 1.8)

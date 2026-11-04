@@ -3,6 +3,7 @@
   job answer <slug> --question "..." [--type select|radio|checkbox|text|number] [--options "A|B|C"] [--job seek:123]
   → JSON {answer, source, confidence}; anything not from answers.json is appended to pending_questions.json
   job answer <slug> pending            list improvised answers waiting for the person to confirm
+  job answer <slug> gaps               the common questions in answers.json that still have no answer (each one stops a form that asks it)
 
 Order: answers.json (approved) → rules (willingness → Yes; credential/experience not in profile → No;
 years → from CV dates; salary/education → closest option; free text → short true sentence) → safest option.
@@ -26,6 +27,13 @@ YEARS = re.compile(r"how many years|years of (experience|work)|years'? experienc
 
 def load_answers(slug: str) -> list[dict[str, Any]]:
     return read_json(cand_dir(slug) / "answers.json", {"answers": []})["answers"]
+
+
+def gaps(slug: str) -> list[dict[str, Any]]:
+    """Questions in answers.json whose answer is still empty: a form that asks one has to stop for the person. `sensitive` ones
+    (visa, work rights, sponsorship, citizenship) are only ever used in a field that asks, and only the person can word them."""
+    return [{"question": a["match"][0], "sensitive": bool(SENSITIVE.search(" ".join(a["match"])))}
+            for a in load_answers(slug) if a.get("answer") in (None, "")]
 
 
 def from_answers(slug: str, q: str) -> Any:
@@ -179,10 +187,14 @@ def record(slug: str, q: str, res: dict[str, Any], job: str, options: list[str])
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("slug"); ap.add_argument("action", nargs="?", default="ask", choices=["ask", "pending"])
+    ap.add_argument("slug"); ap.add_argument("action", nargs="?", default="ask", choices=["ask", "pending", "gaps"])
     ap.add_argument("--question", default=""); ap.add_argument("--type", default="radio")
     ap.add_argument("--options", default=""); ap.add_argument("--job", default="")
     a = ap.parse_args()
+    if a.action == "gaps":
+        g = gaps(a.slug)
+        print(json.dumps({"unanswered": len(g), "questions": g}, ensure_ascii=False, indent=2))
+        return
     if a.action == "pending":
         for x in read_json(cand_dir(a.slug) / "pending_questions.json", {"questions": []})["questions"]:
             if x["status"] == "to-confirm":

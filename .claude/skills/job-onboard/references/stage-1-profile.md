@@ -9,7 +9,7 @@ Goal: `intake.json` (who, rules, preferences, sensitive answers), `answers.json`
    - date conflicts found in stage 0.
 2. Rules the user states go to `intake.rules` (`never_mention`, `never_include`, `other`). They are enforced by `job lint`.
 3. Figures: for each number in the old CV ask whether the person can explain how it was measured. Keep → `job facts <slug> add`; uncertain → "approximately"; unmeasurable (e.g. "awareness +35%") → remove. Non-claim numbers (ISO 14001, phone, journal pages) → `facts.json` `allow` list.
-4. `answers.json`: map common Australian form questions (right to work, sponsorship now vs future, visa, salary, notice, licence, police check, medical, FIFO, relocation, EEO, referees) to answers. Anything unknown stays `null` → manual-review.
+4. `answers.json`: map common Australian form questions (right to work, sponsorship now vs future, visa, salary, notice, licence, police check, medical, FIFO, relocation, EEO, referees) to answers. Anything unknown stays `null` → manual-review. Ask the person for each one and word it with them (right to work and sponsorship especially: they are only used in a field that asks); `job answer <slug> gaps` lists what is still empty, because every empty answer stops a form that asks that question.
 
 Lessons
 - Do not over-explain obvious points to the user (e.g. that a career changer will not apply to senior roles). Propose the action.

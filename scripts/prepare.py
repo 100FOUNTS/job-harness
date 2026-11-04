@@ -59,7 +59,10 @@ LABELS = {
            "have_it": "in your profile but not in the CV", "gaps": "not in your profile", "match": "Keywords",
            "high": "high", "medium": "medium", "low": "low", "score": "score", "check_ad": "check the ad",
            "how_li_easy": "LinkedIn Easy Apply", "how_li": "LinkedIn → Apply (may lead to the employer's site)",
+           "how_li_ext": "LinkedIn → Apply (leads to the employer's own site: its form, possibly an account)",
            "how_seek": "SEEK → Quick apply (or the employer's site, as the ad says)",
+           "how_seek_quick": "SEEK → Quick apply (SEEK's own form)",
+           "how_seek_ext": "SEEK → Apply (leads to the employer's own site: its form, possibly an account)",
            "how_wagov": "WA Government Jobs → Apply Now (account on the agency's portal; often asks for a statement against the selection criteria)",
            "how_other": "Employer's careers page → Apply (the link opens the ad)",
            "how_link": "Open the link → Apply on the employer's site (a link you pasted: check how the ad says to apply)",
@@ -77,7 +80,10 @@ LABELS = {
            "have_it": "lo tienes pero no está en el CV", "gaps": "no está en tu perfil", "match": "Palabras clave",
            "high": "alta", "medium": "media", "low": "baja", "score": "puntaje", "check_ad": "revisar el aviso",
            "how_li_easy": "LinkedIn Easy Apply", "how_li": "LinkedIn → Apply (puede llevar a la web de la empresa)",
+           "how_li_ext": "LinkedIn → Apply (lleva a la web de la empresa: su formulario, quizás con cuenta)",
            "how_seek": "SEEK → Quick apply (o web de la empresa, según el aviso)",
+           "how_seek_quick": "SEEK → Quick apply (formulario de SEEK)",
+           "how_seek_ext": "SEEK → Apply (lleva a la web de la empresa: su formulario, quizás con cuenta)",
            "how_wagov": "WA Government Jobs → Apply Now (cuenta en el portal de la agencia; suele pedir una declaración según los criterios de selección)",
            "how_other": "Página de empleo de la empresa → Apply (el link abre el aviso)",
            "how_link": "Abrir el link → Apply en la web de la empresa (link que pegaste: revisa cómo pide postular el aviso)",
@@ -256,9 +262,12 @@ def notes_for(job: dict[str, Any], hits: list[str], odds: dict[str, Any] | None 
         watch.append(L["closes"].format(d=job["closes"]))
     if GUARD_MARK in text:
         watch.append(L["guard"])
-    how = ((L["how_li_easy"] if job.get("easy_apply") else L["how_li"]) if job["platform"] == "linkedin"
+    route = job.get("apply_route")                  # read where the harness reads the ad (applyroute.py); "" = not known
+    how = ((L["how_li_easy"] if job.get("easy_apply") or route == "quick" else L["how_li_ext"] if route == "external" else L["how_li"])
+           if job["platform"] == "linkedin"
            else L["how_wagov"] if job["platform"] == "wagov" else L["how_link"] if job["platform"] == "link"
-           else L["how_seek"] if job["platform"] == "seek" else L["how_other"])
+           else (L["how_seek_quick"] if route == "quick" else L["how_seek_ext"] if route == "external" else L["how_seek"])
+           if job["platform"] == "seek" else L["how_other"])
     odds = odds or {}
     watch += [L[w] for w in odds.get("why", []) if w in WATCH]
     for w in odds.get("why", []):

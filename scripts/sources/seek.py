@@ -15,6 +15,7 @@ DETAIL_DELAY = (0.8, 1.8)
 API = "https://www.seek.com.au/api/jobsearch/v5/search"
 GQL = "https://au.seek.com/graphql"            # www.seek.com.au/graphql now answers 308, which urllib does not follow on a POST
 HEADERS = {"seek-request-brand": "seek", "seek-request-country": "AU"}
+_LINK_OUT: dict[str, bool] = {}                  # job id → "applied for on the employer's site", noted while reading the ad
 
 
 def search(search: dict[str, Any], max_age_days: int) -> list[dict[str, Any]]:
@@ -42,10 +43,26 @@ def search(search: dict[str, Any], max_age_days: int) -> list[dict[str, Any]]:
 def detail(job_id: str) -> str:
     """Full description of a SEEK job (the job page itself returns 403; the site's GraphQL does not). Shortlist only."""
     q = {"operationName": "jobDetails", "variables": {"jobId": job_id},
-         "query": "query jobDetails($jobId: ID!) { jobDetails(id: $jobId) { job { content(platform: WEB) } } }"}
+         "query": "query jobDetails($jobId: ID!) { jobDetails(id: $jobId) { job { content(platform: WEB) isLinkOut } } }"}
     body = base.post_json(GQL, q, HEADERS) or {}
-    content = ((body.get("data") or {}).get("jobDetails") or {}).get("job", {}).get("content") or ""
-    return base.guarded(content)
+    job = ((body.get("data") or {}).get("jobDetails") or {}).get("job") or {}
+    if isinstance(job.get("isLinkOut"), bool):
+        _LINK_OUT[job_id] = job["isLinkOut"]
+    return base.guarded(job.get("content") or "")
+
+
+def route(job_id: str) -> tuple[str, str] | None:
+    """How the ad is applied for: SEEK's own form ("quick") or the employer's site ("external"). Free when detail()
+    just read the ad; otherwise one GraphQL request. None = could not tell."""
+    if job_id not in _LINK_OUT:
+        q = {"operationName": "jobDetails", "variables": {"jobId": job_id},
+             "query": "query jobDetails($jobId: ID!) { jobDetails(id: $jobId) { job { isLinkOut } } }"}
+        job = ((base.post_json(GQL, q, HEADERS) or {}).get("data") or {}).get("jobDetails") or {}
+        flag = (job.get("job") or {}).get("isLinkOut")
+        if not isinstance(flag, bool):
+            return None
+        _LINK_OUT[job_id] = flag
+    return ("external", "") if _LINK_OUT[job_id] else ("quick", "")
 
 
 def alive(job_id: str) -> tuple[bool | None, str | None]:

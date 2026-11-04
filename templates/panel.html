@@ -399,10 +399,19 @@ function visible(a) {
   return true;
 }
 function scoreCls(f) { return f == null ? "low" : f >= 60 ? "" : f >= 30 ? "mid" : "low"; }
+const APPLY_TAG = {quick: ["Portal form", "Applied for on the portal itself (SEEK's own form or LinkedIn Easy Apply)."],
+  "open-ats": ["Public form", "The employer's own public form, usually with no account."],
+  "account-ats": ["Needs an account", "The employer's system usually asks you to create an account first."],
+  "company-site": ["Employer's site", "Applied for on the employer's own site; the system is not known yet."]};
+const GATE_TAG = {open: ["Form ready", "The Apply button leads to a form with no account in front. The form-filler can fill it up to the review page.", "on"],
+  login: ["Needs your login", "The Apply button leads to a sign-in first. Sign in once on that site and the form-filler goes on.", ""],
+  captcha: ["Captcha: yours", "The site asks for a captcha or a bot check. That step is left to you.", ""],
+  blocked: ["Site not allowed", "Claude in Chrome has not been allowed on this employer's site yet. Allow it and try again.", ""]};
+const applyTag = a => GATE_TAG[a.apply_gate] ? `<span class="tag ${GATE_TAG[a.apply_gate][2]}" title="${esc(GATE_TAG[a.apply_gate][1])}">${GATE_TAG[a.apply_gate][0]}</span>` : APPLY_TAG[a.apply] ? `<span class="tag" title="${esc(APPLY_TAG[a.apply][1] + (a.apply_ats ? " (" + a.apply_ats + ")" : ""))}">${APPLY_TAG[a.apply][0]}</span>` : "";
 function card(a) {
   const d = daysTo(a.closes), soon = a.col === "todo" && d != null && d >= 0 && d <= 3;
   const tags = [`<span class="tag">${PLAT[a.platform] || esc(a.platform)}</span>`, a.track ? `<span class="tag">${esc(a.track)}</span>` : "",
-    a.tailored ? `<span class="tag on">Tailored</span>` : "", a.notes ? `<span class="tag">Has notes</span>` : "", a.new ? `<span class="tag on">New</span>` : "",
+    a.col === "todo" ? applyTag(a) : "", a.tailored ? `<span class="tag on">Tailored</span>` : "", a.notes ? `<span class="tag">Has notes</span>` : "", a.new ? `<span class="tag on">New</span>` : "",
     a.red_flags?.length ? `<span class="tag flag" title="${esc(a.red_flags.join("\n"))}" aria-label="${a.red_flags.length} red flag${a.red_flags.length === 1 ? "" : "s"}: ${esc(a.red_flags.join("; "))}">⚠ ${a.red_flags.length}</span>` : "",
     a.follow_up ? `<span class="tag late">Follow up</span>` : ""].join("");
   let body = "";
@@ -585,6 +594,7 @@ function drawer() {
       <div><span>Closes</span><b>${j.closes ? fmt(j.closes) + (d >= 0 ? ` · ${d} days left` : " · closed") : "No date published"}</b></div>
       <div><span>Experience asked</span><b>${j.years ? j.years + "+ years" : "Not stated"}</b></div>
       <div><span>How to apply</span><b>${esc(j.how || PLAT[j.platform] || j.platform)}</b></div>
+      ${(() => { const r = D.apps.find(x => x.key === j.key); return r && APPLY_TAG[r.apply] ? `<div><span>Where it is applied for</span><b>${esc((GATE_TAG[r.apply_gate] || APPLY_TAG[r.apply])[0] + (r.apply_ats ? " · " + r.apply_ats : ""))}</b></div>` : ""; })()}
       <div><span>Sponsor lists (for you only)</span><b>${esc(j.sponsor || "No data")}</b></div>
       ${j.salary ? `<div><span>Salary</span><b>${esc(j.salary)}</b></div>` : ""}<div><span>Track</span><b>${esc(j.track || "—")}</b></div></section>`;
     body += `<section><h2>History</h2><ol class="timeline">${j.history.map(h => `<li><span class="dot"></span><span><b>${esc(STATUS[h.status] || h.status)}</b>${h.note && h.note !== "from the panel" ? `<br><small>${esc(h.note)}</small>` : ""}</span><small class="num">${fmt(h.date)}</small></li>`).join("")}</ol></section>`;

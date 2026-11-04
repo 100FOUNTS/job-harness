@@ -362,6 +362,14 @@ def sponsor_of(company: str) -> dict[str, str]:
     return {"sponsor_match": sp["match"], "sponsor_name": sp["names"][0]} if sp else {"sponsor_match": "", "sponsor_name": ""}
 
 
+def route_of(ad: dict[str, Any]) -> dict[str, str]:
+    """How the job is applied for, for the card's tag: quick | open-ats | account-ats | company-site | unknown,
+    and what the Apply button led to when a probe saw it: open | login | captcha | blocked (applyroute.py)."""
+    from applyroute import klass
+    return {"apply": klass(ad.get("apply_route") or "", ad.get("apply_ats") or ""), "apply_ats": ad.get("apply_ats") or "",
+            "apply_gate": ad.get("apply_gate") or ""}
+
+
 def data(slug: str) -> dict[str, Any]:
     items = package_items(slug)
     all_apps = load(slug)
@@ -383,7 +391,7 @@ def data(slug: str) -> dict[str, Any]:
                      "tailored": any("tailored" in (h.get("note") or "") for h in a["history"]),
                      "has_folder": job_dir(slug, a, it) is not None, "notes": bool(a.get("notes")),
                      "red_flags": red_flags_of(a), "follow_up": follow_up_due(a), "draft": draft_file(slug, a) is not None,
-                     "new": a["date"] == today, **sponsor_of(a.get("company") or "")})
+                     "new": a["date"] == today, **sponsor_of(a.get("company") or ""), **route_of(ad)})
     pending_answers = len(read_json(cand_dir(slug) / "pending_questions.json", {"questions": []}).get("questions", []))
     return {"slug": slug, "name": read_json(cand_dir(slug) / "intake.json")["name"], "apps": apps,
             "state": summary(slug)["state"],

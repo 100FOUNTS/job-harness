@@ -10,6 +10,7 @@ from typing import Any
 from sources import base
 
 NAME, COUNTRY, NEEDS_LOGIN = "ashby", "*", False
+APPLY = ("external", "ashby")                    # the public posting is the application page: no account usually
 DESCRIPTION = "Ashby company job boards (public Job Posting API, one company per search)"
 KEYS = "board, name, location, max_age_days"
 
