@@ -1,0 +1,42 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tag must equal the plugin version
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          tag = os.environ["GITHUB_REF_NAME"]
+          version = json.load(open(".claude-plugin/plugin.json", encoding="utf-8"))["version"]
+          if tag != "v" + version:
+              sys.exit(f"tag {tag} does not match plugin.json version {version}")
+          print("tag and plugin.json agree:", tag)
+          PY
+      - name: Extract this version's changelog section
+        run: |
+          python - <<'PY'
+          import os, re, sys
+          version = os.environ["GITHUB_REF_NAME"][1:]
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(r"^## \[" + re.escape(version) + r"\][^\n]*\n(.*?)(?=^## |^\[[^\]]+\]: |\Z)", text, re.S | re.M)
+          if not m or not m.group(1).strip():
+              sys.exit(f"CHANGELOG.md has no section for {version}")
+          open("release-notes.md", "w", encoding="utf-8").write(m.group(1).strip() + "\n")
+          PY
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag
