@@ -255,6 +255,8 @@ def from_text(text: str, title: str = "", company: str = "") -> dict[str, Any]:
     if len(desc) < MIN_AD_CHARS:
         raise AdError("That text is too short to be a job ad.", need_text=True)
     first = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
+    if not title and len(first) > 90:                      # a one-paragraph paste: the first sentence is the title
+        first = (re.split(r"(?<=[.!?:])\s", first, maxsplit=1)[0] if re.search(r"[.!?:]\s", first[:90]) else first[:90]).rstrip(".:")
     return {"title": (title or first)[:140].strip(), "company": company.strip(), "location": "", "listed": "", "closes": "",
             "salary": "", "description": desc, "warn": bad}
 

@@ -265,6 +265,12 @@ class AddLinkTests(Base):
         self.assertEqual((r["ok"], r["title"], r["company"]), (True, "Junior Software Engineer", "Acme"))
         self.assertEqual(load("ana")[0]["key"], r["key"])
 
+    def test_a_one_paragraph_paste_takes_its_first_sentence_as_the_title(self):
+        import addlink
+        j = addlink.from_text("Water Resources Engineer. " + LONG)
+        self.assertEqual(j["title"], "Water Resources Engineer")
+        self.assertEqual(addlink.from_text(LONG, title="Mine")["title"], "Mine")
+
     def test_text_without_a_link_still_works(self):
         import addlink
         with unittest.mock.patch("prepare.build_one", fake_build):

@@ -145,7 +145,8 @@ kbd { font: 11px/1 var(--font); border: 1px solid var(--line-strong); border-bot
 .addbar form { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
 .addrow { display: flex; align-items: center; gap: 10px; }
 .addrow .lbl { font-weight: 700; white-space: nowrap; }
-.addrow .input { flex: 1; min-width: 0; }
+.addrow .input { flex: 1; min-width: 0; order: 2; }
+.addrow .btn { order: 3; }
 .addbar summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; width: fit-content; padding: 4px 0; }
 .addtext { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 .addtext textarea { min-height: 110px; }
@@ -235,18 +236,20 @@ td.r, th.r { text-align: right; }
 
 @media (max-width: 900px) {
   .top, .filters, .today, .board-wrap, .keys, .addbar { padding-left: 16px; padding-right: 16px; }
+  .top { position: static; }                  /* a four-row header must not pin itself over a phone screen */
+  #helpbtn { display: none; }
   .addrow { flex-wrap: wrap; }
   .addrow .input { flex-basis: 100%; order: 3; }
-  .addrow .btn { margin-left: auto; }
+  .addrow .btn { order: 2; margin-left: auto; }
   .addtext .two { grid-template-columns: 1fr; }
   .today { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .board { grid-template-columns: 1fr; min-width: 0; }
   .range { margin-left: 0; flex-wrap: wrap; }
   .range input { width: 140px; }
-  .tabs { max-width: 100%; overflow-x: auto; }
+  .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .tab { white-space: nowrap; }
   .top > * { min-width: 0; }
-  .search { max-width: none; flex-basis: 100%; }
+  .search { max-width: none; flex: 1 1 200px; }
   .page { padding-left: 16px; padding-right: 16px; }
   .drawer .actions .field { margin-left: 0; }
   .three, .cov, .docs, .facts { grid-template-columns: 1fr; }
@@ -691,7 +694,7 @@ document.addEventListener("submit", async e => {
   btn.disabled = true; btn.textContent = "Reading…"; addMsg([["Reading the ad. This can take a few seconds.", ""]]);
   try {
     const r = await post("/add-link", {url, text, title: $("#addtitle").value.trim(), company: $("#addco").value.trim()});
-    S.todoDay = "today"; S.expanded.todo = false; S.view = "board";
+    S.todoDay = "today"; S.expanded.todo = false; S.view = "board"; S.focus = r.key;
     await refreshData(); render();
     const hidden = !D.apps.some(a => a.key === r.key && visible(a));
     addMsg([[`Added: ${r.title}${r.company ? " · " + r.company : ""}. Score ${r.score}, track ${r.track}.${r.package ? " Cover letter and CV are ready." : ""}`],
@@ -699,7 +702,7 @@ document.addEventListener("submit", async e => {
       ...(r.rules ? [[r.rules, "warn"]] : []), ...(r.warning ? [[r.warning, "warn"]] : []),
       ...(hidden ? [["A filter above is hiding it: clear the filters to see the card."]] : [])]);
     $("#addurl").value = ""; $("#addtext").value = ""; $("#addtitle").value = ""; $("#addco").value = ""; $("#addmore").open = false;
-    if (!hidden) focusCard(r.key);
+    $("#addmsg").scrollIntoView({block: "nearest"});
   } catch (err) {
     addMsg([[err.message]], true);
     if (err.data?.need_text) { $("#addmore").open = true; $("#addtext").focus(); }
