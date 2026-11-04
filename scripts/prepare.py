@@ -60,6 +60,7 @@ LABELS = {
            "how_li_easy": "LinkedIn Easy Apply", "how_li": "LinkedIn → Apply (may lead to the employer's site)",
            "how_seek": "SEEK → Quick apply (or the employer's site, as the ad says)",
            "how_wagov": "WA Government Jobs → Apply Now (account on the agency's portal; often asks for a statement against the selection criteria)",
+           "how_link": "Open the link → Apply on the employer's site (a link you pasted: check how the ad says to apply)",
            "title": "Applications", "howto": "How to apply: open the link → Apply → upload the CV and letter from the folder with the same number.",
            "what": "What it is", "fits": "Why it fits", "odds": "Odds", "watch": "Watch out", "apply": "How to apply",
            "ad": "Ad", "folder": "Folder", "open_ad": "Open ad", "sponsor": "Visa sponsor lists (for you only)", "upload": "Upload the CV and cover letter in this folder.",
@@ -76,6 +77,7 @@ LABELS = {
            "how_li_easy": "LinkedIn Easy Apply", "how_li": "LinkedIn → Apply (puede llevar a la web de la empresa)",
            "how_seek": "SEEK → Quick apply (o web de la empresa, según el aviso)",
            "how_wagov": "WA Government Jobs → Apply Now (cuenta en el portal de la agencia; suele pedir una declaración según los criterios de selección)",
+           "how_link": "Abrir el link → Apply en la web de la empresa (link que pegaste: revisa cómo pide postular el aviso)",
            "title": "Postulaciones", "howto": "Cómo postular: abrir el link → Apply → subir el CV y la carta de la carpeta con el mismo número.",
            "what": "Qué es", "fits": "Por qué calza", "odds": "Probabilidad", "watch": "Ojo", "apply": "Cómo postular",
            "ad": "Aviso", "folder": "Carpeta", "open_ad": "Abrir aviso", "sponsor": "Listas de patrocinio (solo para ti)", "upload": "Subir el CV y la carta de esta carpeta.",
@@ -208,7 +210,7 @@ def fill_letter(tpl: dict[str, Any], job: dict[str, Any], hits: list[str], track
     # would fail the facts check
     role = re.sub(r"\s*[\(\[][^)\]]*[\)\]]", "", job["title"].split(" | ")[0])   # "Role | Site | 8/6 Roster"
     role = re.sub(r"\s*[-–|]\s*\d+\s*(month|mth|year|yr|week)\w*.*$", "", role, flags=re.I).strip() or job["title"]
-    source = "SEEK" if job["platform"] == "seek" else "LinkedIn"
+    source = job.get("source") or {"seek": "SEEK", "wagov": "WA Government Jobs"}.get(job["platform"], "LinkedIn")
     focus = focus_phrases(hits, job, track, role)
     strengths = track.get("letter_strengths", "practical experience, careful documentation and a reliable approach")
     l["date"] = f"{date.today().day} {date.today():%B %Y}"
@@ -252,7 +254,7 @@ def notes_for(job: dict[str, Any], hits: list[str], odds: dict[str, Any] | None 
     if GUARD_MARK in text:
         watch.append(L["guard"])
     how = ((L["how_li_easy"] if job.get("easy_apply") else L["how_li"]) if job["platform"] == "linkedin"
-           else L["how_wagov"] if job["platform"] == "wagov" else L["how_seek"])
+           else L["how_wagov"] if job["platform"] == "wagov" else L["how_link"] if job["platform"] == "link" else L["how_seek"])
     odds = odds or {}
     watch += [L[w] for w in odds.get("why", []) if w in WATCH]
     for w in odds.get("why", []):
@@ -298,10 +300,37 @@ def repost_of(key: str, dk: str, done: dict[str, str], texts: dict[str, str]) ->
     return None
 
 
+def build_one(slug: str, targets: dict[str, Any], pkg: Path, i: int, fit: int, hits: list[str], odds: dict[str, Any],
+              j: dict[str, Any], first_last: str, tracked: dict[str, Any], note: str = "") -> dict[str, Any]:
+    """The package of ONE job: numbered folder, filled cover letter, the track's CV, tracker entry (prepared). Returns the
+    items.json entry. prepare() calls it for each ranked job; addlink.py for a link the person pasted."""
+    base = cand_dir(slug)
+    track = {t["id"]: t for t in targets["tracks"]}[j["track"]]
+    d = pkg / f"{i:02d}_{safe(j.get('company') or 'company')}_{safe(j['title'])}"
+    d.mkdir(exist_ok=True)
+    letter_json = d / "letter.json"
+    save_json(letter_json, fill_letter(read_json(base / track["letter"]), j, hits, track))
+    r = build(slug, letter_json, "letter", d, f"{first_last}_Cover_Letter")
+    cv_src = base / track.get("cv_pdf", f"docs/master/{first_last}_Resume.pdf")
+    cv = d / f"{first_last}_Resume.pdf"
+    shutil.copy(cv_src, cv)
+    summary = f"{j['track']} · matches: {', '.join(hits[:5]) or '—'}"
+    if j["key"] not in tracked:
+        add(slug, {"key": j["key"], "title": j["title"], "company": j.get("company"), "url": j["url"],
+                   "platform": j["platform"], "track": j["track"], "location": j.get("location", ""), "fit": fit,
+                   "summary": summary, **({"closes": j["closes"]} if j.get("closes") else {})})
+    if r["ok"]:
+        set_status(slug, j["key"], "prepared", cv=str(cv), letter=r["pdf"], summary=summary, note=note)
+    else:
+        set_status(slug, j["key"], "manual-review", reason=f"letter check failed: {r['problems']}")
+    return {"notes": notes_for(j, hits, odds, slug, extract_text(cv)), "n": i, "key": j["key"], "title": j["title"], "company": j.get("company", ""), "url": j["url"],
+            "platform": j["platform"], "location": j.get("location", ""), "fit": fit, "track": j["track"],
+            "dir": d.name, "ok": r["ok"], "easy_apply": j.get("easy_apply")}
+
+
 def prepare(slug: str, max_n: int, requeue: list[str] | None = None, only: bool = False) -> list[dict[str, Any]]:
     base = cand_dir(slug)
     targets = read_json(base / "targets.json")
-    tracks = {t["id"]: t for t in targets["tracks"]}
     tracked = {a["key"]: a for a in load(slug)}
     seen = set(tracked) - set(requeue or [])
     short = [] if only else [j for j in read_json(run_dir(slug) / "shortlist.json")["shortlist"] if j["key"] not in seen]
@@ -344,27 +373,7 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None, only: bool 
             live.append((sc, j | ({"closes": closes} if closes else {})))
     ranked = live
     for i, ((fit, hits, odds), j) in enumerate(ranked, start + 1):
-        track = tracks[j["track"]]
-        d = pkg / f"{i:02d}_{safe(j.get('company') or 'company')}_{safe(j['title'])}"
-        d.mkdir(exist_ok=True)
-        letter_json = d / "letter.json"
-        save_json(letter_json, fill_letter(read_json(base / track["letter"]), j, hits, track))
-        r = build(slug, letter_json, "letter", d, f"{first_last}_Cover_Letter")
-        cv_src = base / track.get("cv_pdf", f"docs/master/{first_last}_Resume.pdf")
-        cv = d / f"{first_last}_Resume.pdf"
-        shutil.copy(cv_src, cv)
-        summary = f"{j['track']} · matches: {', '.join(hits[:5]) or '—'}"
-        if j["key"] not in tracked:
-            add(slug, {"key": j["key"], "title": j["title"], "company": j.get("company"), "url": j["url"],
-                       "platform": j["platform"], "track": j["track"], "location": j.get("location", ""), "fit": fit,
-                       "summary": summary, **({"closes": j["closes"]} if j.get("closes") else {})})
-        if r["ok"]:
-            set_status(slug, j["key"], "prepared", cv=str(cv), letter=r["pdf"], summary=summary)
-        else:
-            set_status(slug, j["key"], "manual-review", reason=f"letter check failed: {r['problems']}")
-        out.append({"notes": notes_for(j, hits, odds, slug, extract_text(cv)), "n": i, "key": j["key"], "title": j["title"], "company": j.get("company", ""), "url": j["url"],
-                    "platform": j["platform"], "location": j.get("location", ""), "fit": fit, "track": j["track"],
-                    "dir": d.name, "ok": r["ok"], "easy_apply": j.get("easy_apply")})
+        out.append(build_one(slug, targets, pkg, i, fit, hits, odds, j, first_last, tracked))
     for k, (fit, why) in outcome.items():
         record_outcome(slug, k, fit, why)
     for (fit, _, _), j in ranked:
