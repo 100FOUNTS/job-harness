@@ -4,6 +4,11 @@ All notable changes to job-harness. Format: [Keep a Changelog](https://keepachan
 
 The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `HARNESS_VERSION` in `scripts/common.py`) must go up for plugin installs to pick up a change. See [docs/RELEASING.md](docs/RELEASING.md).
 
+## [0.2.3] - 2026-11-04
+
+### Added
+- Panel: a small passport icon on each board card when the company is on the visa sponsor lists (filled = same name, outlined = same name without Pty/Ltd, faint = the name starts the same). Hover for the explanation. A filter chip with the same icon shows only those companies. It is for your eyes only: nothing about it reaches a CV, letter or form.
+
 ## [0.2.2] - 2026-11-04
 
 ### Added
