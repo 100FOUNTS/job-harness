@@ -1,0 +1,42 @@
+name: Add a country / job board
+description: Propose support for another country or a job board
+labels: ["new-source", "new-country"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        job-harness is built for Australia today. Before opening a pull request, tell us what you have in mind so we can agree on the shape (see CONTRIBUTING.md, "Adding a job source" and "Adding a country"). Sources must read public pages or public APIs: no login, no captcha, no paid service.
+  - type: input
+    id: country
+    attributes:
+      label: Country or region
+    validations:
+      required: true
+  - type: input
+    id: board
+    attributes:
+      label: Job board or feed
+      description: Name and address of the site or the public listing.
+    validations:
+      required: true
+  - type: textarea
+    id: access
+    attributes:
+      label: How the listings can be read
+      description: A public search page, a JSON feed, an RSS feed, an ATS board? Is a login needed? What do the site's terms and robots.txt say?
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Local rules that matter
+      description: Work-rights or citizenship wording in ads, spelling (for example en-NZ), CV customs (photo, date of birth), cover letter norms, salary units.
+    validations:
+      required: false
+  - type: dropdown
+    id: help
+    attributes:
+      label: Can you help build it?
+      options: ["Yes, I will open a pull request", "I can test it", "No, I am only asking"]
+    validations:
+      required: true

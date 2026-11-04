@@ -10,6 +10,7 @@ from typing import Any
 
 import osutil
 from common import cand_dir, read_json, run_dir, today
+from followup import line as followup_line
 from state import load_state
 from tracker import calibrate, followups, load, quota
 
@@ -39,10 +40,14 @@ def build(slug: str, day: str) -> str:
             summ = (a.get("summary") or a.get("reason") or "").replace("|", "/")
             lines.append(f"| {a.get('company') or ''} | {a['title']} | {a['platform']} | {a.get('fit') or ''} | {summ} | [open]({a['url']}) |")
         lines.append("")
+        lines += [f"- ⚠️ **Red flags, {a.get('company') or a['title']}:** " + "; ".join(a["red_flags"]) for a in group if a.get("red_flags")]
+        lines += [""] if any(a.get("red_flags") for a in group) else []
     due = [f for f in followups(slug) if f["action"] != "waiting (already chased)"]
     if due:
         lines += [f"## 📬 Follow-ups due ({len(due)})", "", "| Company | Role | Sent | Action |", "|---|---|---|---|"]
         lines += [f"| {f['company'] or ''} | {f['title']} | {f['sent']} | {f['action']} |" for f in due] + [""]
+    if (fu := followup_line(slug)):
+        lines += [f"**📬 {fu}**", ""]
     cal = calibrate(slug)["total"]
     if cal["with_outcome"]:
         lines += [f"**Outcomes so far:** {cal['interviews']} interviews from {cal['sent']} sent "

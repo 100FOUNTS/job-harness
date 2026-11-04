@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>job-harness: a Claude Code harness for job seekers in Australia</title>
+<meta name="description" content="Finds new jobs every day, ranks them, and prepares an honest CV and cover letter for the best ones. Free, open source, runs on your own computer. You apply yourself.">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #f7f6f2;
+  --panel: #ffffff;
+  --ink: #1c2024;
+  --muted: #5a626b;
+  --line: #dcdad2;
+  --accent: #b8470f;
+  --accent-ink: #ffffff;
+  --link: #0b5cad;
+  --code-bg: #eeece5;
+  --good: #1f7a45;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101418;
+    --panel: #171d23;
+    --ink: #e8eaec;
+    --muted: #9aa4ae;
+    --line: #2a323a;
+    --accent: #f06f3a;
+    --accent-ink: #1a0e07;
+    --link: #7ab0e0;
+    --code-bg: #0b0f13;
+    --good: #5cc088;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 17px; line-height: 1.6; }
+a { color: var(--link); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+header.top { border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+.brand { font-weight: 700; font-size: 1.05rem; text-decoration: none; color: var(--ink); letter-spacing: -0.01em; }
+nav a { margin-left: 16px; font-size: 0.95rem; text-decoration: none; }
+nav a:first-child { margin-left: 0; }
+nav a:hover { text-decoration: underline; }
+.hero { padding: 56px 0 32px; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.9rem); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 16px; max-width: 18ch; text-wrap: balance; }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 62ch; margin: 0 0 24px; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn { display: inline-block; padding: 11px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; border: 1px solid var(--line); background: var(--panel); color: var(--ink); min-height: 44px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:hover { filter: brightness(1.06); }
+.shot { margin: 8px 0 0; }
+.shot img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; }
+.shot figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 8px; }
+section { padding: 36px 0; border-top: 1px solid var(--line); }
+h2 { font-size: 1.5rem; letter-spacing: -0.01em; margin: 0 0 14px; }
+h3 { font-size: 1.05rem; margin: 0 0 6px; }
+p { margin: 0 0 12px; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+.card p:last-child { margin-bottom: 0; }
+ol.steps { padding-left: 1.2rem; margin: 0; }
+ol.steps li { margin-bottom: 8px; }
+pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px; overflow-x: auto; font-family: var(--mono); font-size: 0.88rem; line-height: 1.5; margin: 0 0 12px; }
+code { font-family: var(--mono); font-size: 0.92em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+table { border-collapse: collapse; width: 100%; font-size: 0.97rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.tablewrap { overflow-x: auto; }
+ul.tight { padding-left: 1.2rem; margin: 0; }
+ul.tight li { margin-bottom: 6px; }
+.note { color: var(--muted); font-size: 0.95rem; }
+.coffee { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.coffee img { width: 180px; height: auto; border-radius: 8px; }
+footer { border-top: 1px solid var(--line); padding: 28px 0 48px; color: var(--muted); font-size: 0.93rem; }
+footer a { margin-right: 14px; }
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  .hero { padding-top: 36px; }
+  nav a { margin-left: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top">job-harness</a>
+    <nav aria-label="Main">
+      <a href="#install">Install</a>
+      <a href="#safety">Safety</a>
+      <a href="#lite">Lite version</a>
+      <a href="https://github.com/100FOUNTS/job-harness">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap">
+  <div class="hero">
+    <h1>Find the jobs worth applying to. Send honest applications.</h1>
+    <p class="lede">job-harness is a free, open-source harness for <strong>Claude Code</strong> for job seekers in Australia. Every day it finds new jobs on SEEK, LinkedIn and WA Government Jobs, ranks them against your rules, and prepares a CV and cover letter for the best ones. You open the ad, click Apply and upload the files. It runs on your own computer.</p>
+    <div class="cta">
+      <a class="btn primary" href="#install">Install it</a>
+      <a class="btn" href="https://github.com/100FOUNTS/job-harness/blob/main/docs/GETTING-STARTED.md">Step by step, no terminal</a>
+    </div>
+  </div>
+
+  <figure class="shot">
+    <img src="assets/panel.png" width="1400" height="860" alt="The local panel: today's ads to apply to, each with a score and Open ad and I applied buttons; columns for Applied, Interview, Offer and Closed. Sample data for a fictional candidate.">
+    <figcaption>The local panel (<code>job panel</code>), shown with sample data for a fictional candidate. It opens in your browser and only your computer can reach it.</figcaption>
+  </figure>
+
+  <section aria-labelledby="who">
+    <h2 id="who">Who it is for</h2>
+    <div class="grid">
+      <div class="card"><h3>People applying for many jobs</h3><p>If you check SEEK and LinkedIn by hand every day, it does the searching and the first read for you and leaves a short, ranked list.</p></div>
+      <div class="card"><h3>People who want honest documents</h3><p>Every figure in a CV or letter must come from your own facts file. It does not invent experience, dates or numbers.</p></div>
+      <div class="card"><h3>People who want to stay in control</h3><p>Nothing is sent for you by default. You decide which ads to apply to and you press the final button yourself.</p></div>
+    </div>
+    <p class="note" style="margin-top:14px">You need a paid Claude plan (Pro, Max, Ultra, Team or Enterprise) with Claude Code, on macOS, Windows or Linux. Windows and Linux pass the automated tests on every change but have had little day-to-day use so far.</p>
+  </section>
+
+  <section aria-labelledby="day">
+    <h2 id="day">What happens each day</h2>
+    <ol class="steps">
+      <li><strong>Discover.</strong> New ads from your saved searches. Public pages only: no browser, no login, no AI.</li>
+      <li><strong>Filter.</strong> Your rules: target titles, seniority, years asked, citizenship or clearance requirements, places.</li>
+      <li><strong>Rank.</strong> Fit (your keywords in the ad) plus odds (level, years, credentials you lack). It orders the list; you decide.</li>
+      <li><strong>Prepare.</strong> Up to 15 CVs and cover letters (docx and PDF), each checked for invented figures and rule breaks.</li>
+      <li><strong>Package.</strong> A summary per job: what it is, why it fits, what to watch, how to apply.</li>
+    </ol>
+    <p class="note" style="margin-top:12px">The daily run is plain scripts. It costs nothing and uses no paid service. Setting up your profile, tailoring the best jobs and interview practice use your own Claude plan.</p>
+  </section>
+
+  <section id="install" aria-labelledby="install-h">
+    <h2 id="install-h">Install</h2>
+    <h3>As a Claude Code plugin</h3>
+    <pre><code>claude plugin marketplace add 100FOUNTS/job-harness
+claude plugin install job-harness@100founts
+claude        # then type: /job-harness:job-start</code></pre>
+    <p>In the Claude desktop app, open the <strong>Code</strong> tab and type <code>/plugin marketplace add 100FOUNTS/job-harness</code>, then <code>/plugin install job-harness@100founts</code>. Your data lives in <code>~/job-harness-data</code>, outside the plugin, so updates never touch it.</p>
+    <h3>From a clone</h3>
+    <pre><code>git clone https://github.com/100FOUNTS/job-harness.git
+cd job-harness
+bin/job setup          # Windows: bin\job.cmd setup
+claude                 # open Claude Code in this folder</code></pre>
+    <p>Then schedule the daily run with <code>job schedule install &lt;name&gt; --hour 9</code>. It uses launchd on macOS, Task Scheduler on Windows and a systemd user timer (or a crontab line) on Linux.</p>
+  </section>
+
+  <section id="safety" aria-labelledby="safety-h">
+    <h2 id="safety-h">How it keeps you safe</h2>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th scope="col">Rule</th><th scope="col">How it is enforced</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Dry-run by default</strong></td><td>New candidates start in <code>dry-run</code>. The daily schedule only prepares documents unless you choose a submitting mode.</td></tr>
+        <tr><td><strong>Never submits without go-live</strong></td><td>A <code>go-live</code> approval, signed by you and sealed with a sha256 of your files, is required before anything is submitted. Edit those files later and the seal breaks.</td></tr>
+        <tr><td><strong>No invented figures</strong></td><td><code>job facts verify</code> rejects any number in a CV or letter that is not in your own facts file. <code>job lint</code> checks your rules and an ATS-safe format.</td></tr>
+        <tr><td><strong>Guard hooks</strong></td><td>A hook blocks Claude from signing as you, reading secrets, deleting your data or clicking submit outside a live mode, and asks you before changing the harness's own rules.</td></tr>
+        <tr><td><strong>Ads are data</strong></td><td>Hidden text is stripped from every ad and ads aimed at an AI are flagged. Claude never follows what an ad says.</td></tr>
+        <tr><td><strong>No tricks</strong></td><td>It never solves captchas, creates accounts, types passwords or accepts new terms for you. Those steps are left to you.</td></tr>
+        <tr><td><strong>Your files stay with you</strong></td><td>There is no server. What Claude reads in a session (your CV, the ads) is processed by Claude under your own plan.</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="note" style="margin-top:12px">The hook is pattern-based: it stops mistakes and casual workarounds, not deliberate obfuscation. Scripted applying (an optional mode) is against LinkedIn's terms and likely SEEK's; the default flow does not do it.</p>
+  </section>
+
+  <section id="lite" aria-labelledby="lite-h">
+    <h2 id="lite-h">No Claude Code? The lite version</h2>
+    <p>Three standalone skills you upload to claude.ai or Cowork: review a job ad against your CV, tailor a CV and cover letter to one ad, and prepare for an interview. No terminal and no install. They have none of the daily search, the panel or the automatic checks, so read what they write before you send it. <a href="https://github.com/100FOUNTS/job-harness/blob/main/lite/README.md">How to upload them</a>.</p>
+  </section>
+
+  <section aria-labelledby="limits">
+    <h2 id="limits">Honest limits</h2>
+    <ul class="tight">
+      <li>Built for Australia. Another country needs its own sources and question rules; <a href="https://github.com/100FOUNTS/job-harness/blob/main/CONTRIBUTING.md">help is welcome</a>.</li>
+      <li>Job sites change their pages. When one does, a search returns nothing until the harness is updated.</li>
+      <li>The ranking is keyword and rule scoring, not a prediction of who gets hired.</li>
+      <li>Some application systems (Workday, PageUp and others) need an account, so they are always left to you.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="docs">
+    <h2 id="docs">Read more</h2>
+    <ul class="tight">
+      <li><a href="https://github.com/100FOUNTS/job-harness#readme">README</a>: everything in one place</li>
+      <li><a href="https://github.com/100FOUNTS/job-harness/blob/main/docs/GETTING-STARTED.md">Getting started</a>: from nothing to your first daily package, no terminal</li>
+      <li><a href="https://github.com/100FOUNTS/job-harness/blob/main/docs/TROUBLESHOOTING.md">Troubleshooting</a>: "0 jobs found", schedules that did not run</li>
+      <li><a href="https://github.com/100FOUNTS/job-harness/blob/main/docs/es/README.md">Guía rápida en español</a></li>
+      <li><a href="https://github.com/100FOUNTS/job-harness/blob/main/CHANGELOG.md">Changelog</a> and <a href="https://github.com/100FOUNTS/job-harness/blob/main/CONTRIBUTING.md">contributing</a></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="support">
+    <h2 id="support">Support</h2>
+    <div class="coffee">
+      <a href="https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"><img src="assets/buy-me-a-coffee.png" width="180" alt="Buy me a coffee: support 100 FOUNTS, who build job-harness"></a>
+      <p style="max-width:46ch">job-harness is free, open source and uses no paid services. If it helped your job search, a coffee keeps it going.</p>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="https://github.com/100FOUNTS/job-harness">GitHub</a>
+    <a href="https://github.com/100FOUNTS/job-harness/blob/main/LICENSE">MIT license</a>
+    <a href="https://github.com/100FOUNTS/job-harness/blob/main/SECURITY.md">Security</a>
+    <a href="https://github.com/100FOUNTS/job-harness/blob/main/CODE_OF_CONDUCT.md">Code of conduct</a>
+    <p style="margin-top:12px">Built by 100 FOUNTS. job-harness is not affiliated with SEEK, LinkedIn or Anthropic.</p>
+  </div>
+</footer>
+</body>
+</html>

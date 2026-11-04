@@ -1,0 +1,34 @@
+name: Feature request
+description: Suggest an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        job-harness stays stdlib-only, free to run, and never submits without your signed go-live. Ideas that fit those rules are the easiest to say yes to.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: Describe the situation, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead
+    validations:
+      required: false
+  - type: dropdown
+    id: help
+    attributes:
+      label: Can you help build it?
+      options: ["Yes", "I can test it", "No"]
+    validations:
+      required: false

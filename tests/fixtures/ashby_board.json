@@ -1,0 +1,72 @@
+{
+ "jobs": [
+  {
+   "id": "aa0673c5-9e06-42f8-a720-6c2e43930c5a",
+   "title": "Product Support Specialist, APAC",
+   "department": "GTM",
+   "team": "Customer Experience",
+   "employmentType": "FullTime",
+   "location": "Australia",
+   "shouldDisplayCompensationOnJobPostings": false,
+   "secondaryLocations": [
+    {
+     "location": "Singapore",
+     "address": {
+      "postalAddress": {
+       "addressCountry": "Singapore"
+      }
+     }
+    }
+   ],
+   "publishedAt": "2026-10-21T23:23:40.829+00:00",
+   "isListed": true,
+   "isRemote": true,
+   "workplaceType": "Remote",
+   "address": {
+    "postalAddress": {
+     "addressCountry": "Australia"
+    }
+   },
+   "jobUrl": "https://jobs.ashbyhq.com/linear/aa0673c5-9e06-42f8-a720-6c2e43930c5a",
+   "applyUrl": "https://jobs.ashbyhq.com/linear/aa0673c5-9e06-42f8-a720-6c2e43930c5a/application",
+   "descriptionHtml": "<p style=\"min-height:1.5em\">At Linear, we're building the product development system for teams and agents. AI is fundamentally changing how software gets built, and we’re shaping the tools this new era requires.</p><p style=\"min-height:1.5em\">Founded in 2019, Linear has become the platform of choice for more than 50,000 companies (including OpenAI, Coinbase, and Ramp) to plan, build, and ship their products. Today, our team is distributed across North America, Europe, and Australia, and we’re continuing to grow internationally. What unites us is relentless focus, fast execution, and a deep care for software craftsmanship.</p><p style=\"min-height:1.5em\">Over the past years, Linear has experienced incredible organic growth and has become an instrumental tool for many of the world’s best prod",
+   "descriptionPlain": "At Linear, we're building the product development system for teams and agents. AI is fundamentally changing how software gets built, and we’re shaping the tools this new era requires.\n\nFounded in 2019, Linear has become the platform of choice for more than 50,000 companies (including OpenAI, Coinbase, and Ramp) to plan, build, and ship their products. Today, our team is distributed across North America, Europe, and Australia, and we’re continuing to grow internationally. What unites us is relentless focus, fast execution, and a deep care for software craftsmanship.\n\nOver the past years, Linear has experienced incredible organic growth and has become an instrumental tool for many of the world’s best product teams. We believe customer support should always feel like an extension of that expe",
+   "compensation": {
+    "compensationTierSummary": null,
+    "scrapeableCompensationSalarySummary": null,
+    "compensationTiers": [],
+    "summaryComponents": []
+   }
+  },
+  {
+   "id": "d3bc1ced-3ce4-4086-a050-555055dbb1ff",
+   "title": "Senior / Staff Fullstack Engineer",
+   "department": "Product",
+   "team": "Engineering",
+   "employmentType": "FullTime",
+   "location": "Europe",
+   "shouldDisplayCompensationOnJobPostings": false,
+   "secondaryLocations": [],
+   "publishedAt": "2021-04-27T20:13:45.158+00:00",
+   "isListed": true,
+   "isRemote": true,
+   "workplaceType": "Remote",
+   "address": {
+    "postalAddress": {
+     "addressCountry": "European Union"
+    }
+   },
+   "jobUrl": "https://jobs.ashbyhq.com/linear/d3bc1ced-3ce4-4086-a050-555055dbb1ff",
+   "applyUrl": "https://jobs.ashbyhq.com/linear/d3bc1ced-3ce4-4086-a050-555055dbb1ff/application",
+   "descriptionHtml": "<p style=\"min-height:1.5em\">At Linear, we're building the product development system for teams and agents. AI is fundamentally changing how software gets built, and we’re shaping the tools this new era requires. </p><p style=\"min-height:1.5em\">Founded in 2019, Linear has become the platform of choice for more than 50,000 companies (including OpenAI, Coinbase, and Ramp) to plan, build, and ship their products. Today, our team is distributed across North America, Europe, and Australia, and we’re continuing to grow internationally. What unites us is relentless focus, fast execution, and a deep care for software craftsmanship. </p><p style=\"min-height:1.5em\">As a small team, we’re all generalists and constantly picking up new challenges. When it comes to code, we’re looking to work with experi",
+   "descriptionPlain": "At Linear, we're building the product development system for teams and agents. AI is fundamentally changing how software gets built, and we’re shaping the tools this new era requires. \n\nFounded in 2019, Linear has become the platform of choice for more than 50,000 companies (including OpenAI, Coinbase, and Ramp) to plan, build, and ship their products. Today, our team is distributed across North America, Europe, and Australia, and we’re continuing to grow internationally. What unites us is relentless focus, fast execution, and a deep care for software craftsmanship. \n\nAs a small team, we’re all generalists and constantly picking up new challenges. When it comes to code, we’re looking to work with experienced people who can pick a problem and solve it.  We use TypeScript and build scalable ",
+   "compensation": {
+    "compensationTierSummary": null,
+    "scrapeableCompensationSalarySummary": null,
+    "compensationTiers": [],
+    "summaryComponents": []
+   }
+  }
+ ],
+ "apiVersion": "1"
+}

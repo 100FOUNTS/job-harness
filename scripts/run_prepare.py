@@ -1,7 +1,7 @@
 """Daily runner in prepare mode: scripts only (no LLM, no browser). Works on macOS, Windows and Linux.
 
   python scripts/run_prepare.py <slug> [--env JOB_X=value ...]
-  discover → triage → prepare (top jobs, documents, package) → apply (modes easy/full) → sweep → cleanup → report + notification.
+  discover → triage → prepare (top jobs, documents, package) → apply (modes easy/full) → sweep → follow-up drafts → cleanup → report + notification.
 A step that fails is logged and the run continues. A STOP file (repo or candidate) turns the run off; one run at a time per candidate.
 Everything goes to candidates/<slug>/logs/<date>.log.
 """
@@ -114,6 +114,7 @@ def prepare(slug: str, out: TextIO) -> None:
     if mode_of(slug) in ("easy", "full"):
         step(out, "apply", py("apply", slug))
     step(out, "sweep", py("tracker", slug, "sweep"))
+    step(out, "followup drafts", py("followup", slug, "draft-all"), quiet=True)   # drafts only, nothing is sent
     step(out, "cleanup", py("cleanup", slug, "--days", "15"))
     step(out, "report", py("report", slug, "--notify"), quiet=True)
 

@@ -37,6 +37,7 @@ def daily(slug: str, out: TextIO) -> None:
     step(out, "discover", py("discover", slug))
     step(out, "triage", py("triage", slug))
     step(out, "claude run", claude_cmd(slug), cwd=data_dir())       # plugin: the data folder is the workspace the hooks guard
+    step(out, "followup drafts", py("followup", slug, "draft-all"), quiet=True)   # drafts only, nothing is sent
     step(out, "report", py("report", slug, "--notify"), quiet=True)
 
 

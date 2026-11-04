@@ -8,20 +8,39 @@
 
 A **Claude Code** harness for job seekers in **Australia**. You give it a folder with your CV and certificates. It helps you build an honest profile and every day it finds new jobs on SEEK, LinkedIn and WA Government Jobs, ranks them, and prepares a CV and cover letter for the best ones. You open the folder (or a local board), click Apply on the ad and upload the files.
 
-New to the terminal? Start with **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)**. Prefer Spanish? **[docs/es/README.md](docs/es/README.md)**.
+New to the terminal? Start with **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)**. Prefer Spanish? **[docs/es/README.md](docs/es/README.md)**. Just want the writing help in a normal chat, without installing anything? Use the **[lite pack](lite/README.md)** for Cowork and claude.ai. A short overview page is at **[100founts.github.io/job-harness](https://100founts.github.io/job-harness/)**.
 
 <p align="center"><img src="docs/assets/panel.png" alt="The local panel: today's ads to apply to with their score, Open ad and I applied buttons; columns for Applied, Interview, Offer and Closed; a floating Buy me a coffee button. Sample data for the fictional candidate." width="900"><br><sub>The local panel (<code>job panel</code>), with sample data for the fictional candidate.</sub></p>
 
-<p align="center">
-  <a href="https://100founts.github.io/job-harness/daily-run.html">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/daily-run-dark.png">
-      <img src="docs/assets/daily-run-light.png" alt="The daily run: a schedule starts the scripts at 09:00; Discover reads new ads from SEEK, LinkedIn and WA Government Jobs; Triage applies the person's filters with the full ad text; Rank + prepare scores fit and odds; Document checks verify figures and rules; the Daily package goes to the person, who applies. Only in easy mode, a signed and intact go-live seal lets SEEK Quick Apply submit." width="900">
-    </picture>
-  </a>
-  <br>
-  <sub><a href="https://100founts.github.io/job-harness/daily-run.html">Open the interactive diagram</a> (every box links to the code it describes) · made with <a href="https://github.com/tt-a1i/archify">Archify</a> · source: <a href="docs/daily-run.archify.json"><code>docs/daily-run.archify.json</code></a></sub>
-</p>
+### The daily run
+```mermaid
+flowchart LR
+    SCHED["Scheduler 09:00<br/>launchd / Task Scheduler / systemd-cron<br/>a STOP file turns it off"]
+    subgraph SRC["Job sources (public, no login)"]
+        direction TB
+        B1["SEEK, LinkedIn, WA Government Jobs"]
+        B2["ATS feeds: Greenhouse, Lever, Workable,<br/>SmartRecruiters, Ashby<br/>Adzuna (optional, free key)"]
+    end
+    PASTE["You paste a link<br/>in the panel"]
+    DISC["Discover<br/>sources registry, new ads only"]
+    TRI["Triage<br/>your filters, full ad text"]
+    RANK["Rank + prepare<br/>fit and odds, up to 15 a day"]
+    CHECK["Document checks<br/>facts verify, lint"]
+    PKG[("Daily package<br/>summary, CV, letter")]
+    FLAGS["Red flags<br/>shown on each card"]
+    FOLLOW["Follow-up drafts<br/>for quiet applications"]
+    YOU["You apply<br/>open the link, upload the PDFs"]
+    GOLIVE{{"Go-live seal<br/>signed and intact"}}
+    QA["SEEK Quick Apply<br/>easy mode only"]
+
+    SCHED --> DISC
+    SRC --> DISC --> TRI --> RANK --> CHECK --> PKG --> YOU
+    PASTE -.-> TRI
+    RANK -.-> FLAGS
+    PKG -.-> FOLLOW
+    PKG -. "easy mode" .-> GOLIVE -.-> QA
+```
+<sub>Source of the interactive version (every box links to the code it describes): <a href="docs/daily-run.archify.json"><code>docs/daily-run.archify.json</code></a>, made with <a href="https://github.com/tt-a1i/archify">Archify</a>. Dotted lines are optional. The only step that can submit is the last one, and it needs your signed go-live.</sub>
 
 ## What it does
 Every day (at the hour you choose) it:
@@ -30,6 +49,14 @@ Every day (at the hour you choose) it:
 3. **ranks** them by **fit** (your keywords found in the ad) plus **odds** (title level, years asked, fields you are not in, credentials or licences you lack, preferred places). A whole track, or some titles, can be moved down or up,
 4. **prepares** up to 15: a CV and cover letter (docx and PDF), each checked for invented figures and rule breaks,
 5. writes a **daily package** (`~/job-packages/<slug>/<date>/`) with a summary per job: what it is, why it fits, odds, what to watch, how to apply ([see a sample](docs/sample-package.md)).
+
+Also:
+- **More sources, no scraping.** Follow single employers through their public job feeds on Greenhouse, Lever, Ashby, Workable or SmartRecruiters (`{"platform": "lever", "company": "acme", "location": "Perth"}` in `targets.json`), and add Adzuna with a free key (`JOB_ADZUNA_APP_ID` / `JOB_ADZUNA_APP_KEY`). `job doctor` lists the sources. A new portal or country is one small module: [docs/ADDING-A-SOURCE.md](docs/ADDING-A-SOURCE.md).
+- **Paste a link.** Found an ad yourself? Paste its link (or its text, when a page can't be read) in the panel, or run `job addlink <slug> <url>`. It is scored, gets a CV and cover letter and lands in *To apply*; if your rules would have dropped it, you are told why.
+- **Red flags.** Each prepared ad is checked for pay below your minimum or the legal minimum wage, unpaid trials, commission-only work, upfront fees and other scam patterns, a hidden employer and constant reposts (`job flags`). They are warnings only: nothing is dropped or re-ranked.
+- **Follow-ups.** Applications with no news for 10 days get a short, polite follow-up draft in their folder (`job followup`). It is never sent for you.
+- **What leads to interviews.** After 10 applications with an answer, the panel's *Funnel* shows interview rates by score band, track and source, with one plain suggestion when something stands out. Your targets never change by themselves.
+- **On your phone.** `job panel --lan` serves the board on your wifi and prints a link with a one-time token. Anyone on that wifi with the link can see your board, and the local network is not encrypted, so use it at home and don't share the link.
 
 Ads it dropped stay visible in the panel, with the reason; the best near misses of the week are listed under *Maybe worth a look*, and rescuing one teaches the filter a new title. You open each link, click Apply and upload the two PDFs. Nothing is sent for you unless you choose a submitting mode and sign it yourself (see *Modes*).
 
@@ -50,7 +77,7 @@ Ads it dropped stay visible in the panel, with the reason; the best near misses 
 | **Required** | A folder with your CVs, certificates and other documents | stage 0 (intake) |
 | Optional | The **Claude in Chrome** extension (connect with `/chrome` in Claude Code) | only the profile and alerts stages and LinkedIn extraction |
 | Optional | Playwright, installed with `job setup --apply-tools` | only scripted SEEK Quick Apply (modes `easy`/`full`) |
-| Not needed | Gmail connector, any API key | - |
+| Not needed | Gmail connector, any paid API (an Adzuna key is free and optional) | - |
 
 `job doctor` checks all of this and prints the exact command to fix what is missing.
 
@@ -152,7 +179,8 @@ templates/candidate/         blank candidate files
 templates/docs/              docx (Arial) and PDF (pdfkit, Helvetica) generators, PDF reader
 apply/                       SEEK Quick Apply (Playwright)
 candidates/example/          a fictional filled candidate ("Sam Taylor") to show what each file looks like
-docs/                        guides, architecture diagram and a sample package
+docs/                        guides, architecture diagram, sample package and the landing page
+lite/                        standalone skills for Cowork and claude.ai (no install)
 ```
 
 | Skill | Purpose |
@@ -203,12 +231,20 @@ Candidate folders other than `example/` and `.claude/settings.local.json` are gi
 - External application systems (Workday, PageUp, ...) usually need an account, so they are always left to you.
 - Windows and Linux are new (see above). The local schedule only runs while the computer is on or awake (macOS and systemd run a missed job when the computer wakes up).
 
+## Lite version (Cowork and claude.ai)
+No Claude Code, no terminal? [`lite/`](lite/README.md) has three standalone skills you upload to claude.ai or Cowork: review an ad against your CV, tailor a CV and cover letter, and prepare for an interview. They have none of the daily search, panel or checks; see [lite/README.md](lite/README.md) for what you get and how to upload them.
+
+## Contributing
+Bug reports, broken-site reports, new sources and new countries are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Security problems: [SECURITY.md](SECURITY.md). Changes by version: [CHANGELOG.md](CHANGELOG.md); how releases are cut: [docs/RELEASING.md](docs/RELEASING.md).
+
 ## More help
 - [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md): step by step, no terminal needed
 - [docs/GLOSSARY.md](docs/GLOSSARY.md): the words used here
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md): when something does not work
 - [docs/es/README.md](docs/es/README.md): guía rápida en español
 - [docs/sample-package.md](docs/sample-package.md): what a daily package looks like
+- [CHANGELOG.md](CHANGELOG.md): what changed in each version
+- [Landing page](https://100founts.github.io/job-harness/): a one-page overview (GitHub Pages, source in [docs/index.html](docs/index.html))
 
 ## Support
 job-harness is free, open source and uses no paid services. If it helped your job search, a coffee keeps it going.

@@ -13,6 +13,7 @@ Statuses: shortlisted → prepared → dry-run (filled, not sent) | submitted | 
   job track <slug> quota [--platform seek]      → how many more can be submitted today/this week
   job track <slug> csv                          → tracker.csv for a spreadsheet
   job track <slug> followups [--days 10]        sent and quiet for N days: who to chase (and what to say)
+  (red_flags: warnings about the ad, written by scripts/flags.py; followup_draft: the email draft, by scripts/followup.py)
   job track <slug> calibrate                    does the fit score predict interviews? (needs outcomes)
   job track <slug> sweep [--dry]                not yet applied and the ad has closed → closed (one request per ad)
 """
@@ -33,6 +34,7 @@ COUNTS_TOWARDS_LIMIT = {"submitted"}
 SENT = {"submitted", "applied"}                              # the application left: waiting for the employer
 OUTCOMES = {"interview", "offer", "hired", "rejected", "no-response", "withdrawn"}
 PENDING = {"shortlisted", "prepared", "dry-run", "manual-review"}   # nobody has applied yet
+NO_REPLY_DAYS = 30                                           # sent and silent this long: counts as an answer (no) in calibrate()
 
 
 def path(slug: str):
@@ -92,6 +94,33 @@ def set_note(slug: str, key: str, text: str) -> dict[str, Any]:
     raise SystemExit(f"{key} not tracked")
 
 
+def set_flags(slug: str, key: str, flags: list[str]) -> dict[str, Any]:
+    """Red flags of one application (scripts/flags.py): short sentences for the person, [] when none (the field is then
+    absent). Warnings only: not a status change, no history entry, and nothing else depends on them."""
+    apps = load(slug)
+    for a in apps:
+        if a["key"] == key:
+            flags = [str(f) for f in flags or []]
+            if flags != a.get("red_flags", []):
+                a.pop("red_flags", None)
+                if flags:
+                    a["red_flags"] = flags
+                save(slug, apps)
+            return a
+    raise SystemExit(f"{key} not tracked")
+
+
+def set_followup(slug: str, key: str, draft: str) -> dict[str, Any]:
+    """Where the follow-up email draft for this application was written (scripts/followup.py). Not a status change."""
+    apps = load(slug)
+    for a in apps:
+        if a["key"] == key:
+            a["followup_draft"] = str(draft)
+            save(slug, apps)
+            return a
+    raise SystemExit(f"{key} not tracked")
+
+
 def quota(slug: str, platform: str | None = None) -> dict[str, Any]:
     from state import load_state
     lim = load_state(slug)["limits"]
@@ -130,11 +159,16 @@ def calibrate(slug: str) -> dict[str, Any]:
     """Interview rate by fit band, track and platform, over applications with a known outcome. Advisory only:
     under ~10 outcomes the numbers mean little, and nothing here changes targets.json by itself."""
     done = [a for a in load(slug) if a["status"] in OUTCOMES or a["status"] in SENT]
+    quiet_since = (date.today() - timedelta(days=NO_REPLY_DAYS)).isoformat()
     def row(group):
         got = [a for a in group if any(h["status"] in ("interview", "offer", "hired") for h in a["history"])]
         known = [a for a in group if a["status"] in OUTCOMES]
-        return {"sent": len(group), "with_outcome": len(known), "interviews": len(got),
-                "interview_rate": round(len(got) / len(group), 2) if group else None}
+        # answered = an outcome is known, or it was sent NO_REPLY_DAYS ago and nobody replied (a silent "no")
+        silent = [a for a in group if a["status"] in SENT and sent_date(a) and sent_date(a) <= quiet_since]
+        answered = len(known) + len(silent)
+        return {"sent": len(group), "with_outcome": len(known), "answered": answered, "interviews": len(got),
+                "interview_rate": round(len(got) / len(group), 2) if group else None,
+                "answered_rate": round(len(got) / answered, 2) if answered else None}
     def by(fn):
         groups: dict[str, list] = {}
         for a in done:
@@ -144,7 +178,7 @@ def calibrate(slug: str) -> dict[str, Any]:
     total = row(done)
     return {"total": total, "by_fit": by(band), "by_track": by(lambda a: a.get("track") or "?"),
             "by_platform": by(lambda a: a.get("platform") or "?"),
-            "note": "fewer than 10 outcomes: too early to change the ranking" if total["with_outcome"] < 10 else
+            "note": "fewer than 10 outcomes: too early to change the ranking" if total["answered"] < 10 else
                     "compare the interview rate across fit bands: if high-fit does not beat low-fit, the ranking needs work"}
 
 

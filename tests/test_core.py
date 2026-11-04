@@ -470,12 +470,9 @@ class TestJobMemory(Base):
             if calls[s["keywords"]] == 1:
                 return [{"_error": "linkedin GIS Analyst: HTTP 429"}]
             return [{"platform": "linkedin", "id": "9", "title": "GIS Analyst", "company": "c", "url": "u"}]
-        orig = discover.linkedin, discover.time.sleep
-        discover.linkedin, discover.time.sleep = fake, lambda _s: None
-        try:
+        import sources
+        with unittest.mock.patch.object(sources.linkedin, "search", fake), unittest.mock.patch("time.sleep"):
             r = discover.discover("ana", 3, dry=True)
-        finally:
-            discover.linkedin, discover.time.sleep = orig
         self.assertEqual([j["key"] for j in r["new_jobs"]], ["linkedin:9"])
         self.assertEqual(calls, {"GIS Analyst": 2, "Broken": 1})       # a 4xx other than 429 is not retried
         self.assertEqual(r["errors"], ["linkedin Broken: HTTP 400"])

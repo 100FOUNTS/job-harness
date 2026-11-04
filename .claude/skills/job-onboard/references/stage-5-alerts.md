@@ -8,3 +8,4 @@ Goal: the saved searches on each platform match `targets.json` searches (they ar
 2. Verify: SEEK `https://au.seek.com/my-activity/saved-searches` (count), LinkedIn "Alert on" state.
 3. If LinkedIn offers job alerts after editing "Open to work", do not accept silently; ask.
 4. `job discover <slug> --dry` to confirm the endpoints return jobs for every search.
+5. Company-feed searches (greenhouse, lever, ashby, workable, smartrecruiters) and `adzuna` have no alert to save: `job discover` reads them directly.

@@ -181,11 +181,12 @@ class TestRunPrepare(Base):
 
     def test_steps_run_in_order_and_failures_do_not_stop_the_run(self):
         calls, log = self.run_it({"discover": 1, "prepare": 2})
-        self.assertEqual([c[0] for c in calls], ["discover", "triage", "prepare", "tracker", "cleanup", "report"])
+        self.assertEqual([c[0] for c in calls], ["discover", "triage", "prepare", "tracker", "followup", "cleanup", "report"])
         self.assertEqual(calls[2], ["prepare", "ana", "--max", "7"])
         self.assertEqual(calls[1], ["triage", "ana", "--max", "40"])
         self.assertEqual(calls[3], ["tracker", "ana", "sweep"])
-        self.assertEqual(calls[5], ["report", "ana", "--notify"])
+        self.assertEqual(calls[4], ["followup", "ana", "draft-all"])
+        self.assertEqual(calls[6], ["report", "ana", "--notify"])
         self.assertIn("discover failed", log)
         self.assertIn("prepare failed", log)
         self.assertNotIn("triage failed", log)
@@ -195,7 +196,7 @@ class TestRunPrepare(Base):
         (self.d / "state.json").write_text(json.dumps({"mode": "easy"}), encoding="utf-8")
         calls, _ = self.run_it({"apply": 1})
         self.assertEqual([c[0] for c in calls][3], "apply")
-        self.assertEqual(len(calls), 7)
+        self.assertEqual(len(calls), 8)
         (self.d / "state.json").write_text(json.dumps({"mode": "dry-run"}), encoding="utf-8")
         calls, _ = self.run_it()
         self.assertNotIn("apply", [c[0] for c in calls])

@@ -49,6 +49,10 @@
       "label": "Daily run · scripts only, no LLM"
     },
     {
+      "id": "panel",
+      "label": "Panel · job panel (also on your phone)"
+    },
+    {
       "id": "gates",
       "label": "Opt-in submitting (easy mode)",
       "variant": "exception"
@@ -77,7 +81,7 @@
     }
   ],
   "mainPath": [
-    "launchd",
+    "scheduler",
     "discover",
     "triage",
     "rank",
@@ -91,8 +95,8 @@
       "lane": "boards",
       "col": 1,
       "type": "cloud",
-      "label": "SEEK + LinkedIn",
-      "sublabel": "search JSON · guest pages",
+      "label": "SEEK · LinkedIn · WA Gov",
+      "sublabel": "search JSON · guest pages · public feed",
       "sources": [
         {
           "path": "scripts/discover.py",
@@ -144,12 +148,12 @@
       ]
     },
     {
-      "id": "launchd",
+      "id": "scheduler",
       "lane": "daily",
       "col": 0,
       "type": "backend",
-      "label": "launchd 09:00",
-      "sublabel": "run_prepare.sh",
+      "label": "Scheduler 09:00",
+      "sublabel": "launchd / Task Scheduler / systemd-cron",
       "tag": "STOP file = off",
       "sources": [
         {
@@ -161,7 +165,7 @@
           "path": "scripts/schedule.py",
           "line": 31,
           "end_line": 43,
-          "label": "launchd plist"
+          "label": "scheduler install (launchd plist, schtasks, systemd unit)"
         }
       ]
     },
@@ -171,7 +175,7 @@
       "col": 1,
       "type": "backend",
       "label": "Discover",
-      "sublabel": "new ads only",
+      "sublabel": "sources registry · new ads only",
       "sources": [
         {
           "path": "scripts/discover.py",
@@ -306,19 +310,55 @@
           "end_line": 65
         }
       ]
+    },
+    {
+      "id": "ats",
+      "lane": "boards",
+      "col": 2,
+      "type": "cloud",
+      "label": "ATS feeds + Adzuna",
+      "sublabel": "Greenhouse · Lever · Workable · SmartRecruiters · Ashby",
+      "tag": "Adzuna optional, free key"
+    },
+    {
+      "id": "paste",
+      "lane": "person",
+      "col": 2,
+      "type": "external",
+      "label": "Paste a link",
+      "sublabel": "one ad you found yourself",
+      "tag": "in the panel"
+    },
+    {
+      "id": "flags",
+      "lane": "panel",
+      "col": 3,
+      "type": "security",
+      "label": "Red flags",
+      "sublabel": "pay · hours · wording in the ad",
+      "tag": "shown on the card"
+    },
+    {
+      "id": "followups",
+      "lane": "panel",
+      "col": 4,
+      "type": "backend",
+      "label": "Follow-up drafts",
+      "sublabel": "applications gone quiet",
+      "tag": "you send them"
     }
   ],
   "edges": [
     {
-      "id": "folder-launchd",
+      "id": "folder-scheduler",
       "from": "folder",
-      "to": "launchd",
+      "to": "scheduler",
       "label": "rules + searches",
       "variant": "default"
     },
     {
-      "id": "launchd-discover",
-      "from": "launchd",
+      "id": "scheduler-discover",
+      "from": "scheduler",
       "to": "discover",
       "variant": "default"
     },
@@ -384,6 +424,36 @@
       "label": "intact",
       "variant": "security",
       "role": "branch"
+    },
+    {
+      "id": "ats-discover",
+      "from": "ats",
+      "to": "discover",
+      "label": "company boards",
+      "variant": "default"
+    },
+    {
+      "id": "paste-triage",
+      "from": "paste",
+      "to": "triage",
+      "label": "your own ad",
+      "variant": "dashed"
+    },
+    {
+      "id": "rank-flags",
+      "from": "rank",
+      "to": "flags",
+      "label": "checks the ad",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "package-followups",
+      "from": "package",
+      "to": "followups",
+      "label": "after a few days",
+      "variant": "dashed",
+      "role": "branch"
     }
   ],
   "cards": [
@@ -400,7 +470,8 @@
       "title": "Always on",
       "items": [
         "hooks/gate.py stops the agent from signing for the person, editing bookkeeping, reading secrets, deleting data or submitting outside live mode",
-        "tracker.json prevents duplicates and enforces per-platform, per-day and per-week limits"
+        "tracker.json prevents duplicates and enforces per-platform, per-day and per-week limits",
+        "Sources are plugins: one that is switched off, or needs a key you did not give, is skipped"
       ]
     }
   ]

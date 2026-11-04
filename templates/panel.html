@@ -132,8 +132,29 @@ kbd { font: 11px/1 var(--font); border: 1px solid var(--line-strong); border-bot
 .btn.primary:hover { background: var(--accent-hover); }
 .btn.warn { background: var(--urgent-bg); border-color: var(--urgent-line); color: var(--urgent-ink); }
 .btn:disabled { opacity: .5; cursor: default; }
+.card .actions .btn:not(.primary):not(.warn) { padding: 7px 9px; }
+.drop-btn { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--faint); cursor: pointer; }
+.drop-btn:hover { color: var(--gap); border-color: var(--line-strong); background: var(--sunken); }
+.card .head .score { width: 36px; height: 36px; }
 .grip { margin-left: auto; color: var(--faint); border: 0; background: transparent; padding: 4px; cursor: grab; }
 
+.tag.flag { background: var(--urgent-bg); color: var(--urgent-ink); font-weight: 700; cursor: help; }
+.tag.late { background: var(--urgent-bg); color: var(--urgent-ink); font-weight: 700; }
+.flags { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.addbar { padding: 4px 28px 0; }
+.addbar form { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+.addrow { display: flex; align-items: center; gap: 10px; }
+.addrow .lbl { font-weight: 700; white-space: nowrap; }
+.addrow .input { flex: 1; min-width: 0; order: 2; }
+.addrow .btn { order: 3; }
+.addbar summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; width: fit-content; padding: 4px 0; }
+.addtext { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.addtext textarea { min-height: 110px; }
+.addtext .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.addmsg { margin: 0; padding: 10px 12px; border-radius: 8px; font-size: 13px; background: var(--accent-soft); border: 1px solid var(--accent); display: flex; flex-direction: column; gap: 4px; }
+.addmsg.bad { background: var(--urgent-bg); border-color: var(--urgent-line); color: var(--urgent-ink); }
+.addmsg .warn { color: var(--urgent-ink); background: var(--urgent-bg); border-radius: 6px; padding: 6px 8px; font-weight: 600; }
+.hint { margin: 0; padding: 12px 14px; background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 8px; font-weight: 600; }
 .keys { padding: 0 28px 28px; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
 
 /* Detail drawer */
@@ -206,27 +227,36 @@ td.r, th.r { text-align: right; }
 @keyframes coffee-steam { 0% { opacity: 0; transform: translateY(2px) scaleY(.6); } 40% { opacity: .9; } 100% { opacity: 0; transform: translateY(-8px) scaleY(1.2); } }
 @keyframes coffee-bob { 0%, 88%, 100% { transform: none; } 91% { transform: translateY(-6px) rotate(-3deg); } 94% { transform: translateY(0) rotate(2deg); } 97% { transform: translateY(-3px); } }
 @media (max-width: 900px) { .coffee > span:last-child { display: none; } .coffee { padding: 12px; right: 14px; bottom: 14px; } }
-#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding: 10px 16px; border-radius: 8px; z-index: 50; box-shadow: var(--shadow-lift); }
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding: 10px 16px; border-radius: 8px; z-index: 50; box-shadow: var(--shadow-lift); display: flex; align-items: center; gap: 14px; max-width: min(560px, 92vw); }
+#toast button { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 6px; padding: 4px 12px; font-weight: 700; cursor: pointer; }
+#toast button:focus-visible { outline: 2px solid var(--ground); outline-offset: 2px; }
 .help { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(15,21,25,.4); z-index: 40; }
 .help > div { background: var(--surface); border-radius: 12px; padding: 22px 26px; width: min(440px, 92vw); display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; align-items: center; }
 .help h2 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 17px; }
 
 @media (max-width: 900px) {
-  .top, .filters, .today, .board-wrap, .keys { padding-left: 16px; padding-right: 16px; }
+  .top, .filters, .today, .board-wrap, .keys, .addbar { padding-left: 16px; padding-right: 16px; }
+  .top { position: static; }                  /* a four-row header must not pin itself over a phone screen */
+  #helpbtn { display: none; }
+  .addrow { flex-wrap: wrap; }
+  .addrow .input { flex-basis: 100%; order: 3; }
+  .addrow .btn { order: 2; margin-left: auto; }
+  .addtext .two { grid-template-columns: 1fr; }
   .today { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .board { grid-template-columns: 1fr; min-width: 0; }
   .range { margin-left: 0; flex-wrap: wrap; }
   .range input { width: 140px; }
-  .tabs { max-width: 100%; overflow-x: auto; }
+  .tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .tab { white-space: nowrap; }
   .top > * { min-width: 0; }
-  .search { max-width: none; flex-basis: 100%; }
+  .search { max-width: none; flex: 1 1 200px; }
   .page { padding-left: 16px; padding-right: 16px; }
   .drawer .actions .field { margin-left: 0; }
   .three, .cov, .docs, .facts { grid-template-columns: 1fr; }
   .stage { grid-template-columns: 90px 1fr 90px; }
   .keys { display: none; }
   .btn, .chip, .tab { min-height: 40px; }
+  .drop-btn { width: 40px; height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -250,6 +280,16 @@ td.r, th.r { text-align: right; }
 
 <div class="filters" id="filters" aria-label="Filters"></div>
 <section class="today" id="today" aria-label="Today"></section>
+<section class="addbar" id="addbar" aria-label="Add a job by link">
+  <form id="addform" autocomplete="off">
+    <div class="addrow"><label class="lbl" for="addurl">Paste a job link</label><button class="btn primary" id="addgo" type="submit">Add</button>
+      <input id="addurl" class="input" type="url" inputmode="url" placeholder="https://… a SEEK, LinkedIn, WA Government or company careers page"></div>
+    <details id="addmore"><summary>or paste the ad text</summary>
+      <div class="addtext"><textarea id="addtext" placeholder="Paste the whole ad here when the page cannot be read"></textarea>
+        <div class="two"><input id="addtitle" class="input" placeholder="Job title (optional)"><input id="addco" class="input" placeholder="Company (optional)"></div></div></details>
+    <div class="addmsg" id="addmsg" role="status" aria-live="polite" hidden></div>
+  </form>
+</section>
 <main id="main"></main>
 <div class="keys" id="keys"></div>
 <div id="drawer-root"></div>
@@ -258,13 +298,14 @@ td.r, th.r { text-align: right; }
 <div id="coffee-root"></div>
 
 <script>
-const D = __DATA__, TOKEN = "__TOKEN__";
+let D = __DATA__;
+const TOKEN = "__TOKEN__";
 const COLS = [["todo", "To apply"], ["sent", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["closed", "Closed"]];
 const COL_NAME = Object.fromEntries(COLS);
 const STATUS = {shortlisted: "Shortlisted", prepared: "Package prepared", "dry-run": "Filled, not sent", "manual-review": "Needs a person",
   submitted: "Sent by the harness", applied: "Applied", interview: "Interview", offer: "Offer", hired: "Hired",
   rejected: "Rejected", "no-response": "No response", withdrawn: "Withdrawn", closed: "Ad closed", skipped: "Dropped", failed: "Failed"};
-const PLAT = {seek: "SEEK", linkedin: "LinkedIn", wagov: "WA Gov"};
+const PLAT = {seek: "SEEK", linkedin: "LinkedIn", wagov: "WA Gov", link: "Pasted link"};
 const PER_COL = 12;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -278,6 +319,8 @@ const icon = {
   folder: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
   doc: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:var(--accent)"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
   grip: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="fill:currentColor;stroke:none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
+  info: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+  nope: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   x: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
 
@@ -286,14 +329,21 @@ const S = {view: "board", city: "", plat: "", track: "", min: 0, q: "", focus: n
 try { Object.assign(S, JSON.parse(localStorage.getItem("panel-v2") || "{}"), {open: null, focus: null, q: ""}); } catch (e) {}
 const HASH = {"#tablero": "board", "#embudo": "funnel", "#empresas": "companies", "#descartados": "dropped"};
 if (HASH[location.hash]) S.view = HASH[location.hash];
-const save = () => { try { localStorage.setItem("panel-v2", JSON.stringify({view: S.view, city: S.city, plat: S.plat, track: S.track, min: S.min, csort: S.csort, noagency: S.noagency})); } catch (e) {} };
+const save = () => { try { localStorage.setItem("panel-v2", JSON.stringify({view: S.view, city: S.city, plat: S.plat, track: S.track, min: S.min, csort: S.csort, noagency: S.noagency, todoDay: S.todoDay})); } catch (e) {} };
 try { const t = localStorage.getItem("panel-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
 
-function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2800); }
+const TOP_N = 15;
+/* a toast may carry an Undo button (5 s): `undo` runs once if it is pressed */
+function toast(msg, undo) {
+  const t = $("#toast"); t.textContent = ""; t.append(Object.assign(document.createElement("span"), {textContent: msg}));
+  toast.undo = undo || null;
+  if (undo) t.append(Object.assign(document.createElement("button"), {textContent: "Undo", type: "button"}));
+  t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; toast.undo = null; }, undo ? 5000 : 2800);
+}
 async function post(path, body) {
   const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json", "X-Panel-Token": TOKEN}, body: JSON.stringify({slug: D.slug, ...body})});
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || j.ok === false) throw new Error(j.error || ("error " + r.status));
+  if (!r.ok || j.ok === false) throw Object.assign(new Error(j.error || ("error " + r.status)), {data: j});
   return j;
 }
 
@@ -314,15 +364,17 @@ function filters() {
   const tracks = [...new Set(D.apps.map(a => a.track).filter(Boolean))];
   const chip = (group, val, label) => `<button class="chip" data-f="${group}" data-v="${esc(val)}" aria-pressed="${S[group] === val}">${esc(label)}</button>`;
   $("#filters").innerHTML = `<span class="lbl">Filter</span>${chip("city", "Perth", "Perth")}${chip("city", "Adelaide", "Adelaide")}<span class="sep"></span>`
-    + Object.entries(PLAT).map(([k, v]) => chip("plat", k, v)).join("") + `<span class="sep"></span>`
+    + Object.entries(PLAT).filter(([k]) => k !== "link" || D.apps.some(a => a.platform === "link")).map(([k, v]) => chip("plat", k, v)).join("") + `<span class="sep"></span>`
     + tracks.map(t => chip("track", t, t.length <= 2 ? t.toUpperCase() : t[0].toUpperCase() + t.slice(1))).join("")
     + `<label class="range">Minimum score <input id="min" type="range" min="0" max="100" step="5" value="${S.min}"><output class="num" for="min">${S.min}</output></label>`;
 }
 function todayTiles() {
   const T = D.today, soon = T.closing_soon.map(k => D.apps.find(a => a.key === k)).filter(Boolean);
   const f = T.followups[0];
+  const todo = D.apps.filter(a => a.col === "todo"), fresh = todo.filter(a => a.new).length, fits = todo.map(a => a.fit).filter(v => v != null);
+  const best = fits.length ? " · best " + Math.max(...fits) : "";
   $("#today").innerHTML = `
-    <button class="tile" data-go="todo"><span class="k">To apply</span><span class="v num">${T.to_apply}</span><span class="d">${T.new ? T.new + " new today" : "Nothing new today"}</span></button>
+    <button class="tile" data-go="todo"><span class="k">To apply</span><span class="v num">${todo.length}</span><span class="d">${(fresh ? fresh + " new today" : "Nothing new today") + best}</span></button>
     <button class="tile ${soon.length ? "urgent" : ""}" data-go="soon"><span class="k">Closing in 3 days</span><span class="v num">${soon.length}</span><span class="d">${soon[0] ? esc(soon[0].company + " · " + soon[0].title) : "None"}</span></button>
     <button class="tile ${T.followups.length ? "urgent" : ""}" data-go="quiet"><span class="k">Follow-ups</span><span class="v num">${T.followups.length}</span><span class="d">${f ? esc(f.company + ", sent " + fmt(f.sent)) : "Nothing due"}</span></button>
     <div class="tile" style="cursor:default"><span class="k">Answers to confirm</span><span class="v num">${T.pending_answers}</span><span class="d">${T.pending_answers ? "job answer " + esc(D.slug) + " pending" : "All confirmed"}</span></div>`;
@@ -342,7 +394,9 @@ function scoreCls(f) { return f == null ? "low" : f >= 60 ? "" : f >= 30 ? "mid"
 function card(a) {
   const d = daysTo(a.closes), soon = a.col === "todo" && d != null && d >= 0 && d <= 3;
   const tags = [`<span class="tag">${PLAT[a.platform] || esc(a.platform)}</span>`, a.track ? `<span class="tag">${esc(a.track)}</span>` : "",
-    a.tailored ? `<span class="tag on">Tailored</span>` : "", a.notes ? `<span class="tag">Has notes</span>` : "", a.new ? `<span class="tag on">New</span>` : ""].join("");
+    a.tailored ? `<span class="tag on">Tailored</span>` : "", a.notes ? `<span class="tag">Has notes</span>` : "", a.new ? `<span class="tag on">New</span>` : "",
+    a.red_flags?.length ? `<span class="tag flag" title="${esc(a.red_flags.join("\n"))}" aria-label="${a.red_flags.length} red flag${a.red_flags.length === 1 ? "" : "s"}: ${esc(a.red_flags.join("; "))}">⚠ ${a.red_flags.length}</span>` : "",
+    a.follow_up ? `<span class="tag late">Follow up</span>` : ""].join("");
   let body = "";
   if (a.col === "todo") {
     if (a.match != null) body += `<div class="meter"><div class="row"><span>Keywords</span><b class="num">${a.match}%</b></div><div class="bar"><i style="width:${a.match}%"></i></div>`
@@ -355,12 +409,14 @@ function card(a) {
     body += `<div class="c">${esc(STATUS[a.status] || a.status)}</div>`;
   }
   const primary = a.col === "todo" ? `<button class="btn primary" data-act="applied" data-k="${esc(a.key)}">I applied</button>`
-    : a.col === "sent" && a.sent && -daysTo(a.sent) >= 10 ? `<button class="btn warn" data-open="${esc(a.key)}" data-tab="resumen">Follow up</button>` : "";
+    : a.col === "sent" && a.follow_up ? `<button class="btn warn" data-open="${esc(a.key)}" data-tab="resumen">Follow up</button>` : "";
+  const draftLink = a.draft ? `<a class="btn" href="/draft?slug=${encodeURIComponent(D.slug)}&key=${encodeURIComponent(a.key)}" target="_blank" rel="noopener" draggable="false" title="Open the follow-up draft">Draft</a>` : "";
   return `<article class="card ${soon ? "soon" : ""} ${a.col === "closed" ? "done" : ""} ${S.focus === a.key ? "focus" : ""}" draggable="true" data-key="${esc(a.key)}" tabindex="${S.focus === a.key ? 0 : -1}" aria-label="${esc(a.title + ", " + a.company + ", " + COL_NAME[a.col])}">
     <div class="head"><div class="who"><div class="t">${esc(a.title)}</div><div class="c">${esc(a.company)}${a.location ? " · " + esc(a.location.split(",")[0]) : ""}</div></div>
-      ${a.fit != null ? `<div class="score num ${scoreCls(a.fit)}" title="Score">${a.fit}</div>` : ""}</div>
+      ${a.fit != null ? `<div class="score num ${scoreCls(a.fit)}" title="Score">${a.fit}</div>` : ""}
+      ${a.col === "todo" ? `<button class="drop-btn" data-drop="${esc(a.key)}" aria-label="Drop: not interested in ${esc(a.title)}" title="Not interested" draggable="false">${icon.nope}</button>` : ""}</div>
     <div class="tags">${tags}</div>${body}
-    <div class="actions">${primary}${a.url ? `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener" draggable="false" aria-label="Open the ad for ${esc(a.title)} in a new tab">Open ad ${icon.ext}</a>` : ""}<button class="btn" data-open="${esc(a.key)}">Details</button>
+    <div class="actions">${primary}${draftLink}${a.url ? `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener" draggable="false" aria-label="Open the ad for ${esc(a.title)} in a new tab" title="Open ad">${icon.ext}</a>` : ""}<button class="btn" data-open="${esc(a.key)}" aria-label="Details of ${esc(a.title)}" title="Details">${icon.info}</button>
       <button class="grip" aria-label="Move ${esc(a.title)}: select the card and press 1 to 5" title="Drag to another column, or press 1 to 5" tabindex="-1">${icon.grip}</button></div>
   </article>`;
 }
@@ -372,15 +428,16 @@ function board() {
       offer: "When an offer arrives, move the card here.", closed: "Rejections, no responses and closed ads end up here."}[id];
     if (id === "todo") {                      /* today's package by default; a selector shows any earlier day */
       const days = [...new Set(g.map(a => a.date))].sort().reverse();
-      const pick = S.todoDay || "today", todayIso = new Date().toISOString().slice(0, 10);
-      const shown = pick === "today" ? g.filter(a => a.new) : pick === "all" ? g : g.filter(a => a.date === pick);
-      const slim = S.expanded.todo ? shown.length : PER_COL;
+      const pick = ["today", "top", "all", ...days].includes(S.todoDay) ? S.todoDay : "today", todayIso = new Date().toISOString().slice(0, 10);
+      const shown = pick === "today" ? g.filter(a => a.new) : pick === "top" ? g.slice(0, TOP_N) : pick === "all" ? g : g.filter(a => a.date === pick);
+      const slim = S.expanded.todo || pick === "top" ? shown.length : PER_COL;
       const opt = (v, label, n) => `<option value="${v}" ${pick === v ? "selected" : ""}>${label} (${n})</option>`;
       const select = `<label class="field" style="font-size:12px">Showing <select id="tododay" aria-label="Which day's ads">`
+        + opt("top", "Top picks (all days)", Math.min(TOP_N, g.length))
         + opt("today", "Today", g.filter(a => a.new).length)
         + days.filter(d => d !== todayIso).map(d => opt(d, fmt(d), g.filter(a => a.date === d).length)).join("")
-        + opt("all", "All days", g.length) + `</select></label>`;
-      const emptyMsg = pick === "today" ? "Today's run left no new ads with these filters. Pick another day above." : "No ads for that day with these filters.";
+        + opt("all", "All days (best first)", g.length) + `</select></label>`;
+      const emptyMsg = pick === "top" ? "Nothing to apply to with these filters." : pick === "today" ? "Today's run left no new ads with these filters. Pick another day above." : "No ads for that day with these filters.";
       return `<section class="col" data-col="todo" aria-label="${name}"><h2>${name} <span class="num">${g.length}</span></h2>
         ${select}
         ${shown.slice(0, slim).map(card).join("") || `<div class="empty">${emptyMsg}</div>`}
@@ -391,7 +448,7 @@ function board() {
       ${g.length > lim ? `<button class="more" data-more="${id}">Show ${g.length - lim} more</button>` : ""}</section>`;
   }).join("");
   $("#main").innerHTML = `<div class="board-wrap"><div class="board" id="board">${cols}</div></div>`;
-  $("#keys").innerHTML = `<b style="color:var(--ink)">Shortcuts</b><span><kbd>/</kbd> search</span><span><kbd>J</kbd> <kbd>K</kbd> move</span><span><kbd>Enter</kbd> details</span><span><kbd>A</kbd> I applied</span><span><kbd>1</kbd>–<kbd>5</kbd> move to column</span><span><kbd>O</kbd> open folder</span><span><kbd>T</kbd> <kbd>E</kbd> <kbd>C</kbd> <kbd>D</kbd> views</span><span><kbd>?</kbd> help</span>`;
+  $("#keys").innerHTML = `<b style="color:var(--ink)">Shortcuts</b><span><kbd>/</kbd> search</span><span><kbd>J</kbd> <kbd>K</kbd> move</span><span><kbd>Enter</kbd> details</span><span><kbd>A</kbd> I applied</span><span><kbd>X</kbd> drop (not interested)</span><span><kbd>1</kbd>–<kbd>5</kbd> move to column</span>${D.local ? `<span><kbd>O</kbd> open folder</span>` : ""}<span><kbd>T</kbd> <kbd>E</kbd> <kbd>C</kbd> <kbd>D</kbd> views</span><span><kbd>?</kbd> help</span>`;
 }
 
 /* ---------- funnel ---------- */
@@ -400,16 +457,23 @@ function funnel() {
   const sent = F.stages[1][1];
   const stages = F.stages.map(([n, v], i) => `<div class="stage"><b>${n}</b><div><div class="fill" style="width:${v / max * 100}%"></div></div>
     <span class="num">${v}${i === 1 && F.stages[0][1] ? ` <span style="color:var(--muted)">${Math.round(v / F.stages[0][1] * 100)}%</span>` : i > 1 && sent ? ` <span style="color:var(--muted)">${Math.round(v / sent * 100)}% of sent</span>` : ""}</span></div>`).join("");
-  const rows = obj => Object.entries(obj).map(([k, r]) => `<tr><td>${esc(PLAT[k] || k)}</td><td class="r num">${r.sent}</td><td class="r num">${r.interviews}</td><td class="r num"><b>${r.interview_rate == null ? "—" : Math.round(r.interview_rate * 100) + "%"}</b></td></tr>`).join("")
-    || `<tr><td colspan="4" style="color:var(--muted)">No applications sent yet.</td></tr>`;
-  const table = (title, obj, first) => `<section class="panel"><h2>${title}</h2><div class="scroll"><table><thead><tr><th>${first}</th><th class="r">Sent</th><th class="r">Interviews</th><th class="r">Rate</th></tr></thead><tbody>${rows(obj)}</tbody></table></div></section>`;
+  const C = F.calibration, pct = r => r.answered ? Math.round(r.interviews / r.answered * 100) + "%" : "—";
+  const rows = (obj, name) => Object.entries(obj).map(([k, r]) => `<tr><td>${esc(name(k))}</td><td class="r num">${r.sent}</td><td class="r num">${r.answered}</td><td class="r num">${r.interviews}</td><td class="r num"><b>${pct(r)}</b></td></tr>`).join("")
+    || `<tr><td colspan="5" style="color:var(--muted)">No applications sent yet.</td></tr>`;
+  const table = (title, obj, first, name) => `<section><h3 style="margin:0 0 6px;font-size:14px">${title}</h3><div class="scroll"><table><thead><tr><th>${first}</th><th class="r">Sent</th><th class="r">Answered</th><th class="r">Interviews</th><th class="r">Rate</th></tr></thead><tbody>${rows(obj, name)}</tbody></table></div></section>`;
+  const band = k => k === "unknown" ? "No score" : k.replace("-", "–");
+  const calib = `<section class="panel" id="calib"><h2>What leads to interviews</h2>` + (C.ready
+    ? (C.hint ? `<p class="hint">${esc(C.hint)}</p>` : `<p style="margin:0;color:var(--muted)">No score band, track or source clearly stands out yet.</p>`)
+      + `<div class="three">${table("By fit score", C.by_fit, "Score", band)}${table("By track", C.by_track, "Track", k => k)}${table("By source", C.by_platform, "Source", k => PLAT[k] || k)}</div>
+      <p style="margin:0;color:var(--muted);font-size:12px">Rate = interviews out of the applications that got an answer (an interview, a no, or 30 days of silence). A suggestion only: your targets change when you approve them, never by themselves.</p>`
+    : `<div class="empty">Shows up after ${C.needed} applications with an answer — you have ${C.answered}.</div>`) + `</section>`;
   const quiet = D.today.followups.map(f => `<tr><td><b>${esc(f.title)}</b> · ${esc(f.company || "")}</td><td class="num">${fmt(f.sent)}</td>
     <td>${f.action === "follow up" ? `<button class="btn warn" data-open="${esc(f.key)}">Write a follow-up</button>` : `<button class="btn" data-act="no-response" data-k="${esc(f.key)}">Mark no response</button>`}</td></tr>`).join("")
     || `<tr><td colspan="3" style="color:var(--muted)">Nobody has been quiet for more than 10 days.</td></tr>`;
   $("#main").innerHTML = `<div class="page">
     <section class="panel"><h2>From package to offer</h2>${stages}
-      <p class="note">${F.known < 10 ? `${F.known} known outcome${F.known === 1 ? "" : "s"}. Under 10 the score cannot be calibrated yet: mark on the board what happened to each application.` : "Compare the interview rate by score band: if high scores do not win, the ranking needs adjusting."}${F.avg_wait != null ? ` Average time to a response: ${F.avg_wait} days.` : ""}</p></section>
-    <div class="three">${table("Does the score predict interviews?", F.by_fit, "Score")}${table("By track", F.by_track, "Track")}${table("By source", F.by_platform, "Source")}</div>
+      ${F.avg_wait != null ? `<p style="margin:0;color:var(--muted);font-size:13px">Average time to a response: ${F.avg_wait} days.</p>` : ""}</section>
+    ${calib}
     <section class="panel" id="quiet"><h2>No response</h2><div class="scroll"><table><thead><tr><th>Application</th><th>Sent</th><th>Action</th></tr></thead><tbody>${quiet}</tbody></table></div></section></div>`;
   $("#keys").innerHTML = "";
 }
@@ -462,7 +526,14 @@ function droppedView() {
     <ul class="maybe">${maybes.map(m => `<li><div class="who"><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a> <span>· ${esc(m.company)}${m.day ? " · " + fmt(m.day) : ""}</span></div>
       <div class="kw">${m.keywords.map(k => `<span class="tag on">${esc(k)}</span>`).join("")}</div>
       <button class="btn" data-rescue="${esc(m.key)}" data-track="${esc(m.track)}">Rescue</button></li>`).join("")}</ul></section>` : "";
-  $("#main").innerHTML = `<div class="page">${banner}${maybeBox}<section class="panel"><h2>Dropped by the rules, last 7 days</h2>
+  const mine = (D.dropped_by_you || []).filter(m => !q || (m.title + " " + m.company + " " + m.note).toLowerCase().includes(q));
+  const mineBox = `<section class="panel" id="mine"><h2>Dropped by you</h2>
+    <p style="margin:0;color:var(--muted);font-size:13px">Ads you marked as not interested in the last 30 days, newest first. Restore puts one back in To apply.</p>
+    ${mine.length ? `<ul class="maybe">${mine.map(m => `<li><div class="who"><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a> <span>· ${esc(m.company)}</span></div>
+      <div class="kw">${m.fit != null ? `<span class="tag">Score ${m.fit}</span>` : ""}<span class="tag">Dropped ${fmt(m.day)}</span>${m.note ? `<span class="tag">${esc(m.note)}</span>` : ""}</div>
+      <button class="btn" data-restore="${esc(m.key)}" aria-label="Restore ${esc(m.title)} to To apply">Restore</button></li>`).join("")}</ul>`
+      : `<p style="margin:0;color:var(--muted);font-size:13px">${(D.dropped_by_you || []).length ? "Nothing you dropped matches that search." : "Nothing dropped by you in the last 30 days."}</p>`}</section>`;
+  $("#main").innerHTML = `<div class="page">${banner}${mineBox}${maybeBox}<section class="panel"><h2>Dropped by the rules, last 7 days</h2>
     <p style="margin:0;color:var(--muted);font-size:13px">Each ad shows the rule that dropped it. If you disagree, rescue it: its package is built right away.</p>
     <div class="scroll"><table><thead><tr><th>Seen</th><th>Role</th><th>Company</th><th>Reason</th><th></th></tr></thead><tbody>
     ${rows.slice(0, 200).map(d => `<tr><td class="num">${fmt(d.day)}</td><td><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a></td><td>${esc(d.company)}</td><td>${esc(d.reason)}</td>
@@ -489,6 +560,9 @@ function drawer() {
   const move = `<label class="field" style="margin-left:auto">Move to <select id="moveto">${COLS.map(([id, n]) => `<option value="${id}" ${id === j.col ? "selected" : ""}>${n}</option>`).join("")}</select></label>`;
   let body = "";
   if (S.tab === "resumen") {
+    if (j.red_flags?.length) body += `<section><h2>Red flags</h2><ul class="flags">${j.red_flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul><p style="margin:8px 0 0;color:var(--muted);font-size:12px">Things to check before you apply. A reason to look closer, not a verdict.</p></section>`;
+    if (j.follow_up || j.draft_url) body += `<section><h2>Follow up</h2>${j.follow_up ? `<p style="margin:0 0 8px;color:var(--muted)">Applied more than 10 days ago and nothing since. A short message to the recruiter or hiring contact is usual now.</p>` : ""}
+      ${j.draft_url ? `<a class="btn" href="${j.draft_url}" target="_blank" rel="noopener">${icon.doc.replace(/ style="[^"]*"/, "")}Open the follow-up draft</a>` : j.draft_text ? `<div class="desc">${esc(j.draft_text)}</div>` : ""}</section>`;
     body += c ? `<section><h2>Why it fits</h2><div class="meter" style="margin-bottom:10px"><div class="row"><span>Ad keywords the CV covers</span><b class="num">${c.match_pct ?? "—"}%</b></div><div class="bar"><i style="width:${c.match_pct || 0}%"></i></div></div>
       <div class="cov"><div><b class="c1">In the CV · ${c.terms.filter(t => t.status === "covered").length}</b><span>${esc(c.terms.filter(t => t.status === "covered").map(t => t.term).join(", ")) || "—"}</span></div>
       <div><b class="c2">You have it · ${c.have_it.length}</b><span>${c.have_it.length ? esc(c.have_it.join(", ")) + ". In your profile: add it where it is true." : "—"}</span></div>
@@ -505,7 +579,7 @@ function drawer() {
     body = j.description ? `<section><div class="desc">${esc(j.description)}</div></section>` : `<p style="color:var(--muted)">No saved description. Open the ad on the site.</p>`;
   } else if (S.tab === "docs") {
     body = `<section><h2>${j.tailored ? "Documents tailored to this ad" : "Documents in this package"}</h2>${j.docs.length ? `<div class="docs">${j.docs.map(f => `<a class="doc" href="${f.url}" target="_blank" rel="noopener">${icon.doc}<span><b>${f.kind === "cv" ? "CV" : f.kind === "letter" ? "Cover letter" : "Employer notes"}</b><small>${esc(f.name)}</small></span></a>`).join("")}</div>` : `<p style="color:var(--muted)">This application has no documents in the package folder.</p>`}</section>
-      ${j.has_folder ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Open folder in Finder</button>` : ""}`;
+      ${j.has_folder && D.local ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Open folder in Finder</button>` : ""}`;
   } else {
     body = `<section><label for="notes" style="font-weight:700;font-size:15px;display:block;margin-bottom:8px">Notes</label><textarea id="notes" placeholder="Anything to remember: who you wrote to, what they asked, what to prepare.">${esc(j.notes)}</textarea>
       <div class="actions" style="margin-top:8px"><button class="btn primary" id="savenote">Save notes</button><span style="font-size:12px;color:var(--muted)">Saved on this application only.</span></div></section>`;
@@ -513,11 +587,12 @@ function drawer() {
   const primary = j.col === "todo" ? `<button class="btn primary" data-act="applied" data-k="${esc(j.key)}">I applied</button>` : "";
   $("#drawer-root").innerHTML = `<div class="scrim" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dt">
     <header><div style="display:flex;gap:14px;align-items:flex-start"><div style="flex:1;min-width:0"><h1 id="dt">${esc(j.title)}</h1>
-      <div class="sub">${esc(j.company)}${j.location ? " · " + esc(j.location) : ""} · ${PLAT[j.platform] || esc(j.platform)}</div></div>
+      <div class="sub">${esc(j.company)}${j.location ? " · " + esc(j.location) : ""} · ${PLAT[j.platform] || esc(j.platform)}
+        ${j.red_flags?.length ? ` <span class="tag flag" title="${esc(j.red_flags.join("\n"))}">⚠ ${j.red_flags.length}</span>` : ""}${j.follow_up ? ` <span class="tag late">Follow up</span>` : ""}</div></div>
       ${j.fit != null ? `<div class="score big num ${scoreCls(j.fit)}" title="Score">${j.fit}</div>` : ""}
       <button class="icon-btn" data-close aria-label="Close details">${icon.x}</button></div>
       <div class="actions">${primary}<a class="btn" href="${esc(j.url)}" target="_blank" rel="noopener">Open ad ${icon.ext}</a>
-        ${j.has_folder ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Open folder</button>` : ""}
+        ${j.has_folder && D.local ? `<button class="btn" data-folder="${esc(j.key)}">${icon.folder}Open folder</button>` : ""}
         ${j.col === "todo" ? `<button class="btn" data-act="skipped" data-k="${esc(j.key)}">Drop</button>` : ""}${move}</div>
       <div class="dtabs" role="tablist">${tabs.map(([id, n]) => `<button class="dtab" role="tab" data-dtab="${id}" aria-selected="${S.tab === id}">${n}</button>`).join("")}</div></header>
     <div class="dbody">${body}</div></aside>`;
@@ -537,10 +612,28 @@ async function setStatus(key, opts) {
     render();
   } catch (e) { if (a && before) Object.assign(a, before); toast("Could not change it: " + e.message); render(); }
 }
+/* Drop from the board: skipped through the same POST /status as the drawer's Drop, with a 5 s Undo that puts it back as prepared */
+async function drop(key) {
+  const a = D.apps.find(x => x.key === key); if (!a || a.col !== "todo" || drop.busy.has(key)) return;      /* a held key or a double click must not post twice */
+  drop.busy.add(key);
+  const snap = {...a}, order = [...document.querySelectorAll('.col[data-col="todo"] .card')].map(c => c.dataset.key), i = order.indexOf(key), next = order[i + 1] || order[i - 1];
+  try { await post("/status", {key, status: "skipped", note: "dropped from the panel"}); } catch (e) { toast("Could not drop it: " + e.message); return; } finally { drop.busy.delete(key); }
+  D.apps = D.apps.filter(x => x !== a);
+  D.dropped_by_you = (D.dropped_by_you || []).filter(x => x.key !== key); D.dropped_by_you.unshift({key, title: a.title, company: a.company, url: a.url, fit: a.fit, day: new Date().toISOString().slice(0, 10), note: ""});
+  if (S.open === key) { S.open = null; $("#drawer-root").innerHTML = ""; }
+  render(); if (next && S.view === "board") focusCard(next);
+  toast(`Dropped ${a.title}`, async () => {
+    try { await post("/status", {key, status: "prepared", note: "restored from the panel"}); } catch (e) { toast("Could not undo: " + e.message); return; }
+    D.apps.push({...snap, status: "prepared", col: "todo"}); D.dropped_by_you = D.dropped_by_you.filter(x => x.key !== key);
+    render(); if (S.view === "board") focusCard(key); toast(`Restored ${snap.title}`);
+  });
+}
+drop.busy = new Set();
 function render() {
   header(); filters(); todayTiles();
   if (S.view === "board") board(); else if (S.view === "funnel") funnel(); else if (S.view === "companies") companiesView(); else droppedView();
   $("#today").hidden = S.view === "dropped" || S.view === "companies";
+  $("#addbar").hidden = S.view !== "board";
   $("#filters").hidden = S.view !== "board" && S.view !== "companies";
 }
 function cardsInOrder() { return [...document.querySelectorAll(".card")].map(c => c.dataset.key); }
@@ -554,6 +647,10 @@ document.addEventListener("click", async e => {
   if (t.dataset.csort) { S.csort = t.dataset.csort; save(); companiesView(); return; }
   if (t.dataset.more) { S.expanded[t.dataset.more] = true; render(); return; }
   if (t.dataset.open) { openDetail(t.dataset.open, t.dataset.tab); return; }
+  if (t.id === "toast" || t.closest("#toast")) { const u = toast.undo; if (u && t.tagName === "BUTTON") { toast.undo = null; $("#toast").hidden = true; clearTimeout(toast.h); await u(); } return; }
+  if (t.dataset.drop) { await drop(t.dataset.drop); return; }
+  if (t.dataset.act === "skipped") { t.disabled = true; await drop(t.dataset.k); return; }
+  if (t.dataset.restore) { t.disabled = true; try { await post("/status", {key: t.dataset.restore, status: "prepared", note: "restored from the panel"}); toast("Restored. Reloading…"); setTimeout(() => location.reload(), 700); } catch (err) { toast("Could not restore: " + err.message); t.disabled = false; } return; }
   if (t.dataset.act) { t.disabled = true; await setStatus(t.dataset.k, {status: t.dataset.act}); return; }
   if (t.dataset.dtab) { S.tab = t.dataset.dtab; drawer(); return; }
   if (t.dataset.folder) { try { await post("/open", {key: t.dataset.folder}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
@@ -573,10 +670,43 @@ document.addEventListener("input", e => {
   if (e.target.id === "min") { S.min = +e.target.value; e.target.nextElementSibling.textContent = S.min; save(); S.view === "companies" ? companiesView() : board(); }
 });
 document.addEventListener("change", async e => {
-  if (e.target.id === "tododay") { S.todoDay = e.target.value; S.expanded.todo = false; board(); return; }
+  if (e.target.id === "tododay") { S.todoDay = e.target.value; S.expanded.todo = false; save(); board(); return; }
   if (e.target.id === "noagency") { S.noagency = e.target.checked; save(); companiesView(); return; }
   if (e.target.id === "cand") location.search = "?slug=" + encodeURIComponent(e.target.value);
   if (e.target.id === "moveto" && S.job) await setStatus(S.job.key, {column: e.target.value});
+});
+
+/* Paste a job link: POST /add-link (read, scored, tracked, package built), then the board data is fetched again */
+function addMsg(lines, bad) {
+  const m = $("#addmsg"); m.hidden = !lines.length; m.classList.toggle("bad", !!bad); m.textContent = "";
+  lines.forEach(([text, cls]) => m.append(Object.assign(document.createElement("div"), {textContent: text, className: cls || ""})));
+}
+async function refreshData() {
+  const r = await fetch(`/api/data?slug=${encodeURIComponent(D.slug)}`);
+  if (!r.ok) throw new Error("could not refresh");
+  D = await r.json();
+}
+document.addEventListener("submit", async e => {
+  if (e.target.id !== "addform") return;
+  e.preventDefault();
+  const url = $("#addurl").value.trim(), text = $("#addtext").value.trim(), btn = $("#addgo");
+  if (!url && !text) { addMsg(["Paste a job link, or the text of the ad."], true); return; }
+  btn.disabled = true; btn.textContent = "Reading…"; addMsg([["Reading the ad. This can take a few seconds.", ""]]);
+  try {
+    const r = await post("/add-link", {url, text, title: $("#addtitle").value.trim(), company: $("#addco").value.trim()});
+    S.todoDay = "today"; S.expanded.todo = false; S.view = "board"; S.focus = r.key;
+    await refreshData(); render();
+    const hidden = !D.apps.some(a => a.key === r.key && visible(a));
+    addMsg([[`Added: ${r.title}${r.company ? " · " + r.company : ""}. Score ${r.score}, track ${r.track}.${r.package ? " Cover letter and CV are ready." : ""}`],
+      ...(r.package_error ? [[`Package not built: ${r.package_error}`, "warn"]] : []),
+      ...(r.rules ? [[r.rules, "warn"]] : []), ...(r.warning ? [[r.warning, "warn"]] : []),
+      ...(hidden ? [["A filter above is hiding it: clear the filters to see the card."]] : [])]);
+    $("#addurl").value = ""; $("#addtext").value = ""; $("#addtitle").value = ""; $("#addco").value = ""; $("#addmore").open = false;
+    $("#addmsg").scrollIntoView({block: "nearest"});
+  } catch (err) {
+    addMsg([[err.message]], true);
+    if (err.data?.need_text) { $("#addmore").open = true; $("#addtext").focus(); }
+  } finally { btn.disabled = false; btn.textContent = "Add"; }
 });
 
 /* drag and drop between columns */
@@ -591,8 +721,8 @@ document.addEventListener("drop", async e => {
 
 /* keyboard */
 function help() {
-  const rows = [["/", "Search"], ["J  K", "Next and previous card"], ["Enter", "Open details"], ["A", "Mark as applied"], ["1 to 5", "Move to To apply, Applied, Interview, Offer, Closed"],
-    ["O", "Open the package folder in Finder"], ["T  E  C  D", "Board, Funnel, Companies, Dropped"], ["Esc", "Close"], ["?", "This help"]];
+  const rows = [["/", "Search"], ["J  K", "Next and previous card"], ["Enter", "Open details"], ["A", "Mark as applied"], ["X", "Drop the card (not interested); Undo in the toast"], ["1 to 5", "Move to To apply, Applied, Interview, Offer, Closed"],
+    ...(D.local ? [["O", "Open the package folder in Finder"]] : []), ["T  E  C  D", "Board, Funnel, Companies, Dropped"], ["Esc", "Close"], ["?", "This help"]];
   $("#help-root").innerHTML = `<div class="help" data-close-help><div role="dialog" aria-modal="true" aria-labelledby="ht"><h2 id="ht">Keyboard shortcuts</h2>${rows.map(([k, v]) => `<kbd>${k}</kbd><span>${v}</span>`).join("")}<button class="btn" data-close-help style="grid-column:1/-1;justify-self:end">Close</button></div></div>`;
   $("#help-root button").focus();
 }
@@ -615,7 +745,8 @@ document.addEventListener("keydown", async e => {
   if (!S.focus) return;
   if (e.key === "Enter") { openDetail(S.focus); return; }
   if (k === "a") { const a = D.apps.find(x => x.key === S.focus); if (a?.col === "todo") await setStatus(S.focus, {status: "applied"}); return; }
-  if (k === "o") { try { await post("/open", {key: S.focus}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
+  if (k === "x") { const a = D.apps.find(x => x.key === S.focus); if (a?.col === "todo") await drop(S.focus); return; }
+  if (k === "o") { if (!D.local) return; try { await post("/open", {key: S.focus}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
   if (/^[1-5]$/.test(k)) { const col = COLS[+k - 1][0], a = D.apps.find(x => x.key === S.focus); if (a && a.col !== col) { await setStatus(S.focus, {column: col}); focusCard(S.focus); } }
 });
 

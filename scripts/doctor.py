@@ -16,6 +16,7 @@ import urllib.request
 from pathlib import Path
 
 import pdftext
+import sources
 from common import UA, apply_tools_dir, plugin_mode, setting, tools_dir
 
 MIN_PY, MIN_NODE = (3, 9), 20
@@ -99,6 +100,7 @@ def gather() -> dict:
         "playwright (apply/)": (apply_tools_dir() / "node_modules/playwright").exists(),
         "launchd schedules": plists,
         "network: seek search": reach("https://www.seek.com.au/"),
+        "sources": sources.info(),
     }
 
 
@@ -141,6 +143,11 @@ def show(r: dict) -> int:
         for ok, what, fix in rows:
             print(f"  {mark(ok, opt)} {what}" + ("" if ok else f"\n      fix: {fix}"))
         print()
+    print("Job sources (platform names for targets.json searches; docs/ADDING-A-SOURCE.md)")
+    for x in r.get("sources", []):
+        note = "" if x["configured"] else f"\n      not configured: {x['setup'] or 'see docs/ADDING-A-SOURCE.md'}"
+        print(f"  {mark(x['configured'], True)} {x['name']} [{'any country' if x['country'] == '*' else x['country']}] {x['description']}{note}")
+    print()
     bad = sum(not ok for ok, _, _ in required)
     print("Ready to prepare applications" if not bad else f"{bad} thing{'s' if bad > 1 else ''} to fix first")
     return bad
