@@ -231,6 +231,19 @@ class AddLinkTests(Base):
         a = load("ana")[0]
         self.assertEqual((a["url"], a["closes"]), ("https://www.seek.com.au/job/12345678", "2026-12-05"))
 
+    def test_wagov_url_reads_the_page_through_the_source_module(self):
+        """Regression: addlink once called discover.wagov_page, which moved to sources.wagov.page."""
+        import addlink
+        from tracker import load
+        ld = {"title": "Project Engineer", "hiringOrganization": {"name": "WA Government Jobs"}, "datePosted": "2026-11-01"}
+        with unittest.mock.patch("sources.wagov.page", return_value=(200, ld, "2026-11-20")) as page_, \
+             unittest.mock.patch("discover.wagov_detail", return_value=LONG), \
+             unittest.mock.patch("prepare.build_one", fake_build):
+            r = addlink.add_link("ana", "https://search.jobs.wa.gov.au/jobs/project-engineer-pilbara")
+        page_.assert_called_once_with("project-engineer-pilbara")
+        self.assertEqual((r["ok"], r["key"], r["platform"]), (True, "wagov:project-engineer-pilbara", "wagov"))
+        self.assertEqual(load("ana")[0]["closes"], "2026-11-20")
+
     def test_seek_that_gives_nothing_asks_for_the_text(self):
         import addlink
         with unittest.mock.patch.object(addlink, "_seek_meta", return_value={}), unittest.mock.patch("discover.seek_detail", return_value=""):

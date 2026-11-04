@@ -18,7 +18,7 @@ for _s in (sys.stdout, sys.stderr):      # Windows defaults to cp1252 and crashe
         _s.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parent.parent
-HARNESS_VERSION = "0.2.0"
+HARNESS_VERSION = "0.2.1"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/130.0 Safari/537.36")
 
