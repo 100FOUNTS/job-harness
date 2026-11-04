@@ -61,7 +61,7 @@ class TestBudget(unittest.TestCase):
         os.environ.pop("JOB_CANDIDATES_DIR", None)
 
     def run_triage(self, jobs, **extra):
-        import discover
+        import sources
         from triage import triage
         t = json.loads(json.dumps(T)) | extra
         t["tracks"][0]["description_include"] = {"words": ["python"], "min": 2, "titles": ["developer"]}
@@ -71,7 +71,7 @@ class TestBudget(unittest.TestCase):
         def fake(job_id):
             calls.append(job_id)
             return "We use python and python daily."
-        with unittest.mock.patch.object(discover, "seek_detail", fake), unittest.mock.patch("time.sleep"):
+        with unittest.mock.patch.object(sources.seek, "detail", fake), unittest.mock.patch("time.sleep"):
             return triage("ana", "2026-01-01", 40), calls
 
     def job(self, i, title, listed="2026-01-01", teaser=""):

@@ -8,7 +8,8 @@ Rules (all from targets.json):
 - title must not match `exclude_title` (seniority the candidate is not targeting)
 - text must not match `exclude_text` (citizenship/PR/clearance requirements)
 - location must match `locations_include`
-Shortlisted jobs get their full description (LinkedIn guest page, SEEK GraphQL; one request each, spaced) and are re-judged.
+Shortlisted jobs get their full description (the source's detail(): LinkedIn guest page, SEEK GraphQL...; one request
+each, spaced) and are re-judged. Company feeds (greenhouse, lever, ashby) already carry it: no request.
 Generic titles that a track's `description_include` could still claim are read too, best keyword overlap first, at most
 `max_detail_fetches` per run (default 60); the rest are rejected "not read: daily reading budget" (and judged again tomorrow).
 Rejected-by-title ads carry `hits` (track keywords found in the ad text) as a near-miss score.
@@ -131,8 +132,8 @@ def by_description_possible(title: str, targets: dict[str, Any]) -> bool:
 
 
 def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
-    from discover import linkedin_detail, seek_detail, wagov_detail
-    readers = {"seek": (seek_detail, (0.8, 1.8)), "wagov": (wagov_detail, (0.8, 1.8)), "linkedin": (linkedin_detail, (1.5, 3.5))}
+    import sources
+    readers = {n: (m.detail, getattr(m, "DETAIL_DELAY", (0.8, 1.8))) for n, m in sources.REGISTRY.items() if sources.has(n, "detail")}
     targets = read_json(cand_dir(slug) / "targets.json")
     jobs = read_json(run_dir(slug, day) / "jobs.json")["new_jobs"]
     known = descriptions(slug, [j["key"] for j in jobs])        # fetched on an earlier day: no second request
