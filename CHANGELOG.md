@@ -4,6 +4,11 @@ All notable changes to job-harness. Format: [Keep a Changelog](https://keepachan
 
 The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `HARNESS_VERSION` in `scripts/common.py`) must go up for plugin installs to pick up a change. See [docs/RELEASING.md](docs/RELEASING.md).
 
+## [0.2.1] - 2026-11-04
+
+### Fixed
+- Paste a link: WA Government Jobs links failed with an error since the sources refactor (`discover.wagov_page` moved to `sources.wagov.page`). Found by trying real ads, and now covered by a test.
+
 ## [0.2.0] - 2026-11-04
 
 ### Added

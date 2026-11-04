@@ -307,7 +307,8 @@ def from_linkedin(jid: str) -> dict[str, Any]:
 
 def from_wagov(jid: str) -> dict[str, Any]:
     import discover
-    code, ld, closes = discover.wagov_page(jid)
+    from sources import wagov
+    code, ld, closes = wagov.page(jid)
     desc = discover.wagov_detail(jid) if code == 200 else ""
     if not ld.get("title") or not desc:
         raise AdError("WA Government Jobs did not show me that ad (it may have closed). Paste the text of the ad instead.", need_text=True)
