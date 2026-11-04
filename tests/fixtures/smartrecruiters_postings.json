@@ -1,0 +1,103 @@
+{
+ "offset": 0,
+ "limit": 100,
+ "totalFound": 2,
+ "content": [
+  {
+   "id": "744000158320111",
+   "name": "Senior / Lead Engineering Operations Manager",
+   "uuid": "a6f4c077-a7ac-4b8f-99d4-3756d1544f35",
+   "jobAdId": "a41acbab-0915-47ec-91b3-4ae2c3e91ffe",
+   "defaultJobAd": true,
+   "refNumber": "REF2042H",
+   "company": {
+    "identifier": "smartrecruiters",
+    "name": "SmartRecruiters Inc"
+   },
+   "releasedDate": "2026-10-28T15:14:43.941Z",
+   "location": {
+    "city": "Poland",
+    "region": "Remote",
+    "country": "pl",
+    "remote": true,
+    "hybrid": false,
+    "fullLocation": "Poland, Remote, Poland"
+   },
+   "industry": {
+    "id": "computer_software",
+    "label": "Computer Software"
+   },
+   "department": {
+    "id": "5408693",
+    "label": "Engineering"
+   },
+   "function": {
+    "id": "information_technology",
+    "label": "Information Technology"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "mid_senior_level",
+    "label": "Mid-Senior Level"
+   },
+   "visibility": "PUBLIC",
+   "ref": "https://api.smartrecruiters.com/v1/companies/smartrecruiters/postings/744000158320111",
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  },
+  {
+   "id": "744000158015889",
+   "name": "Customer support Representative",
+   "uuid": "3eaa424e-3ee9-4a7e-9182-7b4aaebfdf9f",
+   "jobAdId": "6d094756-3271-4b3c-bce0-08e85be7dd3d",
+   "defaultJobAd": true,
+   "refNumber": "REF2040E",
+   "company": {
+    "identifier": "smartrecruiters",
+    "name": "SmartRecruiters Inc"
+   },
+   "releasedDate": "2026-10-27T11:01:40.995Z",
+   "location": {
+    "city": "Poland",
+    "region": "Remote",
+    "country": "pl",
+    "remote": true,
+    "hybrid": false,
+    "fullLocation": "Poland, Remote, Poland"
+   },
+   "industry": {
+    "id": "computer_software",
+    "label": "Computer Software"
+   },
+   "department": {
+    "id": "5408914",
+    "label": "Support"
+   },
+   "function": {
+    "id": "engineering",
+    "label": "Engineering"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "mid_senior_level",
+    "label": "Mid-Senior Level"
+   },
+   "visibility": "PUBLIC",
+   "ref": "https://api.smartrecruiters.com/v1/companies/smartrecruiters/postings/744000158015889",
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  }
+ ]
+}

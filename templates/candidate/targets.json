@@ -1,5 +1,5 @@
 {
-  "_note": "Tracks in priority order. title_include assigns the track (description_include as a fallback for generic titles); keywords and the ranking block drive the daily order. Edit with care: it is part of the go-live seal.",
+  "_note": "Tracks in priority order. title_include assigns the track (description_include as a fallback for generic titles); keywords and the ranking block drive the daily order. Edit with care: it is part of the go-live seal. searches: {platform: seek|linkedin|wagov + keywords, adzuna + what/where/country, or a company feed greenhouse(board)|lever(company)|ashby(board)|workable(account)|smartrecruiters(company) + optional location}; `job doctor` lists them.",
   "max_age_days": 3,
   "locations_include": [],
   "exclude_title": [

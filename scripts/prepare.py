@@ -60,6 +60,7 @@ LABELS = {
            "how_li_easy": "LinkedIn Easy Apply", "how_li": "LinkedIn → Apply (may lead to the employer's site)",
            "how_seek": "SEEK → Quick apply (or the employer's site, as the ad says)",
            "how_wagov": "WA Government Jobs → Apply Now (account on the agency's portal; often asks for a statement against the selection criteria)",
+           "how_other": "Employer's careers page → Apply (the link opens the ad)",
            "title": "Applications", "howto": "How to apply: open the link → Apply → upload the CV and letter from the folder with the same number.",
            "what": "What it is", "fits": "Why it fits", "odds": "Odds", "watch": "Watch out", "apply": "How to apply",
            "ad": "Ad", "folder": "Folder", "open_ad": "Open ad", "sponsor": "Visa sponsor lists (for you only)", "upload": "Upload the CV and cover letter in this folder.",
@@ -76,6 +77,7 @@ LABELS = {
            "how_li_easy": "LinkedIn Easy Apply", "how_li": "LinkedIn → Apply (puede llevar a la web de la empresa)",
            "how_seek": "SEEK → Quick apply (o web de la empresa, según el aviso)",
            "how_wagov": "WA Government Jobs → Apply Now (cuenta en el portal de la agencia; suele pedir una declaración según los criterios de selección)",
+           "how_other": "Página de empleo de la empresa → Apply (el link abre el aviso)",
            "title": "Postulaciones", "howto": "Cómo postular: abrir el link → Apply → subir el CV y la carta de la carpeta con el mismo número.",
            "what": "Qué es", "fits": "Por qué calza", "odds": "Probabilidad", "watch": "Ojo", "apply": "Cómo postular",
            "ad": "Aviso", "folder": "Carpeta", "open_ad": "Abrir aviso", "sponsor": "Listas de patrocinio (solo para ti)", "upload": "Subir el CV y la carta de esta carpeta.",
@@ -252,7 +254,7 @@ def notes_for(job: dict[str, Any], hits: list[str], odds: dict[str, Any] | None 
     if GUARD_MARK in text:
         watch.append(L["guard"])
     how = ((L["how_li_easy"] if job.get("easy_apply") else L["how_li"]) if job["platform"] == "linkedin"
-           else L["how_wagov"] if job["platform"] == "wagov" else L["how_seek"])
+           else L["how_wagov"] if job["platform"] == "wagov" else L["how_seek"] if job["platform"] == "seek" else L["how_other"])
     odds = odds or {}
     watch += [L[w] for w in odds.get("why", []) if w in WATCH]
     for w in odds.get("why", []):

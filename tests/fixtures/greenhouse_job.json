@@ -1,0 +1,44 @@
+{
+ "absolute_url": "https://job-boards.greenhouse.io/anthropic/jobs/5456619008",
+ "internal_job_id": 4563891008,
+ "location": {
+  "name": "San Francisco, CA | Seattle, WA"
+ },
+ "metadata": [
+  {
+   "id": 4036944008,
+   "name": "Location Type",
+   "value": "On-Site",
+   "value_type": "single_select"
+  }
+ ],
+ "id": 5456619008,
+ "updated_at": "2026-10-19T11:17:24-04:00",
+ "requisition_id": "REQ-26-1145-01",
+ "title": "3P Revenue Accounting & Reporting",
+ "company_name": "Anthropic",
+ "first_published": "2026-10-19T11:17:24-04:00",
+ "language": "en",
+ "application_deadline": null,
+ "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;h2&gt;&lt;strong&gt;About Anthropic&lt;/strong&gt;&lt;/h2&gt;\n&lt;p&gt;Anthropic’s mission is to create reliable, interpretable, and steerable AI systems. We want AI to be safe and beneficial for our users and for society as a whole. Our team is a quickly growing group of committed researchers, engineers, policy experts, and business leaders working together to build beneficial AI systems.&lt;/p&gt;&lt;/div&gt;&lt;h2&gt;&lt;strong&gt;About the role&lt;/strong&gt;&lt;/h2&gt;\n&lt;p&gt;We are looking for a Senior Manager, 3P Revenue Accounting &amp;amp; Reporting to join our Accounting team. You will own revenue recognition, month-end close and reporting for Claude sold through our cloud service provider (CSP) channels: AWS Bedrock, Google Cloud Vertex AI and Microsoft Azure Marketplace. These channels are among the fastest-growing revenue streams at the company. They run on consumption-based, partner-reported data that changes every month.&lt;/p&gt;\n&lt;p&gt;You will be the accounting point of contact for the finance and partner teams at AWS, Google and Microsoft. Internally, you will partner with Finance, FAB, Engineering and business t",
+ "departments": [
+  {
+   "id": 4002052008,
+   "name": "Finance",
+   "child_ids": [],
+   "parent_id": null
+  }
+ ],
+ "offices": [
+  {
+   "id": 4001218008,
+   "name": "San Francisco, CA",
+   "location": "San Francisco, California, United States",
+   "child_ids": [],
+   "parent_id": null
+  }
+ ],
+ "ai_disclaimer": null,
+ "include_ai_disclaimer": null,
+ "ai_opt_out_request_url": null
+}
