@@ -17,7 +17,9 @@ The lite pack is the writing and judgment part of job-harness. It has none of th
 For the full tool, see the [README](../README.md).
 
 ## Get the zips
-From a clone of this repository:
+The easy way: download them from the [latest Release](https://github.com/100FOUNTS/job-harness/releases/latest) (each release attaches the three zips). Nothing to install.
+
+Or build them yourself, from a clone of this repository:
 ```bash
 python3 scripts/build_lite.py
 ```

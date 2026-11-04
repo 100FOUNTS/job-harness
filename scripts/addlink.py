@@ -312,7 +312,7 @@ def from_wagov(jid: str) -> dict[str, Any]:
     desc = discover.wagov_detail(jid) if code == 200 else ""
     if not ld.get("title") or not desc:
         raise AdError("WA Government Jobs did not show me that ad (it may have closed). Paste the text of the ad instead.", need_text=True)
-    org = _name(ld.get("hiringOrganization"))
+    org = ld.get("department") or _name(ld.get("hiringOrganization"))
     if not org or org.lower() == "wa government jobs":         # the portal, not the agency: the ad usually names the agency
         m = re.search(r"\b((?:Department|Office|Commission|Authority) of [A-Z][\w&' -]{2,40}?|[A-Z][\w&' ]{2,30}? (?:Department|Authority|Commission))\b", desc)
         org = m.group(1).strip() if m else "WA Government"

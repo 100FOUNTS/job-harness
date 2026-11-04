@@ -4,6 +4,14 @@ All notable changes to job-harness. Format: [Keep a Changelog](https://keepachan
 
 The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `HARNESS_VERSION` in `scripts/common.py`) must go up for plugin installs to pick up a change. See [docs/RELEASING.md](docs/RELEASING.md).
 
+## [0.2.2] - 2026-11-04
+
+### Added
+- Each GitHub Release now attaches the three lite skill zips (tailor, interview prep, ad review), ready to upload to claude.ai without cloning the repository.
+
+### Fixed
+- Paste a link: a WA Government ad now shows its agency (for example "Pilbara Ports Authority") instead of "WA Government", read from the ad page's Department field.
+
 ## [0.2.1] - 2026-11-04
 
 ### Fixed

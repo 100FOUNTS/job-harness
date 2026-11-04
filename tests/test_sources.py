@@ -403,6 +403,21 @@ class TestOlderSources(unittest.TestCase):
             self.assertEqual(sources.linkedin.alive("555"), (None, None))
             self.assertEqual(sources.linkedin.search({"keywords": "gis"}, 3), [{"_error": "linkedin gis: HTTP 404"}])
 
+    def test_wagov_page_names_the_agency(self):
+        """The JSON-LD only says 'WA Government Jobs'; the ad page names the agency in its Department field."""
+        ld = json.dumps({"title": "Engineer", "hiringOrganization": {"name": "WA Government Jobs"}})
+        field = ('<i class="fas" aria-hidden="true" aria-label="Department" title="Department"></i>\n'
+                 '<span id="department_icon_text_1">\n      Pilbara Ports &amp; Co Authority\n</span>')
+        page = f'<script type="application/ld+json">{ld}</script>{field}'
+        with Net({"jobs/9": (200, page)}).patch():
+            code, got, _ = sources.wagov.page("9")
+        self.assertEqual((code, got["department"]), (200, "Pilbara Ports & Co Authority"))
+        tracking = '<script>{"job":{"departments":["Public Transport Authority"],"title":"x"}}</script>'
+        self.assertEqual(sources.wagov.department(tracking), "Public Transport Authority")
+        self.assertEqual(sources.wagov.department("<p>nothing</p>"), "")
+        with Net({"jobs/9": (200, f'<script type="application/ld+json">{ld}</script>')}).patch():
+            self.assertNotIn("department", sources.wagov.page("9")[1])
+
     def test_wagov_search_detail_alive(self):
         card = ('<article class="col-12 job-search-results-card-col"><a id="link_job_title_1" href="https://search.jobs.wa.gov.au/jobs/123">'
                 'GIS Officer</a><i aria-label="Department" title=""></i><span> Water Dept </span>'

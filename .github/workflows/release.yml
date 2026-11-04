@@ -36,7 +36,9 @@ jobs:
               sys.exit(f"CHANGELOG.md has no section for {version}")
           open("release-notes.md", "w", encoding="utf-8").write(m.group(1).strip() + "\n")
           PY
+      - name: Build the lite skill zips
+        run: python scripts/build_lite.py
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag dist/lite/*.zip
