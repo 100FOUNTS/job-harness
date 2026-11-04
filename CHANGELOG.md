@@ -14,6 +14,8 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 ### Added
 - Each GitHub Release now attaches the three lite skill zips (tailor, interview prep, ad review), ready to upload to claude.ai without cloning the repository.
 
+- Landing page: a short title (46 characters) and description, and Open Graph / X card tags with a 1200x630 preview image, so a shared link looks right.
+
 ### Fixed
 - Paste a link: a WA Government ad now shows its agency (for example "Pilbara Ports Authority") instead of "WA Government", read from the ad page's Department field.
 
