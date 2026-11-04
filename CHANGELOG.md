@@ -7,7 +7,7 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 ## [0.2.3] - 2026-11-04
 
 ### Added
-- Panel: a small passport icon on each board card when the company is on the visa sponsor lists (filled = same name, outlined = same name without Pty/Ltd, faint = the name starts the same). Hover for the explanation. A filter chip with the same icon shows only those companies. It is for your eyes only: nothing about it reaches a CV, letter or form.
+- Panel: a green check badge next to the company name on a board card when the company is on the visa sponsor lists (same name, or the same name without Pty/Ltd/Group). Click or tap it, or hover, for the explanation. A filter button, *On sponsor lists*, keeps only those companies. Names that merely start the same stay out of the cards (they are mostly look-alikes) but remain in the details and the Companies tab. It is for your eyes only: nothing about it reaches a CV, letter or form.
 
 ## [0.2.2] - 2026-11-04
 

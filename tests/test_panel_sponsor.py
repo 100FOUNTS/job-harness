@@ -33,12 +33,15 @@ class TestSponsorIcon(Base):
         with unittest.mock.patch("sponsors._index", return_value=({}, {})):
             self.assertEqual(panel.sponsor_of("Acme Pty Ltd"), {"sponsor_match": "", "sponsor_name": ""})
 
-    def test_page_draws_an_icon_and_a_filter_but_no_word_on_the_card(self):
+    def test_page_shows_a_badge_for_exact_and_likely_only_and_a_filter_with_words(self):
         html = panel_page()
         self.assertIn("passport:", html)
-        self.assertIn('a.sponsor_match ? `<span class="tag sponsor ', html)
-        self.assertIn("if (S.sp && !a.sponsor_match) return false;", html)
-        self.assertNotIn("sponsor</span>", html.split("function card(a)")[1].split("let body")[0])    # icon only, never a label
+        self.assertIn('const hasSponsor = a => a.sponsor_match === "exact" || a.sponsor_match === "likely";', html)   # "possible" stays off the card
+        self.assertIn("${sponsorBadge(a)}", html.split("function card(a)")[1].split("</article>")[0])
+        self.assertIn("if (S.sp && !hasSponsor(a)) return false;", html)
+        self.assertIn("On sponsor lists</button>", html)                                   # the filter explains the badge once
+        self.assertIn("if (t.dataset.sp) { toast(t.dataset.sp); return; }", html)         # tap explains it on a phone
+        self.assertNotIn("sponsor</span>", html.split("function card(a)")[1].split("</article>")[0])
 
 
 def panel_page():
