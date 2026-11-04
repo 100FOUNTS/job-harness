@@ -15,6 +15,7 @@ import time
 from typing import Any
 
 from common import cand_dir, list_candidates, plugin_mode, read_json, remember_root, today, workspace
+from followup import line as followup_line
 from gates import load_all, seals_ok, valid_approval
 from learn import relevant
 from suggest import line as suggestion_line
@@ -94,7 +95,8 @@ def summary(slug: str) -> dict[str, Any]:
             "pending_signatures": pending, "broken_seals": broken,
             "today": {s: sum(1 for a in apps if a["date"] == today() and a["status"] == s)
                       for s in ("submitted", "dry-run", "manual-review")},
-            "quota": quota(slug), "total_applications": len(apps), "next": nxt, "filter_suggestions": suggestion_line(slug)}
+            "quota": quota(slug), "total_applications": len(apps), "next": nxt, "filter_suggestions": suggestion_line(slug),
+            "followups": followup_line(slug)}
 
 
 def main() -> None:
@@ -124,6 +126,8 @@ def main() -> None:
         print(f"    Next: {d['next']}")
         if d["filter_suggestions"]:
             print(f"    {d['filter_suggestions']}")
+        if d["followups"]:
+            print(f"    {d['followups']}")
     if a.context:
         areas = [x for d in data for x in STATE_AREAS[d["state"]["label"]]]
         for l in relevant(list(dict.fromkeys(areas))):

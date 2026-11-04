@@ -13,6 +13,7 @@ Statuses: shortlisted → prepared → dry-run (filled, not sent) | submitted | 
   job track <slug> quota [--platform seek]      → how many more can be submitted today/this week
   job track <slug> csv                          → tracker.csv for a spreadsheet
   job track <slug> followups [--days 10]        sent and quiet for N days: who to chase (and what to say)
+  (red_flags: warnings about the ad, written by scripts/flags.py; followup_draft: the email draft, by scripts/followup.py)
   job track <slug> calibrate                    does the fit score predict interviews? (needs outcomes)
   job track <slug> sweep [--dry]                not yet applied and the ad has closed → closed (one request per ad)
 """
@@ -87,6 +88,33 @@ def set_note(slug: str, key: str, text: str) -> dict[str, Any]:
     for a in apps:
         if a["key"] == key:
             a["notes"] = text.strip()[:4000]
+            save(slug, apps)
+            return a
+    raise SystemExit(f"{key} not tracked")
+
+
+def set_flags(slug: str, key: str, flags: list[str]) -> dict[str, Any]:
+    """Red flags of one application (scripts/flags.py): short sentences for the person, [] when none (the field is then
+    absent). Warnings only: not a status change, no history entry, and nothing else depends on them."""
+    apps = load(slug)
+    for a in apps:
+        if a["key"] == key:
+            flags = [str(f) for f in flags or []]
+            if flags != a.get("red_flags", []):
+                a.pop("red_flags", None)
+                if flags:
+                    a["red_flags"] = flags
+                save(slug, apps)
+            return a
+    raise SystemExit(f"{key} not tracked")
+
+
+def set_followup(slug: str, key: str, draft: str) -> dict[str, Any]:
+    """Where the follow-up email draft for this application was written (scripts/followup.py). Not a status change."""
+    apps = load(slug)
+    for a in apps:
+        if a["key"] == key:
+            a["followup_draft"] = str(draft)
             save(slug, apps)
             return a
     raise SystemExit(f"{key} not tracked")

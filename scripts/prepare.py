@@ -30,9 +30,10 @@ from discover import GUARD_MARK, alive
 from coverage import coverage
 from docs import build
 from facts import extract_text
+from flags import check_job
 from jobdb import REPOST_SIMILARITY, descriptions, record_outcome, similarity
 from sponsors import describe as sponsor_line
-from tracker import add, load, set_status
+from tracker import add, load, set_flags, set_status
 from triage import dedupe_key
 
 # Everything about the person (keywords, fields they are not in, credentials they lack, preferred places) lives in
@@ -64,7 +65,7 @@ LABELS = {
            "title": "Applications", "howto": "How to apply: open the link → Apply → upload the CV and letter from the folder with the same number.",
            "what": "What it is", "fits": "Why it fits", "odds": "Odds", "watch": "Watch out", "apply": "How to apply",
            "ad": "Ad", "folder": "Folder", "open_ad": "Open ad", "sponsor": "Visa sponsor lists (for you only)", "upload": "Upload the CV and cover letter in this folder.",
-           "summary_file": "SUMMARY.md", "readme_file": "README.md"},
+           "flags": "Red flags", "summary_file": "SUMMARY.md", "readme_file": "README.md"},
     "es": {"entry": "cargo de entrada", "officer": "nivel officer/coordinator", "senior": "senior", "principal": "principal",
            "lead": "jefatura", "specialist": "specialist", "off_field": "otra especialidad",
            "track_down": "línea de menor prioridad ({n})", "track_up": "línea de mayor prioridad (+{n})", "deprioritized": "cargo de tu lista de menor prioridad",
@@ -81,7 +82,7 @@ LABELS = {
            "title": "Postulaciones", "howto": "Cómo postular: abrir el link → Apply → subir el CV y la carta de la carpeta con el mismo número.",
            "what": "Qué es", "fits": "Por qué calza", "odds": "Probabilidad", "watch": "Ojo", "apply": "Cómo postular",
            "ad": "Aviso", "folder": "Carpeta", "open_ad": "Abrir aviso", "sponsor": "Listas de patrocinio (solo para ti)", "upload": "Subir el CV y la carta de esta carpeta.",
-           "summary_file": "LISTA.md", "readme_file": "LEEME.md"},
+           "flags": "Alertas", "summary_file": "LISTA.md", "readme_file": "LEEME.md"},
 }
 SUMMARY_FILES = {v["summary_file"] for v in LABELS.values()}
 
@@ -364,7 +365,10 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None, only: bool 
             set_status(slug, j["key"], "prepared", cv=str(cv), letter=r["pdf"], summary=summary)
         else:
             set_status(slug, j["key"], "manual-review", reason=f"letter check failed: {r['problems']}")
-        out.append({"notes": notes_for(j, hits, odds, slug, extract_text(cv)), "n": i, "key": j["key"], "title": j["title"], "company": j.get("company", ""), "url": j["url"],
+        flags = check_job(slug, j, targets)              # warnings only: they change neither the score nor the order
+        set_flags(slug, j["key"], flags)
+        notes = notes_for(j, hits, odds, slug, extract_text(cv)) | {"flags": "; ".join(flags)}
+        out.append({"notes": notes, "n": i, "key": j["key"], "title": j["title"], "company": j.get("company", ""), "url": j["url"],
                     "platform": j["platform"], "location": j.get("location", ""), "fit": fit, "track": j["track"],
                     "dir": d.name, "ok": r["ok"], "easy_apply": j.get("easy_apply")})
     for k, (fit, why) in outcome.items():
@@ -384,6 +388,7 @@ def write_index(pkg: Path, items: list[dict[str, Any]], slug: str) -> None:
         prob = f"{n['prob']} ({L['score']} {x['fit']})" if n.get("prob") else f"{L['score']} {x['fit']}"
         md += [f"## {x['n']}. {x['title']} — {x['company']}", f"- **{L['what']}:** {n['role']}", f"- **{L['fits']}:** {n['fits']}",
                f"- **{L['odds']}:** {prob}", f"- **{L['watch']}:** {n['watch']}", f"- **{L['apply']}:** {n['how']}",
+               *([f"- **{L['flags']}:** {n['flags']}"] if n.get("flags") else []),
                *([f"- **{L['match']}:** {n['coverage']}"] if n.get("coverage") else []),
                *([f"- **{L['sponsor']}:** {n['sponsor']}"] if n.get("sponsor") else []),
                f"- **{L['ad']}:** {x['url']}", f"- **{L['folder']}:** `{x['dir']}`", ""]
@@ -391,11 +396,13 @@ def write_index(pkg: Path, items: list[dict[str, Any]], slug: str) -> None:
         (pkg / x["dir"] / L["readme_file"]).write_text(
             f"# {x['title']} — {x['company']}\n\n- {L['what']}: {n['role']}\n- {L['fits']}: {n['fits']}\n- {L['odds']}: {prob}\n"
             f"- {L['watch']}: {n['watch']}\n- {L['apply']}: {n['how']}\n"
+            + (f"- {L['flags']}: {n['flags']}\n" if n.get("flags") else "")
             + (f"- {L['match']}: {n['coverage']}\n" if n.get("coverage") else "")
             + (f"- {L['sponsor']}: {n['sponsor']}\n" if n.get("sponsor") else "") + f"- {L['ad']}: {x['url']}\n\n{L['upload']}\n", encoding="utf-8")
         cards.append(f"<li style='margin-bottom:14px'><b>{x['n']}. {html.escape(x['title'])}</b> — {html.escape(x['company'])}"
                      f"<br><i>{html.escape(n['role'])}</i><br>✅ {html.escape(n['fits'])}<br>🎯 {L['odds']}: {html.escape(prob)}"
                      f"<br>⚠️ {html.escape(n['watch'])}"
+                     + (f"<br>🚩 {L['flags']}: {html.escape(n['flags'])}" if n.get("flags") else "")
                      + (f"<br>🔑 {L['match']}: {html.escape(n['coverage'])}" if n.get("coverage") else "")
                      + (f"<br>🛂 {L['sponsor']}: {html.escape(n['sponsor'])}" if n.get("sponsor") else "") +
                      f"<br>📝 {html.escape(n['how'])} · <a href='{x['url']}'>{L['open_ad']}</a> · <a href='{x['dir']}/'>{L['folder']}</a></li>")

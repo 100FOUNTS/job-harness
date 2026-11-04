@@ -39,6 +39,10 @@ Pass: the job URL, the PDFs, `answers.json`, `intake.json`, and the effective mo
 - Outcome → `job track $slug set <key> submitted|dry-run|manual-review|failed --note "..."`.
 - Wait 4–12 minutes (random) between applications in live mode; in dry-run 30–60 s is enough.
 
+## 4b. Warnings and follow-ups (scripts, no LLM)
+- Each prepared job carries `red_flags` in the tracker (pay below the person's minimum, unpaid or commission-only work, upfront fees, a hidden employer, reposts). They are warnings: mention them in your summary, never drop a job because of them.
+- Applications sent 10+ days ago with no answer get a draft in their package folder (`followup.md`, tracker field `followup_draft`); `python3 scripts/followup.py $slug due|draft-all`. You may polish a draft's wording, but sending is the person's job: you never send it, and the gates already block sending.
+
 ## 5. Close
 1. `job report $slug --notify` and show the report path.
 2. Rewrite `candidates/$slug/progress.md` (today's counts, manual-review list, anything broken).
