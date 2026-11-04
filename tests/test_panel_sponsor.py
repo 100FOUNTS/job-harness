@@ -33,15 +33,19 @@ class TestSponsorIcon(Base):
         with unittest.mock.patch("sponsors._index", return_value=({}, {})):
             self.assertEqual(panel.sponsor_of("Acme Pty Ltd"), {"sponsor_match": "", "sponsor_name": ""})
 
-    def test_page_shows_a_badge_for_exact_and_likely_only_and_a_filter_with_words(self):
+    def test_page_shows_a_badge_for_every_level_and_a_filter_with_words(self):
         html = panel_page()
+        card = html.split("function card(a)")[1].split("</article>")[0]
         self.assertIn("passport:", html)
-        self.assertIn('const hasSponsor = a => a.sponsor_match === "exact" || a.sponsor_match === "likely";', html)   # "possible" stays off the card
-        self.assertIn("${sponsorBadge(a)}", html.split("function card(a)")[1].split("</article>")[0])
+        self.assertIn("passportq:", html)                                                  # a question mark for the weakest level
+        self.assertIn("const hasSponsor = a => !!SPONSOR_TIP[a.sponsor_match];", html)
+        for level in ("exact", "likely", "possible"):
+            self.assertIn(f"{level}: \"", html.split("const SPONSOR_TIP = {")[1].split("};")[0])
+        self.assertIn("${sponsorBadge(a)}", card)
         self.assertIn("if (S.sp && !hasSponsor(a)) return false;", html)
-        self.assertIn("On sponsor lists</button>", html)                                   # the filter explains the badge once
-        self.assertIn("if (t.dataset.sp) { toast(t.dataset.sp); return; }", html)         # tap explains it on a phone
-        self.assertNotIn("sponsor</span>", html.split("function card(a)")[1].split("</article>")[0])
+        self.assertIn("Sponsor lists</button>", html)                                      # the filter explains the badge once
+        self.assertIn("if (t.dataset.sp) { toast(t.dataset.sp); return; }", html)          # tap explains it on a phone
+        self.assertNotIn("sponsor</span>", card)
 
 
 def panel_page():
