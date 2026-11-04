@@ -4,22 +4,24 @@ All notable changes to job-harness. Format: [Keep a Changelog](https://keepachan
 
 The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `HARNESS_VERSION` in `scripts/common.py`) must go up for plugin installs to pick up a change. See [docs/RELEASING.md](docs/RELEASING.md).
 
-## [Unreleased]
-
-<!-- The maintainer finalises these bullets when the version is cut. -->
+## [0.2.0] - 2026-11-04
 
 ### Added
-- Pluggable job sources: a registry of sources behind `job discover`, ATS feeds (Greenhouse, Lever, Workable, SmartRecruiters, Ashby) and an optional Adzuna source (free key, off by default).
-- Paste a link in the panel: add a job you found yourself and get it ranked, tailored and tracked like the rest.
-- The panel on your phone: `job panel --lan` serves it on your home network.
-- Calibration view in the panel: how the score compares with what actually happened to your applications.
-- Red flags on each ad (pay, hours, wording that is worth a second look), shown on the card and in the package.
-- Follow-up drafts for applications that went quiet.
-- A lite pack for Cowork and claude.ai: standalone skills (tailor, interview prep, ad review) that need no Claude Code, hooks or Python. Build the zips with `python3 scripts/build_lite.py`.
-- Contributing guide, code of conduct, security policy, issue and pull request templates, a release process and a landing page (GitHub Pages).
+- Pluggable job sources: one module per portal in `scripts/sources/` behind a registry, with a guide for adding a portal or a country ([docs/ADDING-A-SOURCE.md](docs/ADDING-A-SOURCE.md)).
+- Public company job feeds on Greenhouse, Lever, Ashby, Workable and SmartRecruiters, and an optional Adzuna source (free key, off until configured). `job doctor` lists the sources.
+- Paste a link in the panel (or `job addlink <slug> <url>`): SEEK, LinkedIn, WA Government and any page with a JobPosting, or the pasted text. Scored, tailored and tracked like the rest.
+- The panel on your phone: `job panel --lan`, with a fresh token on every request.
+- *What leads to interviews* in the Funnel view: interview rates by score band, track and source after 10 answered applications.
+- Red flags on each prepared ad (`job flags`): pay below your minimum or the minimum wage, unpaid or commission-only work, upfront fees and scam patterns, hidden employer, reposts. Warnings only.
+- Follow-up drafts after 10 days without news (`job followup`), written by the daily run, never sent. The panel shows a *Follow up* badge and the draft.
+- A lite pack for Cowork and claude.ai: standalone skills (tailor, interview prep, ad review). Build the zips with `python3 scripts/build_lite.py`.
+- Contributing guide, code of conduct, security policy, issue and pull request templates, a release workflow and a landing page for GitHub Pages.
 
 ### Changed
-- The daily-run diagram shows the scheduler as launchd, Task Scheduler or systemd/cron, and the new pieces (sources, paste a link, red flags, follow-ups).
+- The README diagram is a Mermaid flowchart with the cross-platform scheduler and the new pieces.
+
+### Fixed
+- SEEK job details: `www.seek.com.au/graphql` now answers 308, which urllib does not follow on a POST, so ad descriptions and closing dates came back empty. It now calls `au.seek.com/graphql`.
 
 ## [0.1.1] - 2026-11-03
 
@@ -50,7 +52,3 @@ First public release, installable as a Claude Code plugin (`/plugin marketplace 
 
 ## Before 0.1.0
 Initial public commit: discovery from SEEK and LinkedIn, triage, ranking, sealed approvals, the document builders and linters, and the optional SEEK Quick Apply mode.
-
-[Unreleased]: https://github.com/100FOUNTS/job-harness/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/100FOUNTS/job-harness/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/100FOUNTS/job-harness/releases/tag/v0.1.0

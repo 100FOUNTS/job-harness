@@ -50,7 +50,13 @@ Every day (at the hour you choose) it:
 4. **prepares** up to 15: a CV and cover letter (docx and PDF), each checked for invented figures and rule breaks,
 5. writes a **daily package** (`~/job-packages/<slug>/<date>/`) with a summary per job: what it is, why it fits, odds, what to watch, how to apply ([see a sample](docs/sample-package.md)).
 
-<!-- features: sources, paste link, phone, calibration, flags, followups -->
+Also:
+- **More sources, no scraping.** Follow single employers through their public job feeds on Greenhouse, Lever, Ashby, Workable or SmartRecruiters (`{"platform": "lever", "company": "acme", "location": "Perth"}` in `targets.json`), and add Adzuna with a free key (`JOB_ADZUNA_APP_ID` / `JOB_ADZUNA_APP_KEY`). `job doctor` lists the sources. A new portal or country is one small module: [docs/ADDING-A-SOURCE.md](docs/ADDING-A-SOURCE.md).
+- **Paste a link.** Found an ad yourself? Paste its link (or its text, when a page can't be read) in the panel, or run `job addlink <slug> <url>`. It is scored, gets a CV and cover letter and lands in *To apply*; if your rules would have dropped it, you are told why.
+- **Red flags.** Each prepared ad is checked for pay below your minimum or the legal minimum wage, unpaid trials, commission-only work, upfront fees and other scam patterns, a hidden employer and constant reposts (`job flags`). They are warnings only: nothing is dropped or re-ranked.
+- **Follow-ups.** Applications with no news for 10 days get a short, polite follow-up draft in their folder (`job followup`). It is never sent for you.
+- **What leads to interviews.** After 10 applications with an answer, the panel's *Funnel* shows interview rates by score band, track and source, with one plain suggestion when something stands out. Your targets never change by themselves.
+- **On your phone.** `job panel --lan` serves the board on your wifi and prints a link with a one-time token. Anyone on that wifi with the link can see your board, and the local network is not encrypted, so use it at home and don't share the link.
 
 Ads it dropped stay visible in the panel, with the reason; the best near misses of the week are listed under *Maybe worth a look*, and rescuing one teaches the filter a new title. You open each link, click Apply and upload the two PDFs. Nothing is sent for you unless you choose a submitting mode and sign it yourself (see *Modes*).
 
@@ -71,7 +77,7 @@ Ads it dropped stay visible in the panel, with the reason; the best near misses 
 | **Required** | A folder with your CVs, certificates and other documents | stage 0 (intake) |
 | Optional | The **Claude in Chrome** extension (connect with `/chrome` in Claude Code) | only the profile and alerts stages and LinkedIn extraction |
 | Optional | Playwright, installed with `job setup --apply-tools` | only scripted SEEK Quick Apply (modes `easy`/`full`) |
-| Not needed | Gmail connector, any API key | - |
+| Not needed | Gmail connector, any paid API (an Adzuna key is free and optional) | - |
 
 `job doctor` checks all of this and prints the exact command to fix what is missing.
 

@@ -5,7 +5,13 @@ Esta es una guía corta. La documentación completa está en inglés: [README](.
 ## Qué es
 job-harness es una herramienta para **Claude Code** que te ayuda a buscar trabajo en **Australia**. Le das una carpeta con tu CV y tus certificados. Te ayuda a armar un perfil honesto y, todos los días, busca ofertas nuevas en SEEK, LinkedIn y WA Government Jobs, las ordena y prepara un CV y una carta de presentación para las mejores. Tú abres el aviso, haces clic en Aplicar y subes los archivos.
 
-<!-- features: sources, paste link, phone, calibration, flags, followups -->
+Además:
+- **Más fuentes, sin scraping.** Puedes seguir a empresas puntuales por sus feeds públicos de empleo en Greenhouse, Lever, Ashby, Workable o SmartRecruiters, y sumar Adzuna con una clave gratuita. `job doctor` muestra las fuentes disponibles. Para agregar un portal o un país: [docs/ADDING-A-SOURCE.md](../ADDING-A-SOURCE.md) (en inglés).
+- **Pega un link.** ¿Encontraste un aviso por tu cuenta? Pega el link (o el texto, si la página no se puede leer) en el panel. Lo puntúa, le prepara CV y carta y lo deja en *To apply*.
+- **Alertas rojas.** Marca sueldo bajo tu mínimo o bajo el mínimo legal, pruebas sin pago, trabajo solo a comisión, cobros por adelantado y otras señales de estafa, empleador oculto y avisos que se republican sin parar. Solo avisan: no descartan nada.
+- **Seguimientos.** A las postulaciones sin noticias en 10 días les prepara un borrador de email de seguimiento en su carpeta. Nunca lo envía por ti.
+- **Qué lleva a entrevistas.** Con 10 postulaciones con respuesta, la vista *Funnel* muestra la tasa de entrevistas por rango de puntaje, línea y fuente.
+- **En el celular.** `job panel --lan` abre el tablero en tu wifi con un link con token. Quien tenga el link en esa red puede verlo, así que úsalo en casa y no lo compartas.
 
 Lo que **nunca** hace:
 - No resuelve captchas, no crea cuentas ni escribe contraseñas por ti.

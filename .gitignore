@@ -29,3 +29,5 @@ STOP
 
 # Built lite-pack zips (python3 scripts/build_lite.py)
 /dist/
+# Agent worktrees
+.claude/worktrees/
