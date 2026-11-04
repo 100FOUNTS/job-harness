@@ -40,7 +40,7 @@ body:
     id: version
     attributes:
       label: job-harness version
-      description: Shown by `job doctor`, or in `.claude-plugin/plugin.json`.
+      description: The `version` in `.claude-plugin/plugin.json`, or the plugin list in Claude Code.
     validations:
       required: false
   - type: textarea
