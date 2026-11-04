@@ -27,6 +27,7 @@ import re
 import secrets
 import sqlite3
 import subprocess
+import threading
 import urllib.parse
 from datetime import date, datetime, timedelta
 from functools import lru_cache
@@ -41,6 +42,7 @@ from status import summary
 from tracker import OUTCOMES, PENDING, SENT, calibrate, followups, load, set_note, set_status
 
 TOKEN = secrets.token_urlsafe(24)
+WRITE = threading.Lock()                  # the tracker file is rewritten whole: one POST at a time (a double click must not corrupt it)
 SUPPORT_URL = "https://donate.stripe.com/4gM28t7b1g0kgHd5YE4wM00"
 PAGE = Path(__file__).resolve().parent.parent / "templates" / "panel.html"
 COLUMNS = [("todo", PENDING), ("sent", SENT), ("interview", {"interview"}), ("offer", {"offer", "hired"}),
@@ -158,6 +160,28 @@ def dropped(slug: str, days: int = 7) -> list[dict[str, Any]]:
     return [dict(zip(cols, r)) for r in rows if r[0] not in tracked]
 
 
+def dropped_by_you(apps: list[dict[str, Any]], days: int = 30) -> list[dict[str, Any]]:
+    """Ads the person dropped (status skipped) in the last `days`, newest first, so they can be restored. The day is that
+    of the skip in the history. Ads the rescue flow parks as skipped ('rescued: waiting for its package') are not drops."""
+    since = (date.today() - timedelta(days=days)).isoformat()
+    out = []
+    for a in apps:
+        if a["status"] != "skipped":
+            continue
+        skip = next((h for h in reversed(a.get("history", [])) if h["status"] == "skipped"), None)
+        if not skip or skip["date"][:10] < since:
+            continue
+        said = (skip.get("note") or a.get("reason") or "")
+        if said.startswith("rescued:") or (not skip.get("note") and (a.get("reason") or "").startswith("rescued:")):
+            continue
+        note = skip.get("note") or ""
+        out.append({"key": a["key"], "title": a["title"], "company": a.get("company") or "", "url": a["url"],
+                    "fit": a.get("fit"), "day": skip["date"][:10], "when": skip["date"],
+                    "note": "" if note in ("", "from the panel", "dropped from the panel") else note})
+    out.sort(key=lambda r: r["when"], reverse=True)
+    return out
+
+
 def maybes(slug: str, days: int = 7, n: int = 10) -> list[dict[str, Any]]:
     """Ads dropped ONLY because their title matched no track, ranked by how many of the tracks' keywords (core 2,
     support 1) their text still contains: the near misses worth a second look. Needs a score of 3+; titles the global or
@@ -266,7 +290,8 @@ def data(slug: str) -> dict[str, Any]:
                                        and today <= a["closes"] <= soon],
                       "followups": [f for f in followups(slug) if f["action"] != "waiting (already chased)"],
                       "pending_answers": pending_answers},
-            "funnel": funnel(slug, all_apps), "dropped": dropped(slug), "maybes": maybes(slug),
+            "funnel": funnel(slug, all_apps), "dropped": dropped(slug),
+            "dropped_by_you": dropped_by_you(all_apps), "maybes": maybes(slug),
             "suggestions": [{"phrase": x["phrase"], "track": x["track"]} for x in suggest.pending(slug)], "companies": companies(slug),
             "candidates": list_candidates(), "support_url": setting("JOB_SUPPORT_URL", SUPPORT_URL),
             "generated": datetime.now().strftime("%H:%M")}
@@ -389,10 +414,12 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if self.path == "/status":
                 status = DROP_STATUS.get(body.get("column"), body.get("status"))
-                set_status(slug, key, status, note=body.get("note") or "from the panel")
+                with WRITE:
+                    set_status(slug, key, status, note=body.get("note") or "from the panel")
                 return self.json({"ok": True, "status": status})
             if self.path == "/note":
-                set_note(slug, key, body.get("text") or "")
+                with WRITE:
+                    set_note(slug, key, body.get("text") or "")
                 return self.json({"ok": True})
             if self.path == "/rescue":
                 return self.json(rescue(slug, key, body.get("track")))

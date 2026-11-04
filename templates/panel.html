@@ -132,6 +132,10 @@ kbd { font: 11px/1 var(--font); border: 1px solid var(--line-strong); border-bot
 .btn.primary:hover { background: var(--accent-hover); }
 .btn.warn { background: var(--urgent-bg); border-color: var(--urgent-line); color: var(--urgent-ink); }
 .btn:disabled { opacity: .5; cursor: default; }
+.card .actions .btn:not(.primary):not(.warn) { padding: 7px 9px; }
+.drop-btn { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--faint); cursor: pointer; }
+.drop-btn:hover { color: var(--gap); border-color: var(--line-strong); background: var(--sunken); }
+.card .head .score { width: 36px; height: 36px; }
 .grip { margin-left: auto; color: var(--faint); border: 0; background: transparent; padding: 4px; cursor: grab; }
 
 .keys { padding: 0 28px 28px; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
@@ -206,7 +210,9 @@ td.r, th.r { text-align: right; }
 @keyframes coffee-steam { 0% { opacity: 0; transform: translateY(2px) scaleY(.6); } 40% { opacity: .9; } 100% { opacity: 0; transform: translateY(-8px) scaleY(1.2); } }
 @keyframes coffee-bob { 0%, 88%, 100% { transform: none; } 91% { transform: translateY(-6px) rotate(-3deg); } 94% { transform: translateY(0) rotate(2deg); } 97% { transform: translateY(-3px); } }
 @media (max-width: 900px) { .coffee > span:last-child { display: none; } .coffee { padding: 12px; right: 14px; bottom: 14px; } }
-#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding: 10px 16px; border-radius: 8px; z-index: 50; box-shadow: var(--shadow-lift); }
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding: 10px 16px; border-radius: 8px; z-index: 50; box-shadow: var(--shadow-lift); display: flex; align-items: center; gap: 14px; max-width: min(560px, 92vw); }
+#toast button { border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 6px; padding: 4px 12px; font-weight: 700; cursor: pointer; }
+#toast button:focus-visible { outline: 2px solid var(--ground); outline-offset: 2px; }
 .help { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(15,21,25,.4); z-index: 40; }
 .help > div { background: var(--surface); border-radius: 12px; padding: 22px 26px; width: min(440px, 92vw); display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; align-items: center; }
 .help h2 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 17px; }
@@ -227,6 +233,7 @@ td.r, th.r { text-align: right; }
   .stage { grid-template-columns: 90px 1fr 90px; }
   .keys { display: none; }
   .btn, .chip, .tab { min-height: 40px; }
+  .drop-btn { width: 40px; height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -278,6 +285,8 @@ const icon = {
   folder: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
   doc: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:22px;height:22px;stroke:var(--accent)"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
   grip: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="fill:currentColor;stroke:none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>',
+  info: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+  nope: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   x: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
 
@@ -286,10 +295,17 @@ const S = {view: "board", city: "", plat: "", track: "", min: 0, q: "", focus: n
 try { Object.assign(S, JSON.parse(localStorage.getItem("panel-v2") || "{}"), {open: null, focus: null, q: ""}); } catch (e) {}
 const HASH = {"#tablero": "board", "#embudo": "funnel", "#empresas": "companies", "#descartados": "dropped"};
 if (HASH[location.hash]) S.view = HASH[location.hash];
-const save = () => { try { localStorage.setItem("panel-v2", JSON.stringify({view: S.view, city: S.city, plat: S.plat, track: S.track, min: S.min, csort: S.csort, noagency: S.noagency})); } catch (e) {} };
+const save = () => { try { localStorage.setItem("panel-v2", JSON.stringify({view: S.view, city: S.city, plat: S.plat, track: S.track, min: S.min, csort: S.csort, noagency: S.noagency, todoDay: S.todoDay})); } catch (e) {} };
 try { const t = localStorage.getItem("panel-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
 
-function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2800); }
+const TOP_N = 15;
+/* a toast may carry an Undo button (5 s): `undo` runs once if it is pressed */
+function toast(msg, undo) {
+  const t = $("#toast"); t.textContent = ""; t.append(Object.assign(document.createElement("span"), {textContent: msg}));
+  toast.undo = undo || null;
+  if (undo) t.append(Object.assign(document.createElement("button"), {textContent: "Undo", type: "button"}));
+  t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; toast.undo = null; }, undo ? 5000 : 2800);
+}
 async function post(path, body) {
   const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json", "X-Panel-Token": TOKEN}, body: JSON.stringify({slug: D.slug, ...body})});
   const j = await r.json().catch(() => ({}));
@@ -321,8 +337,10 @@ function filters() {
 function todayTiles() {
   const T = D.today, soon = T.closing_soon.map(k => D.apps.find(a => a.key === k)).filter(Boolean);
   const f = T.followups[0];
+  const todo = D.apps.filter(a => a.col === "todo"), fresh = todo.filter(a => a.new).length, fits = todo.map(a => a.fit).filter(v => v != null);
+  const best = fits.length ? " · best " + Math.max(...fits) : "";
   $("#today").innerHTML = `
-    <button class="tile" data-go="todo"><span class="k">To apply</span><span class="v num">${T.to_apply}</span><span class="d">${T.new ? T.new + " new today" : "Nothing new today"}</span></button>
+    <button class="tile" data-go="todo"><span class="k">To apply</span><span class="v num">${todo.length}</span><span class="d">${(fresh ? fresh + " new today" : "Nothing new today") + best}</span></button>
     <button class="tile ${soon.length ? "urgent" : ""}" data-go="soon"><span class="k">Closing in 3 days</span><span class="v num">${soon.length}</span><span class="d">${soon[0] ? esc(soon[0].company + " · " + soon[0].title) : "None"}</span></button>
     <button class="tile ${T.followups.length ? "urgent" : ""}" data-go="quiet"><span class="k">Follow-ups</span><span class="v num">${T.followups.length}</span><span class="d">${f ? esc(f.company + ", sent " + fmt(f.sent)) : "Nothing due"}</span></button>
     <div class="tile" style="cursor:default"><span class="k">Answers to confirm</span><span class="v num">${T.pending_answers}</span><span class="d">${T.pending_answers ? "job answer " + esc(D.slug) + " pending" : "All confirmed"}</span></div>`;
@@ -358,9 +376,10 @@ function card(a) {
     : a.col === "sent" && a.sent && -daysTo(a.sent) >= 10 ? `<button class="btn warn" data-open="${esc(a.key)}" data-tab="resumen">Follow up</button>` : "";
   return `<article class="card ${soon ? "soon" : ""} ${a.col === "closed" ? "done" : ""} ${S.focus === a.key ? "focus" : ""}" draggable="true" data-key="${esc(a.key)}" tabindex="${S.focus === a.key ? 0 : -1}" aria-label="${esc(a.title + ", " + a.company + ", " + COL_NAME[a.col])}">
     <div class="head"><div class="who"><div class="t">${esc(a.title)}</div><div class="c">${esc(a.company)}${a.location ? " · " + esc(a.location.split(",")[0]) : ""}</div></div>
-      ${a.fit != null ? `<div class="score num ${scoreCls(a.fit)}" title="Score">${a.fit}</div>` : ""}</div>
+      ${a.fit != null ? `<div class="score num ${scoreCls(a.fit)}" title="Score">${a.fit}</div>` : ""}
+      ${a.col === "todo" ? `<button class="drop-btn" data-drop="${esc(a.key)}" aria-label="Drop: not interested in ${esc(a.title)}" title="Not interested" draggable="false">${icon.nope}</button>` : ""}</div>
     <div class="tags">${tags}</div>${body}
-    <div class="actions">${primary}${a.url ? `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener" draggable="false" aria-label="Open the ad for ${esc(a.title)} in a new tab">Open ad ${icon.ext}</a>` : ""}<button class="btn" data-open="${esc(a.key)}">Details</button>
+    <div class="actions">${primary}${a.url ? `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener" draggable="false" aria-label="Open the ad for ${esc(a.title)} in a new tab" title="Open ad">${icon.ext}</a>` : ""}<button class="btn" data-open="${esc(a.key)}" aria-label="Details of ${esc(a.title)}" title="Details">${icon.info}</button>
       <button class="grip" aria-label="Move ${esc(a.title)}: select the card and press 1 to 5" title="Drag to another column, or press 1 to 5" tabindex="-1">${icon.grip}</button></div>
   </article>`;
 }
@@ -372,15 +391,16 @@ function board() {
       offer: "When an offer arrives, move the card here.", closed: "Rejections, no responses and closed ads end up here."}[id];
     if (id === "todo") {                      /* today's package by default; a selector shows any earlier day */
       const days = [...new Set(g.map(a => a.date))].sort().reverse();
-      const pick = S.todoDay || "today", todayIso = new Date().toISOString().slice(0, 10);
-      const shown = pick === "today" ? g.filter(a => a.new) : pick === "all" ? g : g.filter(a => a.date === pick);
-      const slim = S.expanded.todo ? shown.length : PER_COL;
+      const pick = ["today", "top", "all", ...days].includes(S.todoDay) ? S.todoDay : "today", todayIso = new Date().toISOString().slice(0, 10);
+      const shown = pick === "today" ? g.filter(a => a.new) : pick === "top" ? g.slice(0, TOP_N) : pick === "all" ? g : g.filter(a => a.date === pick);
+      const slim = S.expanded.todo || pick === "top" ? shown.length : PER_COL;
       const opt = (v, label, n) => `<option value="${v}" ${pick === v ? "selected" : ""}>${label} (${n})</option>`;
       const select = `<label class="field" style="font-size:12px">Showing <select id="tododay" aria-label="Which day's ads">`
+        + opt("top", "Top picks (all days)", Math.min(TOP_N, g.length))
         + opt("today", "Today", g.filter(a => a.new).length)
         + days.filter(d => d !== todayIso).map(d => opt(d, fmt(d), g.filter(a => a.date === d).length)).join("")
-        + opt("all", "All days", g.length) + `</select></label>`;
-      const emptyMsg = pick === "today" ? "Today's run left no new ads with these filters. Pick another day above." : "No ads for that day with these filters.";
+        + opt("all", "All days (best first)", g.length) + `</select></label>`;
+      const emptyMsg = pick === "top" ? "Nothing to apply to with these filters." : pick === "today" ? "Today's run left no new ads with these filters. Pick another day above." : "No ads for that day with these filters.";
       return `<section class="col" data-col="todo" aria-label="${name}"><h2>${name} <span class="num">${g.length}</span></h2>
         ${select}
         ${shown.slice(0, slim).map(card).join("") || `<div class="empty">${emptyMsg}</div>`}
@@ -391,7 +411,7 @@ function board() {
       ${g.length > lim ? `<button class="more" data-more="${id}">Show ${g.length - lim} more</button>` : ""}</section>`;
   }).join("");
   $("#main").innerHTML = `<div class="board-wrap"><div class="board" id="board">${cols}</div></div>`;
-  $("#keys").innerHTML = `<b style="color:var(--ink)">Shortcuts</b><span><kbd>/</kbd> search</span><span><kbd>J</kbd> <kbd>K</kbd> move</span><span><kbd>Enter</kbd> details</span><span><kbd>A</kbd> I applied</span><span><kbd>1</kbd>–<kbd>5</kbd> move to column</span><span><kbd>O</kbd> open folder</span><span><kbd>T</kbd> <kbd>E</kbd> <kbd>C</kbd> <kbd>D</kbd> views</span><span><kbd>?</kbd> help</span>`;
+  $("#keys").innerHTML = `<b style="color:var(--ink)">Shortcuts</b><span><kbd>/</kbd> search</span><span><kbd>J</kbd> <kbd>K</kbd> move</span><span><kbd>Enter</kbd> details</span><span><kbd>A</kbd> I applied</span><span><kbd>X</kbd> drop (not interested)</span><span><kbd>1</kbd>–<kbd>5</kbd> move to column</span><span><kbd>O</kbd> open folder</span><span><kbd>T</kbd> <kbd>E</kbd> <kbd>C</kbd> <kbd>D</kbd> views</span><span><kbd>?</kbd> help</span>`;
 }
 
 /* ---------- funnel ---------- */
@@ -462,7 +482,14 @@ function droppedView() {
     <ul class="maybe">${maybes.map(m => `<li><div class="who"><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a> <span>· ${esc(m.company)}${m.day ? " · " + fmt(m.day) : ""}</span></div>
       <div class="kw">${m.keywords.map(k => `<span class="tag on">${esc(k)}</span>`).join("")}</div>
       <button class="btn" data-rescue="${esc(m.key)}" data-track="${esc(m.track)}">Rescue</button></li>`).join("")}</ul></section>` : "";
-  $("#main").innerHTML = `<div class="page">${banner}${maybeBox}<section class="panel"><h2>Dropped by the rules, last 7 days</h2>
+  const mine = (D.dropped_by_you || []).filter(m => !q || (m.title + " " + m.company + " " + m.note).toLowerCase().includes(q));
+  const mineBox = `<section class="panel" id="mine"><h2>Dropped by you</h2>
+    <p style="margin:0;color:var(--muted);font-size:13px">Ads you marked as not interested in the last 30 days, newest first. Restore puts one back in To apply.</p>
+    ${mine.length ? `<ul class="maybe">${mine.map(m => `<li><div class="who"><a href="${esc(m.url)}" target="_blank" rel="noopener">${esc(m.title)}</a> <span>· ${esc(m.company)}</span></div>
+      <div class="kw">${m.fit != null ? `<span class="tag">Score ${m.fit}</span>` : ""}<span class="tag">Dropped ${fmt(m.day)}</span>${m.note ? `<span class="tag">${esc(m.note)}</span>` : ""}</div>
+      <button class="btn" data-restore="${esc(m.key)}" aria-label="Restore ${esc(m.title)} to To apply">Restore</button></li>`).join("")}</ul>`
+      : `<p style="margin:0;color:var(--muted);font-size:13px">${(D.dropped_by_you || []).length ? "Nothing you dropped matches that search." : "Nothing dropped by you in the last 30 days."}</p>`}</section>`;
+  $("#main").innerHTML = `<div class="page">${banner}${mineBox}${maybeBox}<section class="panel"><h2>Dropped by the rules, last 7 days</h2>
     <p style="margin:0;color:var(--muted);font-size:13px">Each ad shows the rule that dropped it. If you disagree, rescue it: its package is built right away.</p>
     <div class="scroll"><table><thead><tr><th>Seen</th><th>Role</th><th>Company</th><th>Reason</th><th></th></tr></thead><tbody>
     ${rows.slice(0, 200).map(d => `<tr><td class="num">${fmt(d.day)}</td><td><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a></td><td>${esc(d.company)}</td><td>${esc(d.reason)}</td>
@@ -537,6 +564,23 @@ async function setStatus(key, opts) {
     render();
   } catch (e) { if (a && before) Object.assign(a, before); toast("Could not change it: " + e.message); render(); }
 }
+/* Drop from the board: skipped through the same POST /status as the drawer's Drop, with a 5 s Undo that puts it back as prepared */
+async function drop(key) {
+  const a = D.apps.find(x => x.key === key); if (!a || a.col !== "todo" || drop.busy.has(key)) return;      /* a held key or a double click must not post twice */
+  drop.busy.add(key);
+  const snap = {...a}, order = [...document.querySelectorAll('.col[data-col="todo"] .card')].map(c => c.dataset.key), i = order.indexOf(key), next = order[i + 1] || order[i - 1];
+  try { await post("/status", {key, status: "skipped", note: "dropped from the panel"}); } catch (e) { toast("Could not drop it: " + e.message); return; } finally { drop.busy.delete(key); }
+  D.apps = D.apps.filter(x => x !== a);
+  D.dropped_by_you = (D.dropped_by_you || []).filter(x => x.key !== key); D.dropped_by_you.unshift({key, title: a.title, company: a.company, url: a.url, fit: a.fit, day: new Date().toISOString().slice(0, 10), note: ""});
+  if (S.open === key) { S.open = null; $("#drawer-root").innerHTML = ""; }
+  render(); if (next && S.view === "board") focusCard(next);
+  toast(`Dropped ${a.title}`, async () => {
+    try { await post("/status", {key, status: "prepared", note: "restored from the panel"}); } catch (e) { toast("Could not undo: " + e.message); return; }
+    D.apps.push({...snap, status: "prepared", col: "todo"}); D.dropped_by_you = D.dropped_by_you.filter(x => x.key !== key);
+    render(); if (S.view === "board") focusCard(key); toast(`Restored ${snap.title}`);
+  });
+}
+drop.busy = new Set();
 function render() {
   header(); filters(); todayTiles();
   if (S.view === "board") board(); else if (S.view === "funnel") funnel(); else if (S.view === "companies") companiesView(); else droppedView();
@@ -554,6 +598,10 @@ document.addEventListener("click", async e => {
   if (t.dataset.csort) { S.csort = t.dataset.csort; save(); companiesView(); return; }
   if (t.dataset.more) { S.expanded[t.dataset.more] = true; render(); return; }
   if (t.dataset.open) { openDetail(t.dataset.open, t.dataset.tab); return; }
+  if (t.id === "toast" || t.closest("#toast")) { const u = toast.undo; if (u && t.tagName === "BUTTON") { toast.undo = null; $("#toast").hidden = true; clearTimeout(toast.h); await u(); } return; }
+  if (t.dataset.drop) { await drop(t.dataset.drop); return; }
+  if (t.dataset.act === "skipped") { t.disabled = true; await drop(t.dataset.k); return; }
+  if (t.dataset.restore) { t.disabled = true; try { await post("/status", {key: t.dataset.restore, status: "prepared", note: "restored from the panel"}); toast("Restored. Reloading…"); setTimeout(() => location.reload(), 700); } catch (err) { toast("Could not restore: " + err.message); t.disabled = false; } return; }
   if (t.dataset.act) { t.disabled = true; await setStatus(t.dataset.k, {status: t.dataset.act}); return; }
   if (t.dataset.dtab) { S.tab = t.dataset.dtab; drawer(); return; }
   if (t.dataset.folder) { try { await post("/open", {key: t.dataset.folder}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
@@ -573,7 +621,7 @@ document.addEventListener("input", e => {
   if (e.target.id === "min") { S.min = +e.target.value; e.target.nextElementSibling.textContent = S.min; save(); S.view === "companies" ? companiesView() : board(); }
 });
 document.addEventListener("change", async e => {
-  if (e.target.id === "tododay") { S.todoDay = e.target.value; S.expanded.todo = false; board(); return; }
+  if (e.target.id === "tododay") { S.todoDay = e.target.value; S.expanded.todo = false; save(); board(); return; }
   if (e.target.id === "noagency") { S.noagency = e.target.checked; save(); companiesView(); return; }
   if (e.target.id === "cand") location.search = "?slug=" + encodeURIComponent(e.target.value);
   if (e.target.id === "moveto" && S.job) await setStatus(S.job.key, {column: e.target.value});
@@ -591,7 +639,7 @@ document.addEventListener("drop", async e => {
 
 /* keyboard */
 function help() {
-  const rows = [["/", "Search"], ["J  K", "Next and previous card"], ["Enter", "Open details"], ["A", "Mark as applied"], ["1 to 5", "Move to To apply, Applied, Interview, Offer, Closed"],
+  const rows = [["/", "Search"], ["J  K", "Next and previous card"], ["Enter", "Open details"], ["A", "Mark as applied"], ["X", "Drop the card (not interested); Undo in the toast"], ["1 to 5", "Move to To apply, Applied, Interview, Offer, Closed"],
     ["O", "Open the package folder in Finder"], ["T  E  C  D", "Board, Funnel, Companies, Dropped"], ["Esc", "Close"], ["?", "This help"]];
   $("#help-root").innerHTML = `<div class="help" data-close-help><div role="dialog" aria-modal="true" aria-labelledby="ht"><h2 id="ht">Keyboard shortcuts</h2>${rows.map(([k, v]) => `<kbd>${k}</kbd><span>${v}</span>`).join("")}<button class="btn" data-close-help style="grid-column:1/-1;justify-self:end">Close</button></div></div>`;
   $("#help-root button").focus();
@@ -615,6 +663,7 @@ document.addEventListener("keydown", async e => {
   if (!S.focus) return;
   if (e.key === "Enter") { openDetail(S.focus); return; }
   if (k === "a") { const a = D.apps.find(x => x.key === S.focus); if (a?.col === "todo") await setStatus(S.focus, {status: "applied"}); return; }
+  if (k === "x") { const a = D.apps.find(x => x.key === S.focus); if (a?.col === "todo") await drop(S.focus); return; }
   if (k === "o") { try { await post("/open", {key: S.focus}); toast("Folder opened in Finder"); } catch (err) { toast(err.message); } return; }
   if (/^[1-5]$/.test(k)) { const col = COLS[+k - 1][0], a = D.apps.find(x => x.key === S.focus); if (a && a.col !== col) { await setStatus(S.focus, {column: col}); focusCard(S.focus); } }
 });
