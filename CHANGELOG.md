@@ -8,13 +8,13 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ### Added
 - Panel: a badge next to the company name on a board card when the company is on the visa sponsor lists. Green with a check: the same name, or the same name without Pty/Ltd/Group. Amber, dashed, with a question mark: a listed name starts the same, so it may be a look-alike. Hover, click or tap it for the explanation. A *Sponsor lists* filter button keeps only those companies. It is for your eyes only: nothing about it reaches a CV, letter or form.
+- Landing page: a short title (46 characters) and description, and Open Graph / X card tags with a 1200x630 preview image, so a shared link looks right.
 
 ## [0.2.2] - 2026-11-04
 
 ### Added
 - Each GitHub Release now attaches the three lite skill zips (tailor, interview prep, ad review), ready to upload to claude.ai without cloning the repository.
 
-- Landing page: a short title (46 characters) and description, and Open Graph / X card tags with a 1200x630 preview image, so a shared link looks right.
 
 ### Fixed
 - Paste a link: a WA Government ad now shows its agency (for example "Pilbara Ports Authority") instead of "WA Government", read from the ad page's Department field.
