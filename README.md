@@ -12,6 +12,8 @@ New to the terminal? Start with **[docs/GETTING-STARTED.md](docs/GETTING-STARTED
 
 <p align="center"><img src="docs/assets/panel.png" alt="The local panel: today's ads to apply to with their score, Open ad and I applied buttons; columns for Applied, Interview, Offer and Closed; a floating Buy me a coffee button. Sample data for the fictional candidate." width="900"><br><sub>The local panel (<code>job panel</code>), with sample data for the fictional candidate.</sub></p>
 
+<p align="center"><img src="docs/assets/demo.gif" alt="A 20-second tour of the panel with sample data: open an ad's details and full text, drop a job with Undo, see what leads to interviews, and the ads you dropped." width="900"><br><sub>20 seconds in the panel: details and full ad, drop with Undo, what leads to interviews, and what you dropped. Sample data.</sub></p>
+
 ### The daily run
 ```mermaid
 flowchart LR

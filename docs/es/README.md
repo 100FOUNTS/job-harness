@@ -5,6 +5,8 @@ Esta es una guía corta. La documentación completa está en inglés: [README](.
 ## Qué es
 job-harness es una herramienta para **Claude Code** que te ayuda a buscar trabajo en **Australia**. Le das una carpeta con tu CV y tus certificados. Te ayuda a armar un perfil honesto y, todos los días, busca ofertas nuevas en SEEK, LinkedIn y WA Government Jobs, las ordena y prepara un CV y una carta de presentación para las mejores. Tú abres el aviso, haces clic en Aplicar y subes los archivos.
 
+<p align="center"><img src="../assets/demo.gif" alt="Recorrido de 20 segundos por el panel con datos de ejemplo: detalle del aviso, descartar con Deshacer, qué lleva a entrevistas y lo descartado." width="900"><br><sub>20 segundos en el panel, con datos de ejemplo (la interfaz está en inglés).</sub></p>
+
 Además:
 - **Más fuentes, sin scraping.** Puedes seguir a empresas puntuales por sus feeds públicos de empleo en Greenhouse, Lever, Ashby, Workable o SmartRecruiters, y sumar Adzuna con una clave gratuita. `job doctor` muestra las fuentes disponibles. Para agregar un portal o un país: [docs/ADDING-A-SOURCE.md](../ADDING-A-SOURCE.md) (en inglés).
 - **Pega un link.** ¿Encontraste un aviso por tu cuenta? Pega el link (o el texto, si la página no se puede leer) en el panel. Lo puntúa, le prepara CV y carta y lo deja en *To apply*.
