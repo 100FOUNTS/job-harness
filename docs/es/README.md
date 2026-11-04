@@ -5,6 +5,8 @@ Esta es una guía corta. La documentación completa está en inglés: [README](.
 ## Qué es
 job-harness es una herramienta para **Claude Code** que te ayuda a buscar trabajo en **Australia**. Le das una carpeta con tu CV y tus certificados. Te ayuda a armar un perfil honesto y, todos los días, busca ofertas nuevas en SEEK, LinkedIn y WA Government Jobs, las ordena y prepara un CV y una carta de presentación para las mejores. Tú abres el aviso, haces clic en Aplicar y subes los archivos.
 
+<!-- features: sources, paste link, phone, calibration, flags, followups -->
+
 Lo que **nunca** hace:
 - No resuelve captchas, no crea cuentas ni escribe contraseñas por ti.
 - No envía postulaciones sin tu propia firma en la aprobación **go-live**. Por defecto, tú postulas.
@@ -52,7 +54,7 @@ claude
 1. Escribe **`/job-harness:job-start`** (si clonaste el repositorio: `/job-start`). Claude revisa tu computador, te explica qué hace la herramienta y te pregunta tu nombre y dónde están tus documentos.
 2. Sigue las etapas de la configuración inicial, una por una: 0 lectura de tus documentos, 1 perfil y vacíos, 2 trayectorias objetivo, 3 CV y carta maestros, 4 perfiles de SEEK/LinkedIn, 5 alertas. `job status <nombre>` siempre muestra el siguiente paso.
 3. Cuando Claude te pida aprobar algo (tus trayectorias, tus documentos maestros, cambios de perfil), responde "OK" en el chat. Claude firma esa aprobación y deja tus palabras registradas; no tienes que escribir ningún comando. La única aprobación que firmas tú mismo es **go-live**, y solo hace falta si quieres que la herramienta envíe postulaciones por ti.
-4. Pide a Claude: "instala la ejecución diaria a las 9" (corre `job schedule install <nombre> --hour 9`). A esa hora tu computador prepara tus ofertas solo, sin usar Claude y sin costo. Solo corre si el computador está encendido. `job schedule run-now <nombre>` hace una prueba ahora.
+4. Pide a Claude: "instala la ejecución diaria a las 9" (corre `job schedule install <nombre> --hour 9`). A esa hora tu computador prepara tus ofertas solo, sin usar Claude y sin costo. Funciona en macOS (LaunchAgent), Windows (Programador de tareas) y Linux (temporizador de systemd, o una línea de crontab si no hay systemd). Solo corre si el computador está encendido. `job schedule run-now <nombre>` hace una prueba ahora.
 
 ## Dónde ver los resultados
 - **El panel:** `job panel` abre un tablero en tu navegador (normalmente `http://127.0.0.1:8765`; solo tu computador puede verlo). Ahí ves cada oferta, por qué calza o por qué se descartó, y botones para marcar "postulé", "entrevista", etc.
@@ -63,6 +65,15 @@ claude
 La ejecución diaria no cuesta nada (son scripts, sin IA). La configuración inicial, `/job-harness:job-tailor` (adapta el CV y la carta de las mejores ofertas) y `/job-harness:job-interview` (preparación de entrevistas) usan tu plan de Claude.
 
 Los documentos de postulación se escriben en inglés australiano (`docs_language`); el idioma de lo que lees (resumen diario) se elige con `ui_language` (`es` para español). Claude te responde en tu idioma.
+
+## Versión lite (Cowork y claude.ai)
+¿No quieres instalar Claude Code? La carpeta [`lite/`](../../lite/README.md) trae tres habilidades (skills) independientes que subes a claude.ai o a Cowork: revisar un aviso contra tu CV, adaptar tu CV y escribir la carta, y prepararte para una entrevista. No incluyen la búsqueda diaria, el panel ni las verificaciones automáticas de cifras: lee siempre el resultado antes de enviarlo. Las instrucciones para subirlas están en [lite/README.md](../../lite/README.md) (en inglés).
+
+## Contribuir
+Los reportes de errores, los sitios que dejaron de funcionar, las nuevas fuentes de avisos y los nuevos países son bienvenidos. Empieza por [CONTRIBUTING.md](../../CONTRIBUTING.md) (en inglés) y el [Código de Conducta](../../CODE_OF_CONDUCT.md). Para problemas de seguridad: [SECURITY.md](../../SECURITY.md). Los cambios de cada versión están en el [CHANGELOG](../../CHANGELOG.md).
+
+## Página de presentación
+Una página corta con lo esencial: [100founts.github.io/job-harness](https://100founts.github.io/job-harness/).
 
 ## Apoya el proyecto
 job-harness es gratis, de código abierto y no usa servicios pagos. Si te ayudó en tu búsqueda, un café ayuda a mantenerlo.
