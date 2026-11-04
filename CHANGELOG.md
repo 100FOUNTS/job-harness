@@ -4,6 +4,11 @@ All notable changes to job-harness. Format: [Keep a Changelog](https://keepachan
 
 The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `HARNESS_VERSION` in `scripts/common.py`) must go up for plugin installs to pick up a change. See [docs/RELEASING.md](docs/RELEASING.md).
 
+## [0.2.3] - 2026-11-04
+
+### Added
+- Panel: a badge next to the company name on a board card when the company is on the visa sponsor lists. Green with a check: the same name, or the same name without Pty/Ltd/Group. Amber, dashed, with a question mark: a listed name starts the same, so it may be a look-alike. Hover, click or tap it for the explanation. A *Sponsor lists* filter button keeps only those companies. It is for your eyes only: nothing about it reaches a CV, letter or form.
+
 ## [0.2.2] - 2026-11-04
 
 ### Added

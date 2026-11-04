@@ -354,6 +354,14 @@ def companies(slug: str, days: int = 60) -> list[dict[str, Any]]:
     return sorted(out, key=lambda g: (-g["ads"], -(g["best"] or 0), rank.get(g["sponsor"], 3)))[:150]
 
 
+def sponsor_of(company: str) -> dict[str, str]:
+    """How the company matches the visa sponsor lists, for the board card's icon (the person's eyes only): 'exact', 'likely'
+    or 'possible' plus the listed name; empty without data or a match."""
+    from sponsors import lookup
+    sp = lookup(company)
+    return {"sponsor_match": sp["match"], "sponsor_name": sp["names"][0]} if sp else {"sponsor_match": "", "sponsor_name": ""}
+
+
 def data(slug: str) -> dict[str, Any]:
     items = package_items(slug)
     all_apps = load(slug)
@@ -375,7 +383,7 @@ def data(slug: str) -> dict[str, Any]:
                      "tailored": any("tailored" in (h.get("note") or "") for h in a["history"]),
                      "has_folder": job_dir(slug, a, it) is not None, "notes": bool(a.get("notes")),
                      "red_flags": red_flags_of(a), "follow_up": follow_up_due(a), "draft": draft_file(slug, a) is not None,
-                     "new": a["date"] == today})
+                     "new": a["date"] == today, **sponsor_of(a.get("company") or "")})
     pending_answers = len(read_json(cand_dir(slug) / "pending_questions.json", {"questions": []}).get("questions", []))
     return {"slug": slug, "name": read_json(cand_dir(slug) / "intake.json")["name"], "apps": apps,
             "state": summary(slug)["state"],
