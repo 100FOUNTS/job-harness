@@ -235,7 +235,8 @@ class AddLinkTests(Base):
         """Regression: addlink once called discover.wagov_page, which moved to sources.wagov.page."""
         import addlink
         from tracker import load
-        ld = {"title": "Project Engineer", "hiringOrganization": {"name": "WA Government Jobs"}, "datePosted": "2026-11-01"}
+        ld = {"title": "Project Engineer", "hiringOrganization": {"name": "WA Government Jobs"}, "datePosted": "2026-11-01",
+              "department": "Pilbara Ports Authority"}
         with unittest.mock.patch("sources.wagov.page", return_value=(200, ld, "2026-11-20")) as page_, \
              unittest.mock.patch("discover.wagov_detail", return_value=LONG), \
              unittest.mock.patch("prepare.build_one", fake_build):
@@ -243,6 +244,7 @@ class AddLinkTests(Base):
         page_.assert_called_once_with("project-engineer-pilbara")
         self.assertEqual((r["ok"], r["key"], r["platform"]), (True, "wagov:project-engineer-pilbara", "wagov"))
         self.assertEqual(load("ana")[0]["closes"], "2026-11-20")
+        self.assertEqual(r["company"], "Pilbara Ports Authority")        # the agency, not the portal
 
     def test_seek_that_gives_nothing_asks_for_the_text(self):
         import addlink

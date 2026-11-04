@@ -47,14 +47,23 @@ def search(search: dict[str, Any], max_age_days: int) -> list[dict[str, Any]]:
     return out
 
 
+def department(body: str) -> str:
+    """The agency named on the ad page ("Department" field; the JSON-LD only says "WA Government Jobs")."""
+    m = (re.search(r'aria-label="Department"[^>]*></i>\s*<span[^>]*>\s*(.*?)\s*</span>', body, re.S)
+         or re.search(r'"departments":\s*\["([^"]+)"', body))
+    return html.unescape(" ".join(m.group(1).split())) if m else ""
+
+
 def page(job_id: str) -> tuple[int, dict[str, Any], str]:
-    """(HTTP status, the ad's JSON-LD JobPosting, closing date YYYY-MM-DD or '')."""
+    """(HTTP status, the ad's JSON-LD JobPosting, closing date YYYY-MM-DD or ''). The JobPosting gets a `department` key."""
     code, body = base.http_get(f"{SITE}/jobs/{job_id}")
     m = re.search(r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>', body, re.S) if code == 200 else None
     try:
         ld = json.loads(m.group(1)) if m else {}
     except ValueError:
         ld = {}
+    if ld and (dept := department(body)):
+        ld["department"] = dept
     close = re.search(r"Closing at:\s*([A-Z][a-z]{2} \d{1,2} \d{4})", body)
     closes = time.strftime("%Y-%m-%d", time.strptime(close.group(1), "%b %d %Y")) if close else None
     return code, ld, closes or ""

@@ -16,7 +16,7 @@ A release is a version number, a tag and a GitHub Release. Plugin installs only 
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
-6. **GitHub Release.** Pushing the tag runs `.github/workflows/release.yml`. It checks that the tag equals the version in `plugin.json`, extracts the `## [X.Y.Z]` section of `CHANGELOG.md` and creates the GitHub Release with it as the body. If the tag and the version differ, or the section is missing, the workflow fails and nothing is published: delete the tag, fix, and tag again.
+6. **GitHub Release.** Pushing the tag runs `.github/workflows/release.yml`. It checks that the tag equals the version in `plugin.json`, extracts the `## [X.Y.Z]` section of `CHANGELOG.md` and builds the lite skill zips (`scripts/build_lite.py`) and creates the GitHub Release with the changelog section as the body and the zips attached. If the tag and the version differ, or the section is missing, the workflow fails and nothing is published: delete the tag, fix, and tag again.
 
 ## Choosing the number (below 1.0)
 - Patch (`0.1.1` to `0.1.2`): fixes and small panel changes.
