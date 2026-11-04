@@ -13,7 +13,7 @@ KEYS = "keywords, where, page_size"
 DETAIL_DELAY = (0.8, 1.8)
 
 API = "https://www.seek.com.au/api/jobsearch/v5/search"
-GQL = "https://www.seek.com.au/graphql"
+GQL = "https://au.seek.com/graphql"            # www.seek.com.au/graphql now answers 308, which urllib does not follow on a POST
 HEADERS = {"seek-request-brand": "seek", "seek-request-country": "AU"}
 
 
