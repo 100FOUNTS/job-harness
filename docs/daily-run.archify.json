@@ -165,7 +165,7 @@
           "path": "scripts/schedule.py",
           "line": 31,
           "end_line": 43,
-          "label": "scheduler install (launchd plist, schtasks, systemd unit)"
+          "label": "scheduler install (launchd, schtasks, systemd)"
         }
       ]
     },
@@ -317,7 +317,7 @@
       "col": 2,
       "type": "cloud",
       "label": "ATS feeds + Adzuna",
-      "sublabel": "Greenhouse · Lever · Workable · SmartRecruiters · Ashby",
+      "sublabel": "Greenhouse · Lever · Ashby · +2 more",
       "tag": "Adzuna optional, free key"
     },
     {
