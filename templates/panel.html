@@ -195,6 +195,31 @@ kbd { font: 11px/1 var(--font); border: 1px solid var(--line-strong); border-bot
 textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); resize: vertical; min-height: 140px; }
 .skeleton { height: 14px; border-radius: 4px; background: var(--sunken); }
 
+/* Profile */
+.panel.prof-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 320px); gap: 8px 28px; align-items: center; }
+.prof-head h2 { font-size: 20px; }
+.prof-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.prog { display: flex; flex-direction: column; gap: 6px; }
+.prog .bar { height: 10px; border-radius: 6px; background: var(--sunken); overflow: hidden; }
+.prog .bar i { display: block; height: 100%; background: var(--have); }
+.chk { list-style: none; margin: 0; padding: 0; }
+.chk li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.chk li:first-child { border-top: 0; }
+.chk .mk { grid-row: span 3; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; margin-top: 1px; }
+.chk .ok .mk { background: var(--have); color: var(--surface); }
+.chk .todo .mk { background: var(--urgent-bg); color: var(--urgent-ink); border: 1px solid var(--urgent-line); }
+.chk .info .mk { background: var(--sunken); color: var(--muted); }
+.chk b { font-size: 14px; }
+.chk span.d { color: var(--muted); font-size: 13px; }
+.chk code, .path { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--sunken); padding: 2px 6px; border-radius: 5px; word-break: break-all; }
+.two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.trk { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.trk:first-of-type { border-top: 0; padding-top: 0; }
+.trk h3 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 6px 14px; font-size: 13px; }
+.kv > span:nth-child(odd) { color: var(--muted); }
+.tags { flex-wrap: wrap; }
+
 /* Funnel and dropped */
 .page { max-width: 1240px; margin: 0 auto; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 20px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
@@ -256,7 +281,7 @@ td.r, th.r { text-align: right; }
   .search { max-width: none; flex: 1 1 200px; }
   .page { padding-left: 16px; padding-right: 16px; }
   .drawer .actions .field { margin-left: 0; }
-  .three, .cov, .docs, .facts { grid-template-columns: 1fr; }
+  .three, .cov, .docs, .facts, .two, .panel.prof-head, .kv { grid-template-columns: 1fr; }
   .stage { grid-template-columns: 90px 1fr 90px; }
   .keys { display: none; }
   .btn, .chip, .tab { min-height: 40px; }
@@ -275,6 +300,7 @@ td.r, th.r { text-align: right; }
     <button class="tab" role="tab" id="tab-funnel" data-view="funnel">Funnel</button>
     <button class="tab" role="tab" id="tab-companies" data-view="companies">Companies</button>
     <button class="tab" role="tab" id="tab-dropped" data-view="dropped">Dropped <span class="count num" id="dropcount"></span></button>
+    <button class="tab" role="tab" id="tab-profile" data-view="profile">Profile</button>
   </div>
   <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <span class="sr">Search</span><input id="q" type="search" placeholder="Search company, role or keyword" autocomplete="off"><kbd>/</kbd></label>
@@ -333,7 +359,7 @@ const icon = {
 /* ---------- state ---------- */
 const S = {view: "board", city: "", plat: "", track: "", min: 0, q: "", focus: null, open: null, expanded: {}, tab: "resumen"};
 try { Object.assign(S, JSON.parse(localStorage.getItem("panel-v2") || "{}"), {open: null, focus: null, q: ""}); } catch (e) {}
-const HASH = {"#tablero": "board", "#embudo": "funnel", "#empresas": "companies", "#descartados": "dropped"};
+const HASH = {"#tablero": "board", "#embudo": "funnel", "#empresas": "companies", "#descartados": "dropped", "#perfil": "profile"};
 if (HASH[location.hash]) S.view = HASH[location.hash];
 const save = () => { try { localStorage.setItem("panel-v2", JSON.stringify({view: S.view, city: S.city, plat: S.plat, track: S.track, sp: S.sp, min: S.min, csort: S.csort, noagency: S.noagency, todoDay: S.todoDay})); } catch (e) {} };
 try { const t = localStorage.getItem("panel-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
@@ -536,6 +562,60 @@ function companiesView() {
   $("#keys").innerHTML = "";
 }
 
+/* ---------- profile ---------- */
+const MARK = {ok: "✓", todo: "!", info: "i"};
+const APPROVAL_NAME = {"master-docs": "Master documents", "profile-changes": "Profile changes (SEEK, LinkedIn)", targets: "Targets (tracks and searches)", report: "Daily report", "go-live": "Go-live: allow sending"};
+const APPROVAL_TAG = {valid: ["Signed", "on"], pending: ["Waiting for a signature", ""], broken: ["Seal broken", ""], none: ["Not asked yet", ""]};
+async function profileView() {
+  $("#main").innerHTML = `<div class="page"><section class="panel"><div class="skeleton" style="width:40%"></div><div class="skeleton"></div><div class="skeleton" style="width:70%"></div></section></div>`;
+  $("#keys").innerHTML = "";
+  let P;
+  try {
+    const r = await fetch(`/api/profile?slug=${encodeURIComponent(D.slug)}`);
+    if (!r.ok) throw new Error("error " + r.status);
+    P = await r.json();
+  } catch (err) { $("#main").innerHTML = `<div class="page"><section class="panel"><p class="note">Could not read the profile: ${esc(err.message)}. Run <code>job profile ${esc(D.slug)}</code> to see the same data in the terminal.</p></section></div>`; return; }
+  if (S.view !== "profile") return;
+  const I = P.identity, pr = P.progress, tags = (a, empty) => a && a.length ? `<div class="tags actions" style="gap:6px">${a.map(x => `<span class="tag">${esc(x)}</span>`).join("")}</div>` : `<span style="color:var(--muted)">${empty || "None"}</span>`;
+  const head = `<section class="panel prof-head"><div><h2>${esc(I.name)}</h2>
+      <p>${[I.location, I.email, I.phone].filter(Boolean).map(esc).join(" · ")}</p>
+      <p>Documents in ${esc(I.docs_language || "—")} · mode <b>${esc(P.state.mode)}</b>${P.state.label ? " · " + esc(P.state.label) : ""}</p></div>
+    <div class="prog" role="group" aria-label="Setup progress"><b class="num">${pr.ok} of ${pr.total} ready</b>
+      <div class="bar" aria-hidden="true"><i style="width:${pr.total ? pr.ok / pr.total * 100 : 0}%"></i></div>
+      <span style="color:var(--muted);font-size:13px">${pr.todo ? pr.todo + " thing" + (pr.todo === 1 ? "" : "s") + " left to do" : "Nothing missing"}</span></div></section>`;
+  const check = `<section class="panel"><h2>What is ready and what is missing</h2><ul class="chk">${P.checklist.map(c => `<li class="${c.status}"><span class="mk" aria-hidden="true">${MARK[c.status]}</span>
+      <b>${esc(c.label)}<span class="sr"> (${c.status === "ok" ? "ready" : c.status === "todo" ? "to do" : "for your information"})</span></b><span class="d">${esc(c.detail)}</span>${c.fix ? `<span class="d">Do it with <code>${esc(c.fix)}</code></span>` : ""}</li>`).join("")}</ul></section>`;
+  const S_ = P.searches;
+  const trk = S_.tracks.map(t => `<div class="trk"><h3>${esc(t.id)} <small style="color:var(--muted);font-weight:400">${t.title_phrases} title phrases${t.description_fallback ? " · also matches by the ad's text" : ""}${t.excluded_titles.length ? " · skips titles with: " + esc(t.excluded_titles.join(", ")) : ""}</small></h3>
+      <div class="scroll"><table><thead><tr><th>Source</th><th>Search</th><th>Where</th></tr></thead><tbody>${t.searches.map(s => `<tr><td>${esc(PLAT[s.platform] || s.platform)}</td><td>${esc(s.what)}</td><td>${esc(s.where || "—")}</td></tr>`).join("") || `<tr><td colspan="3" style="color:var(--muted)">No searches yet.</td></tr>`}</tbody></table></div></div>`).join("");
+  const search = `<section class="panel"><h2>Searches</h2>
+    <div class="kv"><span>Places</span><span>${tags(S_.locations)}</span><span>Skips titles with</span><span>${tags(S_.excluded_titles)}</span><span>Skips ads that say</span><span>${tags(S_.excluded_text)}</span>
+      <span>Ads up to</span><span>${S_.max_age_days != null ? S_.max_age_days + " days old" : "—"}</span><span>Experience asked</span><span>${S_.max_years_required != null ? "up to " + S_.max_years_required + " years" : "no limit"}</span>
+      <span>Sources</span><span>${S_.sources.map(x => `<span class="tag ${x.configured ? "on" : ""}" title="${esc(x.configured ? "Available" : x.setup)}">${esc(PLAT[x.name] || x.name)}${x.configured ? "" : " · not set up"}</span>`).join(" ") || "—"}</span></div>
+    ${trk || `<p class="empty">No tracks yet.</p>`}</section>`;
+  const R = P.rules;
+  const rules = `<section class="panel"><h2>Rules for this candidate</h2><div class="kv">
+      <span>Never mentioned</span><span>${tags(R.never_mention, "Nothing")}</span><span>Never included</span><span>${tags(R.never_include, "Nothing")}</span>
+      <span>Only if a form asks</span><span>${tags(R.only_if_asked, "Nothing")}</span></div>
+    ${R.other.length ? `<ul style="margin:0;padding-left:18px;color:var(--muted);font-size:13px">${R.other.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}</section>`;
+  const A = P.answers;
+  const answers = `<section class="panel"><h2>Answers to form questions</h2>
+    <p style="margin:0"><b class="num">${A.answered} of ${A.total}</b> common questions have an answer.${A.unanswered.length ? " Every empty one stops a form that asks it." : ""}</p>
+    ${A.unanswered.length ? `<div class="tags actions" style="gap:6px">${A.unanswered.map(g => `<span class="tag ${g.sensitive ? "flag" : ""}" title="${g.sensitive ? "Sensitive: only used in a field that asks, and only you can word it." : "Not answered yet"}">${esc(g.question)}</span>`).join("")}</div>
+      <p style="margin:0;color:var(--muted);font-size:12px">Highlighted = sensitive. List them in the terminal with <code>job answer ${esc(D.slug)} gaps</code>.</p>` : ""}</section>`;
+  const appr = `<section class="panel"><h2>Approvals</h2><div class="scroll"><table><thead><tr><th>What</th><th>State</th><th>Reference</th></tr></thead><tbody>${P.approvals.map(a => `<tr><td>${esc(APPROVAL_NAME[a.type] || a.type)}</td>
+      <td><span class="tag ${APPROVAL_TAG[a.status][1]}">${APPROVAL_TAG[a.status][0]}</span></td><td class="num">${esc([a.id, a.date].filter(Boolean).join(" · ") || "—")}</td></tr>`).join("")}</tbody></table></div></section>`;
+  const L = P.state.limits, Q = P.state.quota;
+  const stages = `<section class="panel"><h2>Setup steps</h2><div class="scroll"><table><thead><tr><th>Step</th><th>State</th><th>Note</th></tr></thead><tbody>${Object.entries(P.state.stages).map(([k, v]) => `<tr><td>${esc(k + ". " + v.name)}</td><td><span class="tag ${v.status === "done" ? "on" : ""}">${esc(v.status)}</span></td><td style="color:var(--muted)">${esc(v.summary)}</td></tr>`).join("") || `<tr><td colspan="3" style="color:var(--muted)">Nothing recorded yet. The first step is <code>/job-onboard 0 ${esc(D.slug)}</code>.</td></tr>`}</tbody></table></div>
+    <p style="margin:0;color:var(--muted);font-size:13px">Sending limits: ${L.per_platform} per portal a day, ${L.per_day} a day, ${L.per_week} a week.</p></section>`;
+  const F = P.folders, D_ = P.documents;
+  const folders = `<section class="panel"><h2>Folders and documents</h2><div class="kv"><span>Candidate files</span><span><span class="path">${esc(F.candidate)}</span></span>
+      <span>Daily packages</span><span><span class="path">${esc(F.packages)}</span></span><span>Master documents</span><span>${D_.master_pdfs.length ? tags(D_.master_pdfs) : "None built yet"}</span>
+      ${D_.missing.length ? `<span>Missing</span><span>${tags(D_.missing)}</span>` : ""}</div>
+    <p style="margin:0;color:var(--muted);font-size:12px">Candidate files hold your private data and never go in the public repository.</p></section>`;
+  $("#main").innerHTML = `<div class="page">${head}${check}${search}<div class="two">${rules}${answers}</div><div class="two">${appr}${stages}</div>${folders}</div>`;
+}
+
 /* ---------- dropped ---------- */
 function droppedView() {
   const q = S.q.toLowerCase();
@@ -654,8 +734,8 @@ async function drop(key) {
 drop.busy = new Set();
 function render() {
   header(); filters(); todayTiles();
-  if (S.view === "board") board(); else if (S.view === "funnel") funnel(); else if (S.view === "companies") companiesView(); else droppedView();
-  $("#today").hidden = S.view === "dropped" || S.view === "companies";
+  if (S.view === "board") board(); else if (S.view === "funnel") funnel(); else if (S.view === "companies") companiesView(); else if (S.view === "profile") profileView(); else droppedView();
+  $("#today").hidden = S.view === "dropped" || S.view === "companies" || S.view === "profile";
   $("#addbar").hidden = S.view !== "board";
   $("#filters").hidden = S.view !== "board" && S.view !== "companies";
 }
@@ -746,7 +826,7 @@ document.addEventListener("drop", async e => {
 /* keyboard */
 function help() {
   const rows = [["/", "Search"], ["J  K", "Next and previous card"], ["Enter", "Open details"], ["A", "Mark as applied"], ["X", "Drop the card (not interested); Undo in the toast"], ["1 to 5", "Move to To apply, Applied, Interview, Offer, Closed"],
-    ...(D.local ? [["O", "Open the package folder in Finder"]] : []), ["T  E  C  D", "Board, Funnel, Companies, Dropped"], ["Esc", "Close"], ["?", "This help"]];
+    ...(D.local ? [["O", "Open the package folder in Finder"]] : []), ["T  E  C  D  P", "Board, Funnel, Companies, Dropped, Profile"], ["Esc", "Close"], ["?", "This help"]];
   $("#help-root").innerHTML = `<div class="help" data-close-help><div role="dialog" aria-modal="true" aria-labelledby="ht"><h2 id="ht">Keyboard shortcuts</h2>${rows.map(([k, v]) => `<kbd>${k}</kbd><span>${v}</span>`).join("")}<button class="btn" data-close-help style="grid-column:1/-1;justify-self:end">Close</button></div></div>`;
   $("#help-root button").focus();
 }
@@ -760,7 +840,7 @@ document.addEventListener("keydown", async e => {
   if (e.key === "?") { help(); return; }
   if (S.open) return;
   const k = e.key.toLowerCase();
-  if ("tecd".includes(k) && k.length === 1) { S.view = {t: "board", e: "funnel", c: "companies", d: "dropped"}[k]; save(); render(); return; }
+  if ("tecdp".includes(k) && k.length === 1) { S.view = {t: "board", e: "funnel", c: "companies", d: "dropped", p: "profile"}[k]; save(); render(); return; }
   if (S.view !== "board") return;
   const order = cardsInOrder(); if (!order.length) return;
   const i = order.indexOf(S.focus);
