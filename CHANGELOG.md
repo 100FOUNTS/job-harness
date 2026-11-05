@@ -6,6 +6,12 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-05
+
+### Changed
+- The agent rule lines that only repeated what Claude itself does not do (captchas, accounts, passwords) are gone from `CLAUDE.md`, `job-start`, `job-daily` and the form-filler. The README, the Spanish README and the landing page now say these steps are left to the person because of Claude's own limits, not a setting of this harness. The source guidelines (no proxies, no evasion) stay.
+- The form-filler no longer decides from the job page which kind of form an employer has: it clicks Apply and looks at what loads.
+
 ### Added
 - How each job is applied for. Triage now reads, with no extra request for SEEK and LinkedIn, whether a job is applied for on the portal itself (SEEK's own form, LinkedIn Easy Apply) or on the employer's site, and the company feeds (Greenhouse, Lever, Ashby, Workable, SmartRecruiters) are known public forms. It is kept in `jobs.db` (`apply_route`, `apply_ats`; older databases get the columns on first use), shown as a tag on board cards and in the detail, and used by the package's "how to apply" line, which until now guessed.
 - `job routes <slug> [--refresh]`: counts the board's open jobs by how they are applied for (portal form, public form, account per employer, employer's site, not known), and fills in the ones not known yet. `job routes <slug> --set <key> --url <page>` records where an Apply button really led, naming the system (Greenhouse, Workday...).
