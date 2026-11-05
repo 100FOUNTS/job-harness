@@ -28,7 +28,8 @@ SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS jobs (
   key TEXT PRIMARY KEY, {", ".join(f + " TEXT" for f in FIELDS)}, tracks TEXT, bullets TEXT, description TEXT,
   first_seen TEXT, last_seen TEXT, times_seen INTEGER DEFAULT 0,
-  verdict TEXT, reason TEXT, track TEXT, judged_with TEXT, fit INTEGER, outcome TEXT);
+  verdict TEXT, reason TEXT, track TEXT, judged_with TEXT, fit INTEGER, outcome TEXT,
+  apply_route TEXT, apply_ats TEXT, apply_gate TEXT, apply_host TEXT);
 CREATE TABLE IF NOT EXISTS sightings (key TEXT, day TEXT, PRIMARY KEY (key, day));
 """
 # Verdicts worth judging again even under the same targets: they depended on the day, not on the ad
@@ -52,6 +53,10 @@ def connect(slug: str, readonly: bool = False) -> sqlite3.Connection:
     con.row_factory = sqlite3.Row
     if not readonly:
         con.executescript(SCHEMA)
+        have = {r[1] for r in con.execute("PRAGMA table_info(jobs)")}
+        for col in ("apply_route", "apply_ats", "apply_gate", "apply_host"):    # databases made before the apply route was recorded
+            if col not in have:
+                con.execute(f"ALTER TABLE jobs ADD COLUMN {col} TEXT")
     return con
 
 

@@ -11,6 +11,7 @@ from typing import Any
 from sources import base
 
 NAME, COUNTRY, NEEDS_LOGIN = "workable", "*", False
+APPLY = ("external", "workable")                    # the public posting is the application page: no account usually
 DESCRIPTION = "Workable company jobs (public widget feed, one company per search)"
 KEYS = "account, name, location, max_age_days"
 DETAIL_DELAY = (0.8, 1.8)

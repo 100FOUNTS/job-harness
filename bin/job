@@ -29,6 +29,7 @@
   job learn log|list ...                       harness memory
   job panel [--port 8765] [--lan]              local board: every application, buttons to change status (--lan: open it on your phone)
   job addlink <slug> <url> [--text-file F]     add a job you found yourself: scored, CV + letter, onto the board
+  job routes <slug> [--refresh]               how the board's jobs are applied for (portal form, public ATS, employer site)
   job coverage <slug> <cv> --job <key>         ad keywords: covered / have it / gap (Jobscan-style match %)
   job guard <file>                             hidden or AI-aimed text in a saved ad
   job sponsors import --from <dir> | check "<company>"   visa sponsor lists (package only, never in documents)
@@ -44,7 +45,7 @@ ROOT = Path(__file__).resolve().parent.parent
 S = ROOT / "scripts"
 DIRECT = {"status": "status.py", "setup": "setup.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
           "triage": "triage.py", "db": "jobdb.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
-          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "panel": "panel.py", "suggest": "suggest.py", "flags": "flags.py", "followup": "followup.py", "addlink": "addlink.py"}
+          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "panel": "panel.py", "suggest": "suggest.py", "flags": "flags.py", "followup": "followup.py", "addlink": "addlink.py", "routes": "applyroute.py"}
 
 
 def run(script, args):

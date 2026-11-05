@@ -52,6 +52,49 @@ def panel_page():
     import panel
     return panel.PAGE.read_text(encoding="utf-8")
 
+class TestApplyRoute(Base):
+    def test_cards_carry_how_the_job_is_applied_for(self):
+        import panel
+        import applyroute
+        from jobdb import record_seen
+        from tracker import add, set_status
+        rows = [("seek:1", "quick", ""), ("lever:a/2", "external", "lever"), ("linkedin:3", "external", "workday"),
+                ("linkedin:4", "external", ""), ("seek:5", "", "")]
+        record_seen("ana", [{"key": k, "id": k.split(":", 1)[1], "platform": k.split(":")[0], "title": "T", "company": "C", "url": "u",
+                             "tracks": [], "bullets": []} for k, *_ in rows], "2026-11-01")
+        for k, route, ats in rows:
+            add("ana", {"key": k, "title": "Role", "company": "Co", "url": "u", "platform": k.split(":")[0], "fit": 60})
+            set_status("ana", k, "prepared")
+            if route:
+                applyroute.record("ana", k, route, ats)
+        with unittest.mock.patch.dict(os.environ, {"JOB_PACKAGE_DIR": str(self.tmp / "pkgs")}):
+            d = panel.data("ana")
+        got = {a["key"]: (a["apply"], a["apply_ats"]) for a in d["apps"]}
+        self.assertEqual(got, {"seek:1": ("quick", ""), "lever:a/2": ("open-ats", "lever"), "linkedin:3": ("account-ats", "workday"),
+                               "linkedin:4": ("company-site", ""), "seek:5": ("unknown", "")})
+
+    def test_the_page_tags_only_what_is_known(self):
+        html = panel_page()
+        self.assertIn("const APPLY_TAG", html)
+        self.assertIn("a.col === \"todo\" ? applyTag(a)", html)
+        self.assertNotIn("unknown:", html.split("const APPLY_TAG")[1].split("function card")[0])
+        for gate in ("open", "login", "captcha", "blocked"):                               # what the Apply button led to wins over the class
+            self.assertIn(f"{gate}: [", html.split("const GATE_TAG")[1].split("const applyTag")[0])
+
+    def test_cards_carry_the_gate_found_by_the_probe(self):
+        import panel
+        import applyroute
+        from jobdb import record_seen
+        from tracker import add, set_status
+        record_seen("ana", [{"key": "linkedin:9", "id": "9", "platform": "linkedin", "title": "T", "company": "C", "url": "u",
+                             "tracks": [], "bullets": []}], "2026-11-01")
+        add("ana", {"key": "linkedin:9", "title": "Role", "company": "Co", "url": "u", "platform": "linkedin", "fit": 60})
+        set_status("ana", "linkedin:9", "prepared")
+        applyroute.set_url("ana", "linkedin:9", "https://acme.wd3.myworkdayjobs.com/x", "login")
+        with unittest.mock.patch.dict(os.environ, {"JOB_PACKAGE_DIR": str(self.tmp / "pkgs")}):
+            d = panel.data("ana")
+        self.assertEqual((d["apps"][0]["apply"], d["apps"][0]["apply_gate"]), ("account-ats", "login"))
+
 
 if __name__ == "__main__":
     unittest.main()

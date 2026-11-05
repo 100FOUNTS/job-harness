@@ -27,6 +27,8 @@ A source module defines:
 | `alive(job_id)` | no | `(True/False, closing date "YYYY-MM-DD" or None)`; `(None, None)` when it cannot tell |
 | `configured()` / `SETUP` | no | `False` while a key is missing, and the sentence `job doctor` shows for it |
 | `KEYS` | no | the keys of a search entry the source reads (for humans) |
+| `route(job_id)` | no | `("quick", "")` when the job is applied for on the portal itself, `("external", "<system>")` when on the employer's site (the system's name when known); `None` when it cannot tell. Free when `detail()` just read the same page (keep what you saw in a small dict), else one request. The count in `job routes` and the board's tag come from it |
+| `APPLY` | no | the same as a fixed `("external", "greenhouse")` for a feed whose posting is the application page; then `route()` is not needed |
 | `DETAIL_DELAY` | no | `(lo, hi)` seconds triage waits after each `detail()` call (default 0.8 to 1.8) |
 
 `search` receives the search entry exactly as written in `targets.json` (so a source defines its own keys; discover only needs `platform`) and the `max_age_days` of the targets.

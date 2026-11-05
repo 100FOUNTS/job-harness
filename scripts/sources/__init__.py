@@ -5,6 +5,9 @@ A source module defines
   search(search: dict, max_age_days: int) -> list[dict]      items, or [{"_error": "..."}]
   detail(job_id: str) -> str                                 optional: full ad text, already guarded
   alive(job_id: str) -> (bool | None, closes | None)         optional: still open? None = could not tell
+  route(job_id: str) -> ("quick" | "external", ats) | None   optional: how the job is applied for (on the portal, or on the
+                                                              employer's site and in which system); None = could not tell
+  APPLY = ("external", "greenhouse")                         optional: the same, fixed, for a feed whose postings are the form
   configured() -> bool                                       optional: False while a key/setting is missing
   SETUP = "..."                                               optional: how to configure it (shown by `job doctor`)
   DETAIL_DELAY = (lo, hi)                                    optional: seconds to wait after each detail() call

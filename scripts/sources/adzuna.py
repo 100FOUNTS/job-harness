@@ -15,6 +15,7 @@ from common import setting
 from sources import base
 
 NAME, COUNTRY, NEEDS_LOGIN = "adzuna", "*", False
+APPLY = ("external", "")                         # Adzuna redirects to the employer or another board
 DESCRIPTION = "Adzuna job search API (free key from developer.adzuna.com; au, nz, gb, us, ca...)"
 KEYS = "what, where, country (default au), distance, pages"
 

@@ -16,7 +16,7 @@ Además:
 - **En el celular.** `job panel --lan` abre el tablero en tu wifi con un link con token. Quien tenga el link en esa red puede verlo, así que úsalo en casa y no lo compartas.
 
 Lo que **nunca** hace:
-- No resuelve captchas, no crea cuentas ni escribe contraseñas por ti.
+- Claude no resuelve captchas, no crea cuentas ni escribe contraseñas. Es un límite de Claude, no un ajuste de este harness: si un empleo necesita uno de esos pasos, queda como `manual-review` para que lo termines tú.
 - No envía postulaciones sin tu propia firma en la aprobación **go-live**. Por defecto, tú postulas.
 - No inventa experiencia, fechas ni cifras: cada número de un CV o carta sale de tus propios datos.
 - No usa servicios ni APIs de pago.

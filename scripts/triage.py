@@ -131,6 +131,12 @@ def by_description_possible(title: str, targets: dict[str, Any]) -> bool:
     return False
 
 
+def record_routes(slug: str, short: list[dict[str, Any]]) -> None:
+    """How each shortlisted job is applied for (portal form or the employer's site): kept on the job and in jobs.db."""
+    from applyroute import record_many
+    record_many(slug, short)
+
+
 def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
     import sources
     readers = {n: (m.detail, getattr(m, "DETAIL_DELAY", (0.8, 1.8))) for n, m in sources.REGISTRY.items() if sources.has(n, "detail")}
@@ -201,6 +207,7 @@ def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
                          "reason": "twin ad " + barred[dedupe_key(j.get("title", ""), j.get("company", ""))]})
     out = {"shortlist": short, "rejected": rejected}
     record_triage(slug, jobs, short, rejected, targets)
+    record_routes(slug, short)
     keep_previous(run_dir(slug, day) / "shortlist.json")
     save_json(run_dir(slug, day) / "shortlist.json", out)
     return out
