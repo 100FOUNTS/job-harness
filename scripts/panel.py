@@ -15,6 +15,7 @@ GET  /?slug=<s>                 the page, with the board data embedded
 GET  /api/job?slug=&key=        one application in full: description, keyword coverage, documents, history, notes
 GET  /files/<slug>/<path>       a file from the candidate's package folder (CV, letter)
 GET  /api/data?slug=            the board data again (the page refreshes itself after adding a link)
+GET  /api/profile?slug=         the candidate's setup at a glance (candidate_profile.py), read when the Profile tab opens
 GET  /draft?slug=&key=          a follow-up draft (.md/.txt) that the tracker entry points to, as plain text
 POST /status {slug,key,status}  POST /note {slug,key,text}  POST /rescue {slug,key[,track]}  POST /open {slug,key}
 POST /add-link {slug,url[,text,title,company]}   a job found by hand (scripts/addlink.py): read, scored, tracked, package built
@@ -578,6 +579,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.json(self.page_data(slug))
         if u.path == "/api/job":
             return self.json(detail(slug, q.get("key", [""])[0]))
+        if u.path == "/api/profile":
+            from candidate_profile import profile
+            return self.json(profile(slug))
         if u.path == "/draft":
             app = next((a for a in load(slug) if a["key"] == q.get("key", [""])[0]), None)
             f = draft_file(slug, app) if app else None
