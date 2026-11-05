@@ -6,6 +6,8 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-05
+
 ### Added
 - Panel: a **Profile** tab (key P, `#perfil`) with the candidate's setup at a glance: a checklist of what is ready and what is missing, each missing item with the command that fixes it; the searches per track and the sources they need; the rules that apply (never mentioned, never included, only if a form asks); answers still empty; approvals and their state; setup steps, sending limits, and where the candidate's files and packages are. It reads `GET /api/profile` and never writes. `job profile <slug>` prints the same data as JSON.
 
