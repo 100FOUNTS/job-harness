@@ -9,6 +9,7 @@ Blocks (exit 2, reason on stderr):
    (the harness never deletes anything in the person's accounts).
 5. Submitting an application in the browser unless a candidate is in mode live with a valid, intact go-live.
 6. Reading browser profiles (.browser/, session cookies) and ~/.ssh, ~/.aws.
+8. Gmail write tools (send, draft, label, trash, spam, archive...): the inbox sync (`job-inbox`) only reads the mailbox.
 
 Asks (permissionDecision "ask": the person approves with one click, nothing is blocked):
 7. Changing the harness's own rules: hooks/, bin/, scripts/gates.py, .claude/settings*.json. A job ad aimed at an AI
@@ -41,6 +42,10 @@ SIGN = re.compile(r"\b(job|gates\.py)\b[^\n;|&]*\bsign\b")
 DELETE_SHELL = re.compile(r"\b(rm|rmdir|unlink|trash|shred)\b[^\n;|&]*candidates|git\s+clean", re.I)
 SUBMIT = re.compile(r"\b(submit|send)(s|ting|ted|ing)?\b[^.]{0,40}\b(application|applic|cv|resum)|\bsubmit(s|ting|ted)?\b|\bsend(s|ing)? (the |my )?application\b", re.I)
 DELETE_UI = re.compile(r"\b(delet|remov)(e|es|ed|ing)\b[^.]{0,40}\b(resum|cv|publication|certification|experience|education|account|search|alert|post)", re.I)
+
+
+GMAIL_WRITE = re.compile(r"send|draft|trash|label|spam|archive|reply|forward|delete|modify|move", re.I)
+GMAIL_READ = ("get_", "list_", "search_", "read_")
 
 
 SECRET_DIR = re.compile(r"(^|[/\s'\"=~])\.(browser|ssh|aws)(/|\s*$|['\"]?(\s|$))")
@@ -166,6 +171,8 @@ def main() -> None:
         if DELETE_SHELL.search(cmd):
             block("The harness never deletes candidate data.")
         touched = shell_writes(cmd)
+    if "gmail" in tool.lower() and not tool.split("__")[-1].lower().startswith(GMAIL_READ) and GMAIL_WRITE.search(tool.split("__")[-1]):
+        block("The harness only reads the person's Gmail (job-inbox): never send, draft, label, archive, trash or mark emails.")
     if tool.startswith("mcp__claude-in-chrome__") and tool.split("__")[-1] in (
             "computer", "form_input", "browser_batch", "javascript_tool"):
         texts = " | ".join(browser_texts(tool, inp))

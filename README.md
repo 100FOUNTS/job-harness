@@ -98,7 +98,7 @@ claude plugin install job-harness@100founts
 claude                      # then type: /job-harness:job-start
 ```
 Tested with Claude Code 2.1.317 on macOS.
-Installed as a plugin, the skills are namespaced: `/job-harness:job-start`, `/job-harness:job-onboard`, `/job-harness:job-daily`, `/job-harness:job-tailor`, `/job-harness:job-interview`, `/job-harness:job-learn`. The plugin's `bin/` folder is on the PATH of Claude's shell, so `job ...` works there. Your data lives outside the plugin, in `~/job-harness-data` (or `JOB_DATA_DIR`), so updates never touch it. Open Claude Code **in that folder** each time: the safety hooks only run there.
+Installed as a plugin, the skills are namespaced: `/job-harness:job-start`, `/job-harness:job-onboard`, `/job-harness:job-daily`, `/job-harness:job-tailor`, `/job-harness:job-interview`, `/job-harness:job-inbox`, `/job-harness:job-learn`. The plugin's `bin/` folder is on the PATH of Claude's shell, so `job ...` works there. Your data lives outside the plugin, in `~/job-harness-data` (or `JOB_DATA_DIR`), so updates never touch it. Open Claude Code **in that folder** each time: the safety hooks only run there.
 
 ### C. Clone (developers and current users)
 ```bash
@@ -164,7 +164,7 @@ The hook is pattern-based: it stops mistakes and casual workarounds, not deliber
 
 ## Costs
 - **The daily run costs nothing**: discover, triage, prepare and the report are plain scripts. No AI, no paid API, no browser.
-- Onboarding, `/job-tailor` (writer + reviewer for the top jobs) and `/job-interview` use **your Claude plan**, like any Claude Code session.
+- Onboarding, `/job-tailor` (writer + reviewer for the top jobs), `/job-interview` and `/job-inbox` use **your Claude plan**, like any Claude Code session.
 - The agent-driven daily cycle (`job schedule install <name> --runner agent`, modes `dry-run`/`live`) also uses your Claude plan every run. The default does not.
 - Nothing in the harness uses a paid service.
 
@@ -192,6 +192,7 @@ lite/                        standalone skills for Cowork and claude.ai (no inst
 | `job-daily` | The agent-driven daily cycle (modes `dry-run`/`live`) |
 | `job-tailor` | A writer and a separate reviewer tailor the CV and letter of the day's top jobs |
 | `job-interview` | Interview prep pack for one application, and a mock interview |
+| `job-inbox` | Reads employer replies in your Gmail (read-only connector) and proposes status changes; applied only after you approve |
 | `job-learn` | Reviews recorded lessons and proposes improvements |
 
 | Agent | Purpose |

@@ -70,7 +70,7 @@ claude
 - Para parar todo: crea un archivo vacío llamado `STOP` en `candidates/<nombre>/`.
 
 ## Costos
-La ejecución diaria no cuesta nada (son scripts, sin IA). La configuración inicial, `/job-harness:job-tailor` (adapta el CV y la carta de las mejores ofertas) y `/job-harness:job-interview` (preparación de entrevistas) usan tu plan de Claude.
+La ejecución diaria no cuesta nada (son scripts, sin IA). La configuración inicial, `/job-harness:job-tailor` (adapta el CV y la carta de las mejores ofertas) `/job-harness:job-interview` (preparación de entrevistas) y `/job-harness:job-inbox` (lee las respuestas de empresas en tu Gmail, solo lectura, y propone cambiar el estado; tú apruebas) usan tu plan de Claude.
 
 Los documentos de postulación se escriben en inglés australiano (`docs_language`); el idioma de lo que lees (resumen diario) se elige con `ui_language` (`es` para español). Claude te responde en tu idioma.
 
