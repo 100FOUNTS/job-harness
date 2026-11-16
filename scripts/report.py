@@ -11,6 +11,7 @@ from typing import Any
 import osutil
 from common import cand_dir, read_json, run_dir, today
 from followup import line as followup_line
+from gaps import report_lines as gaps_lines
 from state import load_state
 from tracker import calibrate, followups, load, quota
 
@@ -52,6 +53,7 @@ def build(slug: str, day: str) -> str:
     if cal["with_outcome"]:
         lines += [f"**Outcomes so far:** {cal['interviews']} interviews from {cal['sent']} sent "
                   f"({cal['with_outcome']} with a known result) · `job track {slug} calibrate`", ""]
+    lines += gaps_lines(slug, day)
     q = quota(slug)
     lines += [f"**Remaining today:** {q['day_left']} · **this week:** {q['week_left']}", ""]
     if jobs.get("errors"):
