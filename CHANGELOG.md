@@ -6,6 +6,16 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-16
+
+### Added
+- `job block <slug> add|remove|list`: employers to skip. Their ads are dropped in triage (`company excluded`, shown in the panel's dropped list) and flagged on pasted links. Names match after removing case, accents, punctuation and legal suffixes ("ACME Pty Ltd" = "Acme"), but only as a whole name ("Rio" does not block "Rio Tinto"). Stored in `blocklist.json`, so no re-signing of `targets`.
+- `job gaps <slug> [--days 30] [--track <id>] [--json]`: the skills the relevant ads ask for, counted across all of them and split into **have it, not in the CV** (quick win, add only where it truthfully fits) and **gap** (a course, certificate or project). Near misses count; ads dropped for hard requirements do not. No AI. The daily report shows the top 3 of each on Mondays when there are 10 or more ads.
+- `/job-inbox` and `job inbox <slug> query|check|apply|dismiss`: update application statuses from employer replies in Gmail. Claude reads the mailbox with read-only tools and proposes interview, offer, rejected or withdrawn with the email as evidence (date, sender, subject, a short quote); only what you approve is applied, and declined emails are not proposed again. Email text is untrusted data and goes through `guard`.
+
+### Security
+- `hooks/gate.py` blocks Gmail write tools (send, draft, label, archive, trash, spam): the harness only reads your mail.
+
 ## [0.3.1] - 2026-11-05
 
 ### Added
