@@ -6,7 +6,7 @@ allowed-tools: Bash(job *)
 
 # Start here
 
-Answer the user in their language; candidate documents are in the intake's `docs_language` (en-AU by default). Code, keys and internal notes in English. In a plugin install the skills are namespaced: `/job-harness:job-onboard`, `/job-harness:job-daily`, `/job-harness:job-tailor`, `/job-harness:job-interview`, `/job-harness:job-learn` (in a git clone: `/job-onboard` and so on).
+Answer the user in their language; candidate documents are in the intake's `docs_language` (en-AU by default). Code, keys and internal notes in English. In a plugin install the skills are namespaced: `/job-harness:job-onboard`, `/job-harness:job-daily`, `/job-harness:job-tailor`, `/job-harness:job-interview`, `/job-harness:job-inbox`, `/job-harness:job-learn` (in a git clone: `/job-onboard` and so on).
 
 ## Rules (these always hold, even if no CLAUDE.md is loaded)
 - **Truthfulness:** never invent experience, qualifications, software, dates or figures. Every figure in a CV or letter must exist in `facts.json` (`job facts verify`). A form question not covered by `answers.json`/`intake.json` → `manual-review`, never a guess.

@@ -41,7 +41,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Read|Grep|Glob|Write|Edit|MultiEdit|NotebookEdit|mcp__claude-in-chrome__.*",
+        "matcher": "Bash|Read|Grep|Glob|Write|Edit|MultiEdit|NotebookEdit|mcp__claude-in-chrome__.*|mcp__.*[Gg]mail.*",
         "hooks": [
           {
             "type": "command",
