@@ -55,7 +55,9 @@ Every day (at the hour you choose) it:
 Also:
 - **More sources, no scraping.** Follow single employers through their public job feeds on Greenhouse, Lever, Ashby, Workable or SmartRecruiters (`{"platform": "lever", "company": "acme", "location": "Perth"}` in `targets.json`), and add Adzuna with a free key (`JOB_ADZUNA_APP_ID` / `JOB_ADZUNA_APP_KEY`). `job doctor` lists the sources. A new portal or country is one small module: [docs/ADDING-A-SOURCE.md](docs/ADDING-A-SOURCE.md).
 - **Paste a link.** Found an ad yourself? Paste its link (or its text, when a page can't be read) in the panel, or run `job addlink <slug> <url>`. It is scored, gets a CV and cover letter and lands in *To apply*; if your rules would have dropped it, you are told why.
+- **Skill gaps.** `job gaps <slug>` adds up, over the last 30 days of relevant ads (shortlisted, tracked and near misses), which skills they ask for that your CV lacks: *have it* (you have it, the CV does not say so: add it where true) and *gap* (a course or certificate to consider). Never a keyword to stuff. Mondays, the daily report shows the top three of each.
 - **Red flags.** Each prepared ad is checked for pay below your minimum or the legal minimum wage, unpaid trials, commission-only work, upfront fees and other scam patterns, a hidden employer and constant reposts (`job flags`). They are warnings only: nothing is dropped or re-ranked.
+- **Companies to skip.** `job block <slug> add "Acme" --note "why"` drops that employer's ads in triage (they show in the panel's dropped list as `company excluded`); `remove` and `list` manage it. Whole-name match, ignoring case, "Pty Ltd"/"Inc"/"The" and punctuation. It is not a sealed approval, so it needs no re-signing.
 - **Follow-ups.** Applications with no news for 10 days get a short, polite follow-up draft in their folder (`job followup`). It is never sent for you.
 - **What leads to interviews.** After 10 applications with an answer, the panel's *Funnel* shows interview rates by score band, track and source, with one plain suggestion when something stands out. Your targets never change by themselves.
 - **On your phone.** `job panel --lan` serves the board on your wifi and prints a link with a one-time token. Anyone on that wifi with the link can see your board, and the local network is not encrypted, so use it at home and don't share the link.
@@ -98,7 +100,7 @@ claude plugin install job-harness@100founts
 claude                      # then type: /job-harness:job-start
 ```
 Tested with Claude Code 2.1.317 on macOS.
-Installed as a plugin, the skills are namespaced: `/job-harness:job-start`, `/job-harness:job-onboard`, `/job-harness:job-daily`, `/job-harness:job-tailor`, `/job-harness:job-interview`, `/job-harness:job-learn`. The plugin's `bin/` folder is on the PATH of Claude's shell, so `job ...` works there. Your data lives outside the plugin, in `~/job-harness-data` (or `JOB_DATA_DIR`), so updates never touch it. Open Claude Code **in that folder** each time: the safety hooks only run there.
+Installed as a plugin, the skills are namespaced: `/job-harness:job-start`, `/job-harness:job-onboard`, `/job-harness:job-daily`, `/job-harness:job-tailor`, `/job-harness:job-interview`, `/job-harness:job-inbox`, `/job-harness:job-learn`. The plugin's `bin/` folder is on the PATH of Claude's shell, so `job ...` works there. Your data lives outside the plugin, in `~/job-harness-data` (or `JOB_DATA_DIR`), so updates never touch it. Open Claude Code **in that folder** each time: the safety hooks only run there.
 
 ### C. Clone (developers and current users)
 ```bash
@@ -164,7 +166,7 @@ The hook is pattern-based: it stops mistakes and casual workarounds, not deliber
 
 ## Costs
 - **The daily run costs nothing**: discover, triage, prepare and the report are plain scripts. No AI, no paid API, no browser.
-- Onboarding, `/job-tailor` (writer + reviewer for the top jobs) and `/job-interview` use **your Claude plan**, like any Claude Code session.
+- Onboarding, `/job-tailor` (writer + reviewer for the top jobs), `/job-interview` and `/job-inbox` use **your Claude plan**, like any Claude Code session.
 - The agent-driven daily cycle (`job schedule install <name> --runner agent`, modes `dry-run`/`live`) also uses your Claude plan every run. The default does not.
 - Nothing in the harness uses a paid service.
 
@@ -192,6 +194,7 @@ lite/                        standalone skills for Cowork and claude.ai (no inst
 | `job-daily` | The agent-driven daily cycle (modes `dry-run`/`live`) |
 | `job-tailor` | A writer and a separate reviewer tailor the CV and letter of the day's top jobs |
 | `job-interview` | Interview prep pack for one application, and a mock interview |
+| `job-inbox` | Reads employer replies in your Gmail (read-only connector) and proposes status changes; applied only after you approve |
 | `job-learn` | Reviews recorded lessons and proposes improvements |
 
 | Agent | Purpose |

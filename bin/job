@@ -19,6 +19,7 @@
   job track <slug> add|set|list|quota|csv      application tracker
   job report <slug> [--notify]                 daily summary
   job flags <slug> [key]                       red flags in an ad (pay, unpaid, fees, scams): warnings only
+  job inbox <slug> query|check <file>|apply <file> --keys k|--all   employer replies from Gmail → tracker (inside Claude: /job-inbox)
   job followup <slug> due|draft <key>|draft-all   follow-up email drafts after 10 days (never sent)
   job state <slug> show|stage|mode|limits ...  bookkeeping (mode live needs a signed go-live)
   job ask <slug> add|list|close ...            open questions for the candidate
@@ -32,6 +33,8 @@
   job profile <slug>                          the candidate's setup at a glance: what is ready, what is missing (the panel's Profile tab)
   job routes <slug> [--refresh]               how the board's jobs are applied for (portal form, public ATS, employer site)
   job coverage <slug> <cv> --job <key>         ad keywords: covered / have it / gap (Jobscan-style match %)
+  job block <slug> add "Company" [--note "why"] | remove "Company" | list   companies to skip (no re-signing needed)
+  job gaps <slug> [--days 30] [--track <id>] [--json]   skills the ads ask for that the CV lacks: have it (quick win) / gap (learn)
   job guard <file>                             hidden or AI-aimed text in a saved ad
   job sponsors import --from <dir> | check "<company>"   visa sponsor lists (package only, never in documents)
   job test                                     test suite
@@ -46,7 +49,7 @@ ROOT = Path(__file__).resolve().parent.parent
 S = ROOT / "scripts"
 DIRECT = {"status": "status.py", "setup": "setup.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
           "triage": "triage.py", "db": "jobdb.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
-          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "panel": "panel.py", "suggest": "suggest.py", "flags": "flags.py", "followup": "followup.py", "addlink": "addlink.py", "routes": "applyroute.py", "profile": "candidate_profile.py"}
+          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "gaps": "gaps.py", "panel": "panel.py", "suggest": "suggest.py", "flags": "flags.py", "followup": "followup.py", "addlink": "addlink.py", "routes": "applyroute.py", "profile": "candidate_profile.py", "block": "blocklist.py", "inbox": "inbox.py"}
 
 
 def run(script, args):

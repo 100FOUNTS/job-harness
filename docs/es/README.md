@@ -10,6 +10,7 @@ job-harness es una herramienta para **Claude Code** que te ayuda a buscar trabaj
 Además:
 - **Más fuentes, sin scraping.** Puedes seguir a empresas puntuales por sus feeds públicos de empleo en Greenhouse, Lever, Ashby, Workable o SmartRecruiters, y sumar Adzuna con una clave gratuita. `job doctor` muestra las fuentes disponibles. Para agregar un portal o un país: [docs/ADDING-A-SOURCE.md](../ADDING-A-SOURCE.md) (en inglés).
 - **Pega un link.** ¿Encontraste un aviso por tu cuenta? Pega el link (o el texto, si la página no se puede leer) en el panel. Lo puntúa, le prepara CV y carta y lo deja en *To apply*.
+- **Brechas de habilidades.** `job gaps <nombre>` suma, en los avisos relevantes de los últimos 30 días (preseleccionados, en seguimiento y casi calzados), qué habilidades piden que tu CV no muestra: *have it* (la tienes pero el CV no lo dice: agrégala donde sea verdad) y *gap* (un curso o certificado por considerar). Nunca para rellenar palabras clave. Los lunes el reporte diario muestra las tres principales de cada una.
 - **Alertas rojas.** Marca sueldo bajo tu mínimo o bajo el mínimo legal, pruebas sin pago, trabajo solo a comisión, cobros por adelantado y otras señales de estafa, empleador oculto y avisos que se republican sin parar. Solo avisan: no descartan nada.
 - **Seguimientos.** A las postulaciones sin noticias en 10 días les prepara un borrador de email de seguimiento en su carpeta. Nunca lo envía por ti.
 - **Qué lleva a entrevistas.** Con 10 postulaciones con respuesta, la vista *Funnel* muestra la tasa de entrevistas por rango de puntaje, línea y fuente.
@@ -66,11 +67,12 @@ claude
 
 ## Dónde ver los resultados
 - **El panel:** `job panel` abre un tablero en tu navegador (normalmente `http://127.0.0.1:8765`; solo tu computador puede verlo). Ahí ves cada oferta, por qué calza o por qué se descartó, y botones para marcar "postulé", "entrevista", etc.
+- **Empresas que no quieres:** `job block <nombre> add "Acme" --note "motivo"` descarta sus ofertas en el filtro (aparecen como descartadas con el motivo `company excluded`); `remove` y `list` la administran. Coincide el nombre completo, sin importar mayúsculas ni "Pty Ltd"/"Inc"/"The". No es una aprobación sellada: no hay que volver a firmar.
 - **La carpeta del día:** `~/job-packages/<nombre>/<fecha>/`, con `SUMMARY.md`, `index.html` y una subcarpeta por oferta con el CV y la carta en PDF.
 - Para parar todo: crea un archivo vacío llamado `STOP` en `candidates/<nombre>/`.
 
 ## Costos
-La ejecución diaria no cuesta nada (son scripts, sin IA). La configuración inicial, `/job-harness:job-tailor` (adapta el CV y la carta de las mejores ofertas) y `/job-harness:job-interview` (preparación de entrevistas) usan tu plan de Claude.
+La ejecución diaria no cuesta nada (son scripts, sin IA). La configuración inicial, `/job-harness:job-tailor` (adapta el CV y la carta de las mejores ofertas) `/job-harness:job-interview` (preparación de entrevistas) y `/job-harness:job-inbox` (lee las respuestas de empresas en tu Gmail, solo lectura, y propone cambiar el estado; tú apruebas) usan tu plan de Claude.
 
 Los documentos de postulación se escriben en inglés australiano (`docs_language`); el idioma de lo que lees (resumen diario) se elige con `ui_language` (`es` para español). Claude te responde en tu idioma.
 

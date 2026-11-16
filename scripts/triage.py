@@ -84,6 +84,10 @@ def min_years_required(text: str) -> int | None:
 
 def judge(job: dict[str, Any], targets: dict[str, Any]) -> tuple[str | None, str]:
     title = job.get("title", "")
+    if blocked := targets.get("exclude_companies"):         # set by blocklist.with_blocklist: whole-name match, see blocklist.py
+        from blocklist import matches
+        if name := matches(job.get("company", ""), blocked):
+            return None, f"company excluded ('{name}')"
     text = " ".join([title, job.get("teaser", ""), " ".join(job.get("bullets", [])), job.get("description", "")])
     ex_title, ex_text, loc = rx(targets.get("exclude_title", [])), rx(targets.get("exclude_text", [])), rx(targets.get("locations_include", []))
     # "Scientist to Associate Director": a seniority range is judged by its entry point, not its ceiling
@@ -140,7 +144,8 @@ def record_routes(slug: str, short: list[dict[str, Any]]) -> None:
 def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
     import sources
     readers = {n: (m.detail, getattr(m, "DETAIL_DELAY", (0.8, 1.8))) for n, m in sources.REGISTRY.items() if sources.has(n, "detail")}
-    targets = read_json(cand_dir(slug) / "targets.json")
+    from blocklist import with_blocklist
+    targets = with_blocklist(slug, read_json(cand_dir(slug) / "targets.json"))
     jobs = read_json(run_dir(slug, day) / "jobs.json")["new_jobs"]
     known = descriptions(slug, [j["key"] for j in jobs])        # fetched on an earlier day: no second request
     for j in jobs:

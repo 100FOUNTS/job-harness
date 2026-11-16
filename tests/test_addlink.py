@@ -270,6 +270,16 @@ class AddLinkTests(Base):
         self.assertIn("Added anyway", r["rules"])
         self.assertEqual(load("ana")[0]["status"], "prepared")
 
+    def test_an_excluded_company_is_added_with_the_reason(self):
+        import blocklist
+        from tracker import load
+        blocklist.add("ana", "Acme")
+        r = self.add("https://careers.acme.com.au/jobs/5")
+        self.assertTrue(r["ok"])
+        self.assertIn("company excluded ('Acme')", r["rules"])
+        self.assertIn("Added anyway", r["rules"])
+        self.assertEqual(load("ana")[0]["status"], "prepared")
+
     def test_pasted_text_makes_no_request(self):
         import addlink
         from tracker import load

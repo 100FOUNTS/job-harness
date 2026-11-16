@@ -356,7 +356,8 @@ def rank(slug: str, job: dict[str, Any], targets: dict[str, Any]) -> tuple[str, 
     import triage
     if not targets.get("tracks"):
         raise AdError("This candidate has no target tracks yet (targets.json).")
-    judged, why = triage.judge(job, targets)
+    from blocklist import with_blocklist
+    judged, why = triage.judge(job, with_blocklist(slug, targets))
     best = None
     for t in targets["tracks"]:
         fit, hits, odds = prepare.score(job | {"track": t["id"]}, targets, slug)
