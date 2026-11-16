@@ -41,29 +41,35 @@ def _has(term: str, text: str) -> bool:
     return bool(re.search(rf"(?<![\w]){re.escape(_norm(term))}", text))
 
 
-def coverage(slug: str, ad_text: str, cv_text: str, track_id: str | None = None) -> dict[str, Any]:
+def vocabulary(slug: str, track_id: str | None = None) -> list[tuple[str, str]]:
+    """(term, priority) the check looks for: track keywords (core, support), then the common technologies (priority "ad")."""
     from prepare import track_keywords
-    base = cand_dir(slug)
-    targets = read_json(base / "targets.json")
+    targets = read_json(cand_dir(slug) / "targets.json")
     tracks = [t for t in targets["tracks"] if track_id in (None, t["id"])] or targets["tracks"]
-    ad, cv = _norm(ad_text), _norm(cv_text)
-    profile = _norm(json.dumps(read_json(base / "intake.json"), ensure_ascii=False))
-    rows, seen = [], set()
+    out, seen = [], set()
     for t in tracks:
         kw = track_keywords(slug, t)
         for prio in ("core", "support"):
             for term in kw[prio]:
-                if term in seen or not _has(term, ad):
-                    continue
-                seen.add(term)
-                status = "covered" if _has(term, cv) else "have it" if _has(term, profile) else "gap"
-                rows.append({"term": term, "priority": prio, "status": status})
-    for term in TECH:
-        if term in seen or not _has(term, ad):
-            continue
-        seen.add(term)
-        rows.append({"term": term, "priority": "ad",
-                     "status": "covered" if _has(term, cv) else "have it" if _has(term, profile) else "gap"})
+                if term not in seen:
+                    seen.add(term); out.append((term, prio))
+    return out + [(t, "ad") for t in TECH if t not in seen]
+
+
+def profile_text(slug: str) -> str:
+    """intake.json (skills, coursework, experience), normalised: what the person has even when the CV does not say it."""
+    return _norm(json.dumps(read_json(cand_dir(slug) / "intake.json"), ensure_ascii=False))
+
+
+def status_of(term: str, cv: str, profile: str) -> str:
+    """cv and profile are already normalised (_norm)."""
+    return "covered" if _has(term, cv) else "have it" if _has(term, profile) else "gap"
+
+
+def coverage(slug: str, ad_text: str, cv_text: str, track_id: str | None = None) -> dict[str, Any]:
+    ad, cv, profile = _norm(ad_text), _norm(cv_text), profile_text(slug)
+    rows = [{"term": term, "priority": prio, "status": status_of(term, cv, profile)}
+            for term, prio in vocabulary(slug, track_id) if _has(term, ad)]
     core = [r for r in rows if r["priority"] == "core"]
     pct = round(100 * sum(r["status"] == "covered" for r in rows) / len(rows)) if rows else None
     return {"match_pct": pct, "terms": rows,
