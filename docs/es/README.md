@@ -66,6 +66,7 @@ claude
 
 ## Dónde ver los resultados
 - **El panel:** `job panel` abre un tablero en tu navegador (normalmente `http://127.0.0.1:8765`; solo tu computador puede verlo). Ahí ves cada oferta, por qué calza o por qué se descartó, y botones para marcar "postulé", "entrevista", etc.
+- **Empresas que no quieres:** `job block <nombre> add "Acme" --note "motivo"` descarta sus ofertas en el filtro (aparecen como descartadas con el motivo `company excluded`); `remove` y `list` la administran. Coincide el nombre completo, sin importar mayúsculas ni "Pty Ltd"/"Inc"/"The". No es una aprobación sellada: no hay que volver a firmar.
 - **La carpeta del día:** `~/job-packages/<nombre>/<fecha>/`, con `SUMMARY.md`, `index.html` y una subcarpeta por oferta con el CV y la carta en PDF.
 - Para parar todo: crea un archivo vacío llamado `STOP` en `candidates/<nombre>/`.
 

@@ -124,5 +124,89 @@ class TestBudget(unittest.TestCase):
         self.assertTrue("title does not match any target track (not read: daily reading budget)".startswith(TRANSIENT))
 
 
+class TestCompanyBlocklist(unittest.TestCase):
+    """Excluded employers: whole-name match after normalisation, dropped in triage and flagged on pasted links."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        os.environ["JOB_CANDIDATES_DIR"] = str(self.tmp)
+        (self.tmp / "ana" / "data" / "2026-01-01").mkdir(parents=True)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp)
+        os.environ.pop("JOB_CANDIDATES_DIR", None)
+
+    def test_normalisation_ignores_case_suffixes_and_punctuation(self):
+        from blocklist import matches
+        for ad in ("ACME Pty Ltd", "Acme Pty. Ltd.", "The Acme Limited", "acme", "Acme Inc."):
+            self.assertEqual(matches(ad, ["Acme"]), "Acme", ad)
+        self.assertEqual(matches("Smith and Sons", ["Smith & Sons Pty Ltd"]), "Smith & Sons Pty Ltd")
+        self.assertEqual(matches("Caf\u00e9 Rio", ["Cafe Rio"]), "Cafe Rio")
+
+    def test_whole_name_only_no_substring_false_positives(self):
+        from blocklist import matches
+        self.assertIsNone(matches("Rio Tinto", ["Rio"]))
+        self.assertIsNone(matches("Acme Australia", ["Acme"]))
+        self.assertIsNone(matches("Macmillan", ["Acme"]))
+        self.assertEqual(matches("Rio Tinto Limited", ["Rio Tinto"]), "Rio Tinto")
+        self.assertIsNone(matches("", ["Acme"]))
+        self.assertIsNone(matches("The Pty Ltd", ["Acme"]))
+
+    def test_add_remove_list_and_duplicates(self):
+        import blocklist
+        self.assertIn("Blocked", blocklist.add("ana", "Acme Pty Ltd", note="rejected twice"))
+        self.assertIn("already", blocklist.add("ana", "ACME"))
+        self.assertEqual(blocklist.names("ana"), ["Acme Pty Ltd"])
+        self.assertEqual(blocklist.load("ana")[0]["note"], "rejected twice")
+        self.assertIn("Unblocked", blocklist.remove("ana", "acme limited"))
+        self.assertEqual(blocklist.names("ana"), [])
+        with self.assertRaises(SystemExit):
+            blocklist.remove("ana", "Acme")
+        with self.assertRaises(SystemExit):
+            blocklist.add("ana", "  ")
+
+    def test_judge_rejects_with_reason_and_only_for_listed_companies(self):
+        from triage import judge
+        job = {"title": "Web Developer", "company": "ACME Pty Ltd", "location": "Perth WA"}
+        self.assertEqual(judge(job, T)[0], "sw")
+        self.assertEqual(judge(job, T | {"exclude_companies": ["Acme"]}), (None, "company excluded ('Acme')"))
+        self.assertEqual(judge(job, T | {"exclude_companies": ["Other"]})[0], "sw")
+
+    def test_triage_drops_the_ad_and_the_panel_reason_is_stored(self):
+        import blocklist
+        from jobdb import connect, record_seen
+        from triage import triage
+        blocklist.add("ana", "Acme")
+        t = json.loads(json.dumps(T))
+        (self.tmp / "ana" / "targets.json").write_text(json.dumps(t), encoding="utf-8")
+        mk = lambda i, co: {"key": f"seek:{i}", "id": str(i), "platform": "linkedin", "title": "Web Developer", "company": co,
+                            "location": "Perth WA", "listed": "2026-01-01", "teaser": "", "bullets": [], "description": "python"}
+        jobs = [mk(1, "Acme Pty Ltd"), mk(2, "Rio Tinto")]
+        (self.tmp / "ana" / "data" / "2026-01-01" / "jobs.json").write_text(json.dumps({"new_jobs": jobs}), encoding="utf-8")
+        record_seen("ana", [j | {"tracks": []} for j in jobs], "2026-01-01")
+        with unittest.mock.patch("applyroute.record_many"):
+            out = triage("ana", "2026-01-01", 40)
+        self.assertEqual([j["key"] for j in out["shortlist"]], ["seek:2"])
+        self.assertEqual(out["rejected"][0]["reason"], "company excluded ('Acme')")
+        with connect("ana", readonly=True) as con:
+            row = con.execute("SELECT verdict, reason FROM jobs WHERE key='seek:1'").fetchone()
+        self.assertEqual(tuple(row), ("rejected", "company excluded ('Acme')"))
+
+    def test_with_blocklist_keeps_targets_untouched_when_empty(self):
+        import blocklist
+        self.assertIs(blocklist.with_blocklist("ana", T), T)
+        blocklist.add("ana", "Acme")
+        self.assertEqual(blocklist.with_blocklist("ana", T)["exclude_companies"], ["Acme"])
+
+    def test_blocklist_does_not_touch_the_sealed_targets_file(self):
+        import blocklist
+        p = self.tmp / "ana" / "targets.json"
+        p.write_text(json.dumps(T), encoding="utf-8")
+        before = p.read_bytes()
+        blocklist.add("ana", "Acme")
+        self.assertEqual(p.read_bytes(), before)
+        self.assertTrue((self.tmp / "ana" / "blocklist.json").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

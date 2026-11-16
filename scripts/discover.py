@@ -94,7 +94,8 @@ def discover(slug: str, max_age_days: int, dry: bool = False) -> dict[str, Any]:
         pending = failed
         if not pending:
             break
-    skip = seen_keys(slug) | settled(slug, targets)
+    from blocklist import with_blocklist
+    skip = seen_keys(slug) | settled(slug, with_blocklist(slug, targets))      # same hash triage records under
     result = {"date": run_dir(slug).name, "new_jobs": [j for k, j in jobs.items() if k not in skip],
               "already_known": len([k for k in jobs if k in skip]), "errors": errors, "retried": retried}
     if not dry:
