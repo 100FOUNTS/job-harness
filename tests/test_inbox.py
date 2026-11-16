@@ -150,7 +150,8 @@ class TestCheck(InboxBase):
 
     def test_cli_check_exit_code(self):
         def run(items):
-            return subprocess.run([sys.executable, str(ROOT / "bin/job"), "inbox", "ana", "check", self.write(items)],
+            # the script itself: on Windows os.execv in bin/job returns 0 before the child's exit code is known
+            return subprocess.run([sys.executable, str(ROOT / "scripts" / "inbox.py"), "ana", "check", self.write(items)],
                                   capture_output=True, encoding="utf-8", env=self.env)
         good = run([{"key": "seek:1", "status": "interview", "evidence": ev()}])
         self.assertEqual(good.returncode, 0, good.stderr)
