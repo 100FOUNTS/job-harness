@@ -392,7 +392,7 @@ class TestNodeCalls(Base):
         cv.write_text("", encoding="utf-8"); letter.write_text("", encoding="utf-8")
         job = {"key": "seek:1", "status": "prepared", "platform": "seek", "cv": str(cv), "letter": str(letter), "title": "T"}
         with mock.patch.object(apply, "load_state", return_value={"mode": "dry-run"}), mock.patch.object(apply, "load", return_value=[job]), \
-                mock.patch.object(apply, "set_status"), mock.patch.object(apply, "quota", return_value={}), \
+                mock.patch.object(apply, "set_status"), mock.patch.object(apply, "quota", return_value={}), mock.patch.object(apply, "saved_cvs", return_value=None), \
                 mock.patch("subprocess.run", side_effect=run):
             apply.apply("ana", True)
         self.assertEqual(captured["env"]["JOB_NODE_MODULES"], str(self.data / "tools/apply/node_modules"))

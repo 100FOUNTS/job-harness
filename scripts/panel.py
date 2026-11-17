@@ -309,10 +309,25 @@ def maybes(slug: str, days: int = 7, n: int = 10) -> list[dict[str, Any]]:
     return out[:n]
 
 
+SPONSOR_POINTS = {"exact": 100, "likely": 70, "possible": 35}
+
+
+def company_priority(ads: int, avg: float | None, sponsor: str | None, has_sponsor_data: bool = True) -> int:
+    """How worth contacting an employer is, 0 to 100, from three things: the average score of its qualifying ads (half),
+    how many there are (a third, full marks from 5 ads so one busy employer or agency cannot bury a better one), and the
+    sponsor lists (a fifth). Without sponsor data the other two share the weight. The best score is shown, not ranked on.
+    templates/panel.html repeats this formula to rank again after the filters."""
+    qty = min(ads, 5) / 5 * 100
+    a = avg or 0
+    if not has_sponsor_data:
+        return round(a * 0.65 + qty * 0.35)
+    return round(a * 0.5 + qty * 0.3 + SPONSOR_POINTS.get(sponsor or "", 0) * 0.2)
+
+
 def companies(slug: str, days: int = 60) -> list[dict[str, Any]]:
     """Employers worth contacting, from the ads that QUALIFIED in the last `days` (passed the rules: tracked or
-    shortlisted; dropped ads do not count). Ranked by the person's order of value: most qualifying ads, then best
-    fit, then sponsor lists (exact > likely > possible). Agencies post under their own name; they are flagged."""
+    shortlisted; dropped ads do not count). Ranked by `company_priority`: average score, number of qualifying ads and
+    sponsor list match. Each carries its best score too. Agencies post under their own name; they are flagged."""
     from sponsors import lookup, normalize, core
     db = cand_dir(slug) / "jobs.db"
     if not db.exists():
@@ -351,8 +366,12 @@ def companies(slug: str, days: int = 60) -> list[dict[str, Any]]:
         out.append(g | {"titles": g["titles"][:4], "cities": sorted(g["cities"]),
                         "sponsor": sp["match"] if sp else None,
                         "sponsor_name": sp["names"][0] if sp else "", "sponsor_lists": sp["lists"] if sp else []})
-    rank = {"exact": 0, "likely": 1, "possible": 2}
-    return sorted(out, key=lambda g: (-g["ads"], -(g["best"] or 0), rank.get(g["sponsor"], 3)))[:150]
+    has_sp = any(g["sponsor"] for g in out)
+    for g in out:
+        fs = [j["fit"] for j in g["jobs"] if j["fit"] is not None]
+        g["avg"] = round(sum(fs) / len(fs)) if fs else None
+        g["priority"] = company_priority(g["ads"], g["avg"], g["sponsor"], has_sp)
+    return sorted(out, key=lambda g: (-g["priority"], -(g["best"] or 0), -g["ads"]))[:150]
 
 
 def sponsor_of(company: str) -> dict[str, str]:

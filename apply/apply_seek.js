@@ -1,5 +1,8 @@
 // SEEK Quick Apply with Playwright (no LLM, no extension). One job per run.
-// Usage: node apply_seek.js <slug> <jobId> <cv.pdf> <letter.pdf> <dry|submit> <profileDir> <key>
+// Usage: node apply_seek.js <slug> <jobId> <cv.pdf> <letter.pdf> <dry|submit> <profileDir> <key> [savedCv]
+// savedCv: file name of a resumé already saved on SEEK (one per area). Given → that one is selected and only the
+// letter is uploaded, so the profile default never changes. Not given → the job's CV is uploaded (SEEK then makes it
+// the default resumé).
 // Uses a dedicated Chrome profile where the candidate logged in once (`job apply <slug> login seek`).
 // Every question goes through scripts/answer.py: approved answers first, safe rules otherwise; improvised
 // answers are recorded in pending_questions.json. Prints one JSON line with the outcome.
@@ -7,7 +10,8 @@ const { chromium } = require("playwright");
 const { execFileSync } = require("child_process");
 const path = require("path");
 
-const [, , slug, jobId, cv, letter, mode, profileDir, key] = process.argv;
+const [, , slug, jobId, cv, letter, mode, profileDir, key, savedCv] = process.argv;
+const cvName = savedCv || path.basename(cv);
 const ROOT = path.resolve(__dirname, "..");
 const out = { key, outcome: "failed", note: "", answered: [], unanswered: [] };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -19,8 +23,46 @@ function answer(question, type, options) {
   return JSON.parse(r.trim().split("\n").pop());
 }
 
+// A stop that leaves the job for the person (manual-review) instead of guessing on their account.
+class SafeStop extends Error {}
+
+let shot = 0;
+async function snap(page, label) {
+  try {
+    const dir = path.join(path.dirname(cv), "seek_steps");
+    require("fs").mkdirSync(dir, { recursive: true });
+    await page.screenshot({ path: path.join(dir, `${String(++shot).padStart(2, "0")}_${label}.png`), fullPage: true });
+  } catch (e) { /* screenshots are evidence, never a reason to fail */ }
+}
+
+// The documents step has three file inputs: the profile photo (images), the resumé and the cover letter. Never pick
+// one by position: by id first, then by "accepts documents, not images" and the section it sits in.
+async function docInput(page, kind) {
+  let inp = page.locator(`#${kind}-fileFile`);
+  if (!(await inp.count())) {
+    // Fallback: the inputs that take documents (not images), resumé first; checkSelected() verifies the result
+    const docs = page.locator("input[type=file][accept*='pdf']:not([accept*='jpg']):not([accept*='png'])");
+    if ((await docs.count()) !== 2) throw new SafeStop(`Expected 2 document file inputs, found ${await docs.count()}`);
+    inp = docs.nth(kind === "resume" ? 0 : 1);
+  }
+  const accept = ((await inp.first().getAttribute("accept")) || "").toLowerCase();
+  if (!/pdf/.test(accept) || /jpe?g|png|image\//.test(accept))
+    throw new SafeStop(`The ${kind} file input does not look like a document field (accept="${accept}")`);
+  return inp.first();
+}
+
+// After uploading, the file must be the one selected for its section, and the two must be different radio groups.
+async function checkSelected(page) {
+  const sel = await page.$$eval("input[type=radio]:checked", (els) => els.map((e) => ({
+    name: e.name, label: ((e.labels && e.labels[0] ? e.labels[0].innerText : "") || "").trim() })));
+  const r = sel.find((s) => s.label === cvName), l = sel.find((s) => s.label === path.basename(letter));
+  if (!r || !l || r.name === l.name)
+    throw new SafeStop("Uploaded documents are not the selected resumé and cover letter: " + JSON.stringify(sel));
+}
+
 async function clickContinue(page) {
-  const btn = page.getByRole("button", { name: /^continue$/i }).first();
+  // SEEK's label carries an invisible word joiner (U+2060): "Continue⁠"
+  const btn = page.getByRole("button", { name: /^\s*continue[^a-z]*$/i }).first();
   await btn.waitFor({ timeout: 15000 });
   await human(); await btn.click();
   await page.waitForLoadState("domcontentloaded"); await sleep(2500);
@@ -69,12 +111,29 @@ async function answerQuestions(page) {
     if (/login|sign-in|oauth/i.test(page.url())) { out.outcome = "needs-login"; out.note = `Log in once: job apply ${slug} login seek`; return; }
     if (!/\/apply/.test(page.url())) { out.outcome = "manual-review"; out.note = "Not a SEEK Quick Apply job (external application): " + page.url(); return; }
 
-    // 1. Documents: first file input = resumé, second = cover letter. Keep the master CV as the profile default.
-    const files = page.locator("input[type=file]");
-    await files.nth(0).setInputFiles(cv); await sleep(4000);
-    const def = page.getByLabel(/make this my default resum/i);
-    if (await def.count() && (await def.first().isChecked())) await def.first().uncheck({ force: true });
-    await files.nth(1).setInputFiles(letter); await sleep(4000);
+    // 1. Documents: resumé and cover letter into their own inputs (never the profile photo). Keep the profile default.
+    await snap(page, "documents_before");
+    const sameName = () => page.$$eval("input[type=radio]", (els, n) => els.filter((e) => e.labels && e.labels[0] &&
+      e.labels[0].innerText.trim() === n).length, cvName);
+    if (savedCv) {
+      // The area's resumé is already on SEEK: select it, upload nothing, leave the default alone
+      if ((await sameName()) !== 1) throw new SafeStop(`Saved resumé '${savedCv}' must appear exactly once on SEEK (found ${await sameName()})`);
+      await page.getByLabel(savedCv, { exact: true }).check({ force: true }); await human();
+    } else {
+      const before = await sameName();
+      await (await docInput(page, "resume")).setInputFiles(cv); await sleep(4000);
+      // an older upload can share the file name: the new one must be there, or SEEK would send the old one
+      if ((await sameName()) <= before) throw new SafeStop("The resumé upload did not show up in SEEK's list");
+      out.note = "Uploaded resumé is now the SEEK default (SEEK locks that box on upload); ";
+    }
+    const sameLetter = () => page.$$eval("input[type=radio]", (els, n) => els.filter((e) => e.labels && e.labels[0] &&
+      e.labels[0].innerText.trim() === n).length, path.basename(letter));
+    const lettersBefore = await sameLetter();
+    await (await docInput(page, "coverLetter")).setInputFiles(letter); await sleep(4000);
+    // earlier letters share the file name: if the new one is not listed, SEEK would send another job's letter
+    if ((await sameLetter()) <= lettersBefore) throw new SafeStop("The cover letter upload did not show up in SEEK's list");
+    await checkSelected(page);
+    await snap(page, "documents_after");
     await clickContinue(page);
 
     // 2. Employer questions (if any) → 3. SEEK profile step → 4. Review
@@ -83,6 +142,7 @@ async function answerQuestions(page) {
       if (/review/.test(page.url())) break;
       await clickContinue(page);
     }
+    await snap(page, "last_step");
     if (!/review/.test(page.url())) { out.outcome = "manual-review"; out.note = "Did not reach the review step: " + page.url(); return; }
     if (mode !== "submit") { out.outcome = "dry-run"; out.note = "Filled up to review, not submitted"; return; }
     const submit = page.getByRole("button", { name: /submit application/i }).first();
@@ -92,7 +152,8 @@ async function answerQuestions(page) {
     out.outcome = ok ? "submitted" : "manual-review";
     out.note = ok ? "SEEK confirmation shown" : "Clicked submit but no confirmation found: check SEEK 'Applied jobs'";
   } catch (e) {
-    out.outcome = "failed"; out.note = String(e.message || e).slice(0, 300);
+    await snap(page, "stopped");
+    out.outcome = e instanceof SafeStop ? "manual-review" : "failed"; out.note = String(e.message || e).slice(0, 300);
   } finally {
     console.log(JSON.stringify(out));
     await ctx.close();

@@ -5,6 +5,10 @@
 
 Effective submission requires: state.mode in (easy, full) AND a valid go-live AND not --dry.
 Otherwise the form is filled up to the review step (dry-run). LinkedIn Easy Apply: not automated (account risk).
+
+Resumés: with candidates/<slug>/seek_cvs.json ({"<track>": "<file name already saved on SEEK>"}) the area's resumé is
+selected and only the tailored letter is uploaded, so the SEEK profile default never changes (an upload always becomes
+SEEK's default). A track missing from that file is left for the person. Without the file, the job's CV is uploaded.
 """
 from __future__ import annotations
 
@@ -16,7 +20,7 @@ import time
 from pathlib import Path
 
 import osutil
-from common import ROOT, apply_tools_dir, browser_dir, cand_dir, node_env, today
+from common import ROOT, apply_tools_dir, browser_dir, cand_dir, node_env, read_json, today
 from gates import valid_approval
 from state import load_state
 from tracker import load, quota, set_status
@@ -37,19 +41,31 @@ def login(slug: str, site: str) -> None:
     print(f"Chrome opened with the dedicated profile ({profile_dir(slug)}). The person logs in once; then close that window.")
 
 
+def saved_cvs(slug: str) -> dict[str, str] | None:
+    """{track: file name of the resumé already saved on SEEK for that area}, or None to upload the job's CV."""
+    return read_json(cand_dir(slug) / "seek_cvs.json", None)
+
+
 def apply(slug: str, force_dry: bool) -> list[dict]:
     st = load_state(slug)
     live = st["mode"] in ("easy", "full") and valid_approval(slug, "go-live")[0] and not force_dry
     results = []
     jobs = [a for a in load(slug) if a["status"] == "prepared" and a["platform"] == "seek"
             and Path(a.get("cv", "")).is_file() and Path(a.get("letter", "")).is_file()]
+    saved = saved_cvs(slug)
     for a in jobs:
         q = quota(slug, "seek")
         if live and (q["platform_left"] <= 0 or q["day_left"] <= 0 or q["week_left"] <= 0):
             break
         job_id = a["key"].split(":", 1)[1]
+        cv_choice = []
+        if saved is not None:
+            if not saved.get(a.get("track", "")):
+                set_status(slug, a["key"], "manual-review", reason=f"no saved SEEK resumé for track '{a.get('track')}' in seek_cvs.json")
+                continue
+            cv_choice = [saved[a["track"]]]
         r = subprocess.run(["node", str(APPLY / "apply_seek.js"), slug, job_id, a["cv"], a["letter"],
-                            "submit" if live else "dry", str(profile_dir(slug)), a["key"]],
+                            "submit" if live else "dry", str(profile_dir(slug)), a["key"], *cv_choice],
                            capture_output=True, encoding="utf-8", cwd=APPLY, timeout=600,
                            env=node_env(apply_tools_dir()))
         try:
