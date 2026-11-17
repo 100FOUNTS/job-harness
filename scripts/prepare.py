@@ -46,6 +46,40 @@ LEVEL_ADJ = [
     (r"\b(team leader|lead)\b", -25, "lead"),
     (r"\bspecialist\b", -5, "specialist"),
 ]
+
+
+def level_adj(targets: dict[str, Any]) -> list[tuple[str, int, str]]:
+    """LEVEL_ADJ with the person's ranking.level_adjust ({"senior": -5, "entry": 10}) applied: 0 drops the label,
+    unknown labels and non-integer values are ignored."""
+    own = (targets.get("ranking") or {}).get("level_adjust")
+    own = own if isinstance(own, dict) else {}
+    ok = lambda v: isinstance(v, int) and not isinstance(v, bool)
+    return [(pat, own[label] if label in own and ok(own[label]) else pts, label) for pat, pts, label in LEVEL_ADJ
+            if not (label in own and ok(own[label]) and own[label] == 0)]
+
+
+def track_adjust(targets: dict[str, Any], track_id: str) -> int:
+    """Points a track adds to the total. targets["priority"] (track ids, highest first) replaces every track's rank_adjust:
+    the i-th of n listed tracks gets int(round(step * ((n - 1) / 2 - i))), step = targets["priority_step"] (default 5);
+    Python rounds halves to even, so 4 tracks at step 5 give +8, +2, -2, -8. Tracks missing from the list get the lowest
+    value; ids that are not tracks are ignored. Without a usable priority list it is the track's own rank_adjust."""
+    tracks = {t.get("id"): t for t in targets.get("tracks", [])}
+    order: list[str] = []
+    pr = targets.get("priority")
+    for i in pr if isinstance(pr, list) else []:
+        if i in tracks and i not in order:
+            order.append(i)
+    try:
+        if not order:
+            return int(tracks.get(track_id, {}).get("rank_adjust") or 0)
+        step = targets.get("priority_step", 5)
+        step = step if isinstance(step, int) and not isinstance(step, bool) else 5
+    except (TypeError, ValueError):
+        return 0
+    n = len(order)
+    return int(round(step * ((n - 1) / 2 - (order.index(track_id) if track_id in order else n - 1))))
+
+
 WATCH = ("off_field", "no_credential", "no_licence", "senior_salary", "lead", "deprioritized")
 # What the person reads in the daily package. intake.ui_language picks the set (default en).
 LABELS = {
@@ -130,7 +164,7 @@ def score(job: dict[str, Any], targets: dict[str, Any], slug: str = "") -> tuple
     core, support = found(kw["core"]), found(kw["support"])
     fit = min(55, 7 * len(core) + 3 * len(support))
     prob, why = 0, []
-    adj = list(LEVEL_ADJ)
+    adj = level_adj(targets)
     if (r := words_rx(rk.get("off_field", []))):
         adj.append((r + r"\w*\b", -18, "off_field"))
     for pat, pts, label in adj:
@@ -159,7 +193,7 @@ def score(job: dict[str, Any], targets: dict[str, Any], slug: str = "") -> tuple
         pass
     adjust = 0                                             # priority knobs: move the total, not the odds label
     try:
-        if (n := int(track.get("rank_adjust") or 0)):
+        if (n := track_adjust(targets, job["track"])):
             adjust += n; why.append(f"track_adjust:{n}")
         dp = rk.get("deprioritize") or {}
         if (r := words_rx(dp.get("terms", []))) and re.search(r + r"\b", title, re.I):
@@ -317,6 +351,8 @@ def build_one(slug: str, targets: dict[str, Any], pkg: Path, i: int, fit: int, h
               j: dict[str, Any], first_last: str, tracked: dict[str, Any], note: str = "") -> dict[str, Any]:
     """The package of ONE job: numbered folder, filled cover letter, the track's CV, tracker entry (prepared). Returns the
     items.json entry. prepare() calls it for each ranked job; addlink.py for a link the person pasted."""
+    from jobdb import restore_routes
+    restore_routes(slug, [j])
     base = cand_dir(slug)
     track = {t["id"]: t for t in targets["tracks"]}[j["track"]]
     d = pkg / f"{i:02d}_{safe(j.get('company') or 'company')}_{safe(j['title'])}"

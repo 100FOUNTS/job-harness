@@ -6,6 +6,18 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-18
+
+### Added
+- `job targets check <slug> [--days 30] [--json]`: a read-only linter for `targets.json`, using the same matchers as triage. Errors: a title phrase that an exclusion rejects (it can never let an ad in), duplicate track ids, missing CV or letter files, unknown ids in `priority` or `seek_cvs.json`. Warnings: a phrase an earlier track always takes, a title accepted but always penalised (`off_field`, missing credentials, `deprioritize`), a track with no saved SEEK resumé in easy/full mode. Info: phrases no ad title matched in the period. Exit code 1 on errors.
+- `job nearmiss <slug> [--days 14] [--json]`: the ads the pre-filter rejected by a little: one or two years over `max_years_required`, titles that share part of a track phrase (grouped by the words not yet covered, with examples), the exclusion words doing the most work, and location-only rejects. The top lines go into Monday's daily report.
+- `targets.json` `"priority": [track ids, highest first]` (and `priority_step`, default 5) sets each track's ranking weight (+10, +5, 0, −5, −10 for five tracks), in place of a `rank_adjust` per track. The order of `tracks` still decides which track takes an ad.
+- `ranking.level_adjust` (`{"senior": -5, "lead": -15, "entry": 10}`) changes the seniority points for one person; 0 turns a level off.
+
+### Fixed
+- Title exclusions now match simple plurals: "manager" rejects "Project Managers" and "director" rejects "Directors" ("partner" still does not reject "Partnership", "head" not "Header"). `exclude_text` is unchanged.
+- `easy_apply` was only set by LinkedIn cards: an ad applied for on SEEK's own form (`apply_route` = quick) now carries it in `jobs.db`, in re-judged ads and in the package, and a later sighting without the flag no longer clears it.
+
 ## [0.5.0] - 2026-11-17
 
 ### Fixed

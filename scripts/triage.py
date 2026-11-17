@@ -34,6 +34,12 @@ def rx(words: list[str]) -> re.Pattern[str] | None:
     return re.compile(r"\b(" + "|".join(re.escape(w) for w in words) + r")\b", re.I) if words else None
 
 
+def xrx(words: list[str]) -> re.Pattern[str] | None:
+    """Whole title exclusions, including simple plurals of the final word."""
+    alts = [re.escape(w) + (r"(?:s|es)?" if re.search(r"[a-z]$", w, re.I) else "") for w in words]
+    return re.compile(r"\b(" + "|".join(alts) + r")\b", re.I) if alts else None
+
+
 SEP = r"[\s/&,|()\-–]+"
 GAP = SEP + r"(?:\w+" + SEP + r"){0,2}"          # up to 2 other words (or "and", "UI"...) between the words of a phrase
 
@@ -70,11 +76,11 @@ def assign_track(title: str, tracks: list[dict[str, Any]], text: str = "") -> st
     Then `description_include` {words, min, titles}: a generic title (e.g. "Fire Planning Officer") whose ad
     mentions the track's words at least `min` times."""
     for t in tracks:
-        r, ex = prx(t.get("title_include", [])), rx(t.get("exclude_title", []))
+        r, ex = prx(t.get("title_include", [])), xrx(t.get("exclude_title", []))
         if r and r.search(title) and not (ex and ex.search(title)):
             return t["id"]
     for t in tracks:
-        di, ex = t.get("description_include"), rx(t.get("exclude_title", []))
+        di, ex = t.get("description_include"), xrx(t.get("exclude_title", []))
         if not di or (ex and ex.search(title)) or not (prx(di.get("titles", [])) or re.compile("")).search(title):
             continue
         if len(rx(di["words"]).findall(text)) >= di.get("min", 3):
@@ -98,7 +104,7 @@ def judge(job: dict[str, Any], targets: dict[str, Any]) -> tuple[str | None, str
         if name := matches(job.get("company", ""), blocked):
             return None, f"company excluded ('{name}')"
     text = " ".join([title, job.get("teaser", ""), " ".join(job.get("bullets", [])), job.get("description", "")])
-    ex_title, ex_text, loc = rx(targets.get("exclude_title", [])), rx(targets.get("exclude_text", [])), rx(targets.get("locations_include", []))
+    ex_title, ex_text, loc = xrx(targets.get("exclude_title", [])), rx(targets.get("exclude_text", [])), rx(targets.get("locations_include", []))
     # "Scientist to Associate Director": a seniority range is judged by its entry point, not its ceiling
     lead = re.split(r"\s+to\s+", title, maxsplit=1, flags=re.I)[0]
     if ex_title and (m := ex_title.search(lead)):
@@ -138,7 +144,7 @@ def dedupe_key(title: str, company: str) -> str:
 def by_description_possible(title: str, targets: dict[str, Any]) -> bool:
     """A title that a track's `description_include` could still claim once the full ad is read."""
     for t in targets["tracks"]:
-        di, ex = t.get("description_include"), rx(t.get("exclude_title", []))
+        di, ex = t.get("description_include"), xrx(t.get("exclude_title", []))
         if di and not (ex and ex.search(title)) and (not di.get("titles") or prx(di["titles"]).search(title)):
             return True
     return False
@@ -148,6 +154,8 @@ def record_routes(slug: str, short: list[dict[str, Any]]) -> None:
     """How each shortlisted job is applied for (portal form or the employer's site): kept on the job and in jobs.db."""
     from applyroute import record_many
     record_many(slug, short)
+    from jobdb import restore_routes
+    restore_routes(slug, short)
 
 
 def triage(slug: str, day: str | None, max_n: int, rejudge_days: int = 14) -> dict[str, Any]:

@@ -78,6 +78,13 @@ def build(slug: str, day: str) -> str:
         lines += [f"**Outcomes so far:** {cal['interviews']} interviews from {cal['sent']} sent "
                   f"({cal['with_outcome']} with a known result) · `job track {slug} calibrate`", ""]
     lines += gaps_lines(slug, day)
+    try:
+        from datetime import date
+        from nearmiss import summary_lines
+        if date.fromisoformat(day).weekday() == 0 and (near := summary_lines(slug)):
+            lines += ["## Near misses (weekly)", ""] + near + [""]
+    except Exception:                              # optional weekly advice must never break the report
+        pass
     q = quota(slug)
     lines += [f"**Remaining today:** {q['day_left']} · **this week:** {q['week_left']}", ""]
     if jobs.get("errors"):
