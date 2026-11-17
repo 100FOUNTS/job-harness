@@ -55,13 +55,31 @@ def main_cv(slug: str) -> dict[str, Any]:
     return next((read_json(p) for p in paths if p.exists()), {"experience": []})
 
 
+FILLER = {"and", "the", "for", "experience", "years", "year", "working", "work", "role", "roles", "position", "similar",
+          "you", "your", "have", "had", "does", "did"}
+
+
+def role_words(keyword: str) -> list[str]:
+    return [w for w in re.findall(r"[a-z]{3,}", keyword.lower()) if w not in FILLER]
+
+
+def related_in_cvs(slug: str, keyword: str) -> bool:
+    """Some word of the asked role appears in the person's CVs (any track): the work touched it even if no entry is
+    titled that way ("environmental health officer" for an environmental engineer who did health and compliance work)."""
+    text = " ".join(json.dumps(read_json(p, {})) for p in sorted((cand_dir(slug) / "docs").glob("cv_*.json"))).lower()
+    return any(w[:6] in text for w in role_words(keyword))
+
+
 def experience_years(slug: str, keyword: str = "") -> float:
     """Years of experience from the main CV. With a keyword (e.g. 'field officer', 'gis'), only entries whose
     role/bullets mention it count; questions about the person's own profession (CV title) count every professional role."""
     cv = main_cv(slug)
     mon = {m: i for i, m in enumerate("jan feb mar apr may jun jul aug sep oct nov dec".split(), 1)}
     prof = [w[:7] for w in re.findall(r"[a-z]{4,}", cv.get("title", "").lower())] + ["industry", "professional", "relevant"]
-    generic = not keyword or (re.search("|".join(prof), keyword)
+    # Generic only when EVERY word of the asked role belongs to the person's profession: "environmental engineer" for an
+    # Environmental Engineer, yes; "environmental health officer" shares one word and is a different profession.
+    words = role_words(keyword)
+    generic = not keyword or (all(any(w.startswith(p) or p.startswith(w[:7]) for p in prof) for w in words)
                               and not re.search(r"consult|gis|field|lead|supervis|manag", keyword))
     months = 0
     for e in cv.get("experience", []):
@@ -136,13 +154,20 @@ def decide(slug: str, q: str, typ: str, options: list[str]) -> dict[str, Any]:
     if YEARS.search(q):                       # computed from the CV, never a generic number
         kw = re.search(r"(?:as an?|in|with|of) ([a-z][a-z /&-]{2,40}?)(?:\?|$| role| position| work)", q.lower())
         yrs = experience_years(slug, kw.group(1) if kw else "")
+        src = f"rule:years-from-cv ({yrs})"
+        if yrs < 1 and kw and experience_years(slug) >= 1:
+            if not related_in_cvs(slug, kw.group(1)):
+                # nothing in any CV touches it (a different profession): neither 0 nor a guess, the person answers
+                return {"answer": None, "source": "rule:years-unrelated (not in any CV)", "confidence": "low"}
+            # Owner's rule: the person did this kind of work inside their roles, so never 0 → at least 1 year
+            yrs, src = 1.0, f"rule:years-related-min-1 ({yrs} named in the CV)"
         cap = read_json(cand_dir(slug) / "intake.json", {}).get("preferences", {}).get("years_experience_claimed")
         if cap is not None:                   # never more than the CV and profiles claim (e.g. "5+")
             yrs = min(yrs, float(cap))
         ans = floor_option(options, yrs) if options else str(int(yrs))      # never round experience up
         if options and yrs < 1:
             ans = pick(options, "Less than 1", "None", "0") or ans
-        return {"answer": ans, "source": f"rule:years-from-cv ({yrs})", "confidence": "medium"}
+        return {"answer": ans, "source": src if "related" in src else f"rule:years-from-cv ({yrs})", "confidence": "medium"}
     a = from_answers(slug, q)
     if a:
         ans = to_option(a.get("answer"), options, a.get("option_prefer"))

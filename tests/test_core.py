@@ -220,6 +220,12 @@ class TestAnswerEngine(Base):
         self.assertEqual(decide("ana", "How many years of experience as an environmental engineer?", "select",
                                 ["Less than 1 year", "1 year", "2 years"])["answer"], "1 year")   # 1.3 → floor
         self.assertIsNone(decide("ana", "Will you require visa sponsorship?", "radio", ["Yes", "No"])["answer"])  # sensitive
+        # a related role (shares "environmental" with the CV) is never 0 and never the total: at least 1 year
+        eho = decide("ana", "How many years' experience do you have as an Environmental Health Officer?", "select",
+                     ["None", "Less than 1 year", "1 year", "2 years", "3 years"])
+        self.assertEqual((eho["answer"], eho["source"].split(" ")[0]), ("1 year", "rule:years-related-min-1"))
+        # nothing in any CV touches it: left for the person, never 0
+        self.assertIsNone(decide("ana", "How many years of experience as a registered nurse?", "text", [])["answer"])
 
     def test_years_cap_and_own_salary(self):
         from answer import decide
@@ -388,6 +394,20 @@ class TestPanelViews(Base):
         # Acme: 2 qualifying ads (one tracked, one shortlisted); Beta was dropped (not counted); Gamma: 1
         self.assertEqual([(g["company"].split()[0], g["ads"]) for g in co], [("Acme", 2), ("Gamma", 1)])
         self.assertEqual(co[0]["best"], 80)
+        self.assertEqual((co[0]["avg"], co[0]["priority"]), (80, panel.company_priority(2, 80, None, False)))
+
+    def test_company_priority_ranks_quality_then_quantity_then_sponsor(self):
+        import panel
+        cp = panel.company_priority
+        # a busy employer with weak ads does not bury a smaller one with strong ads (22 ads averaging 38 vs 6 averaging 92)
+        self.assertLess(cp(22, 38, "exact"), cp(6, 92, "likely"))
+        self.assertEqual(cp(22, 50, None), cp(5, 50, None))                      # quantity is capped at 5 ads
+        self.assertGreater(cp(2, 60, "exact"), cp(2, 60, "likely"))
+        self.assertGreater(cp(2, 60, "likely"), cp(2, 60, "possible"))
+        self.assertGreater(cp(2, 60, "possible"), cp(2, 60, None))
+        self.assertEqual(cp(5, 100, "exact"), 100)
+        self.assertEqual(cp(5, 100, None, False), 100)                           # no sponsor data: nothing is lost for that
+        self.assertEqual(cp(1, None, None), 6)                                   # an ad with no score counts as 0
 
 
 class TestPostingGuard(unittest.TestCase):
@@ -491,3 +511,73 @@ class TestPrivacy(unittest.TestCase):
             self.skipTest("not a git repository")
         leaked = [f for f in r.stdout.split() if not f.startswith("candidates/example/")]
         self.assertEqual(leaked, [], "personal candidate data is tracked by git")
+
+
+class TestSeekSavedResumes(unittest.TestCase):
+    """seek_cvs.json: the area's resumé already on SEEK is selected (no upload); a track without one is left for the person."""
+
+    def run_apply(self, saved, track):
+        import apply
+        calls, statuses = [], []
+        job = {"key": "seek:1", "status": "prepared", "platform": "seek", "cv": __file__, "letter": __file__,
+               "title": "T", "track": track}
+
+        def run(cmd, **kw):
+            calls.append(cmd)
+            return subprocess.CompletedProcess(cmd, 0, '{"outcome": "dry-run"}', "")
+        with unittest.mock.patch.object(apply, "load_state", return_value={"mode": "dry-run"}), \
+                unittest.mock.patch.object(apply, "load", return_value=[job]), \
+                unittest.mock.patch.object(apply, "set_status", side_effect=lambda *a, **k: statuses.append(a[2])), \
+                unittest.mock.patch.object(apply, "quota", return_value={}), \
+                unittest.mock.patch.object(apply, "saved_cvs", return_value=saved), \
+                unittest.mock.patch.object(apply, "apply_routes", return_value={}), \
+                unittest.mock.patch("subprocess.run", side_effect=run):
+            apply.apply("x", True)
+        return calls, statuses
+
+    def test_saved_resume_is_passed_to_the_script(self):
+        calls, _ = self.run_apply({"gis": "CV_GIS.pdf"}, "gis")
+        self.assertEqual(calls[0][-1], "CV_GIS.pdf")
+
+    def test_track_without_saved_resume_is_not_uploaded(self):
+        calls, statuses = self.run_apply({"gis": "CV_GIS.pdf"}, "water")
+        self.assertEqual(calls, [])
+        self.assertEqual(statuses, ["manual-review"])
+
+    def test_without_the_file_the_job_cv_is_uploaded(self):
+        calls, _ = self.run_apply(None, "gis")
+        self.assertEqual(calls[0][-1], "seek:1")
+
+
+class TestReleaseFiveOh(Base):
+    def test_new_request_supersedes_the_pending_one(self):
+        from gates import load_all, request
+        first = request("ana", "go-live", ["intake.json"], "first")
+        second = request("ana", "go-live", ["intake.json"], "second")
+        st = {g["id"]: g["status"] for g in load_all("ana")}
+        self.assertEqual((st[first], st[second]), ("rejected", "pending"))
+
+    def test_lost_seek_session_is_reported_with_its_streak(self):
+        from report import login_alert, login_streak
+        for day in ("2026-01-01", "2026-01-02", "2026-01-03"):
+            (self.d / "data" / day).mkdir(parents=True, exist_ok=True)
+            (self.d / "data" / day / "apply.json").write_text(json.dumps({"results": [{"outcome": "needs-login"}]}),
+                                                               encoding="utf-8")
+        self.assertEqual(login_streak("ana", "2026-01-03"), 3)
+        self.assertIn("3 days in a row", login_alert("ana", "2026-01-03"))
+        self.assertEqual(login_alert("ana", "2026-01-05"), "")              # no apply that day: nothing to say
+
+    def test_rejected_ads_are_judged_again_after_targets_change(self):
+        from jobdb import connect, record_seen, rejudge_candidates, targets_hash
+        from common import today
+        record_seen("ana", [{"key": "seek:1", "platform": "seek", "title": "HSEQ Advisor"},
+                            {"key": "seek:2", "platform": "seek", "title": "Env Officer"}], today())
+        with connect("ana") as con:
+            con.execute("UPDATE jobs SET verdict='rejected', reason='title does not match any target track', judged_with='old' WHERE key='seek:1'")
+            con.execute("UPDATE jobs SET verdict='rejected', reason='requirement excluded (citizen)', judged_with='old' WHERE key='seek:2'")
+        new = {"tracks": [{"id": "hse", "title_include": ["hse*"]}]}
+        got = rejudge_candidates("ana", new, 14)
+        self.assertEqual([(j["key"], j["id"]) for j in got], [("seek:1", "1")])   # hard requirements stay rejected
+        with connect("ana") as con:
+            con.execute("UPDATE jobs SET judged_with=? WHERE key='seek:1'", (targets_hash(new),))
+        self.assertEqual(rejudge_candidates("ana", new, 14), [])                  # once only

@@ -36,6 +36,14 @@ class TestPhrases(unittest.TestCase):
                      ("data integration", "Database Integration")):
             self.assertFalse(self.m(p, t), (p, t))
 
+    def test_stems(self):
+        from triage import prx
+        for p, t in (("cartograph", "Cartographer"), ("hydrolog", "Senior Hydrologist"), ("hse*", "HSEQ Advisor"),
+                     ("water engineer", "Water Engineering Lead")):
+            self.assertTrue(prx([p]).search(t), (p, t))
+        for p, t in (("hse", "HSEQ Advisor"), ("node", "Nodes Operator"), ("gis", "Gisborne Officer")):
+            self.assertFalse(prx([p]).search(t), (p, t))
+
     def test_single_word_as_before(self):
         from triage import prx
         self.assertTrue(prx(["gis"]).search("Environmental GIS Officer"))

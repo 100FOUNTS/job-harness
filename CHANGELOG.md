@@ -6,6 +6,23 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-17
+
+### Fixed
+- SEEK Quick Apply (`apply/apply_seek.js`): files were put into inputs by position, and SEEK now has a profile-photo input first, so the CV went to the photo and the letter became a resumé. Inputs are found by id (`#resume-fileFile`, `#coverLetter-fileFile`), never one that accepts images; anything unexpected stops the job as `manual-review` without guessing. The "Continue" button carries an invisible U+2060 and is now found. Each upload must show up in SEEK's list (older files share the name), and a screenshot of each step goes to `seek_steps/` in the job folder.
+- Years-of-experience answers: a role that only shares one word with the person's profession ("Environmental Health Officer" for an Environmental Engineer) no longer claims the whole career. If the asked work appears in any of the person's CVs, the answer is at least 1 year (never 0, never sent to review); only work found in no CV is left for the person.
+
+### Added
+- Triage judges again the ads seen in the last 14 days that were rejected under older targets (`job triage <slug> --rejudge DAYS`, 0 = off): widening a track now reaches ads already in `jobs.db`, once. Hard requirements, twins and blocked employers stay rejected.
+- Title phrases: the last word matches as a stem when it has 6+ letters ("cartograph" ~ Cartographer, "hydrolog" ~ Hydrologist) or ends in `*` ("hse*" ~ HSEQ, SHEQ...). Short words stay whole ("node" does not match "Nodes").
+- Daily report and notification: when the scripted apply stops because the SEEK session is gone, it is the first line, with how many days in a row (`job apply <slug> login seek` fixes it). Results are kept in `data/<date>/apply.json`.
+- `job apply` only tries ads applied for on SEEK's own form; ads whose route is the employer's site stay for the person instead of ending as `manual-review`.
+- `job gate request` marks the previous pending request of the same type as superseded, so only one is left to sign.
+- `candidates/<slug>/seek_cvs.json` (`{"<track>": "<file saved on SEEK>"}`): one resumé per area is saved once on SEEK; `job apply` selects the track's file and uploads only the tailored letter, so SEEK's default resumé never changes (an upload always becomes the default). A track missing from the file is left for the person.
+
+### Changed
+- Panel, Companies: the order is now a **Priority** (0 to 100) that mixes the average score of the company's qualifying ads (half), how many there are (a third, full marks from 5 ads) and the sponsor lists (a fifth; without sponsor data the first two share the weight). Before, the number of ads came first, so an employer with 22 weak ads beat one with 6 strong ones. The table shows Priority, Best, Average and Ads; hover the Priority for the breakdown. Sorts: By priority, Best score, Most ads, Sponsors only.
+
 ## [0.4.0] - 2026-11-16
 
 ### Added

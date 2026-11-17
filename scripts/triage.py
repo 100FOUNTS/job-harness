@@ -8,6 +8,8 @@ Rules (all from targets.json):
 - title must not match `exclude_title` (seniority the candidate is not targeting)
 - text must not match `exclude_text` (citizenship/PR/clearance requirements)
 - location must match `locations_include`
+After a change to targets.json, ads seen in the last 14 days (`--rejudge DAYS`, 0 = off) that were rejected under the
+older targets are judged again with today's new ads, so widening a track also reaches ads already in jobs.db.
 Shortlisted jobs get their full description (the source's detail(): LinkedIn guest page, SEEK GraphQL...; one request
 each, spaced) and are re-judged. Company feeds (greenhouse, lever, ashby) already carry it: no request.
 Generic titles that a track's `description_include` could still claim are read too, best keyword overlap first, at most
@@ -25,7 +27,7 @@ import time
 from typing import Any
 
 from common import cand_dir, keep_previous, read_json, run_dir, save_json
-from jobdb import descriptions, record_triage
+from jobdb import descriptions, record_triage, rejudge_candidates
 
 
 def rx(words: list[str]) -> re.Pattern[str] | None:
@@ -38,8 +40,15 @@ GAP = SEP + r"(?:\w+" + SEP + r"){0,2}"          # up to 2 other words (or "and"
 
 def prx(phrases: list[str]) -> re.Pattern[str] | None:
     """Phrase matcher for titles: all words of a phrase, in order, with up to 2 other words or separators between them
-    ("web developer" ~ "Web/UI Developer", "data integration" ~ "Data and Integration Specialist"). \\b at both ends."""
-    alts = ["(?:" + GAP.join(re.escape(w) for w in re.split(r"[\s/\-–]+", p.strip()) if w) + ")" for p in phrases if p.strip()]
+    ("web developer" ~ "Web/UI Developer", "data integration" ~ "Data and Integration Specialist"). Whole words, except
+    the last word of a phrase when it is a long stem (6+ letters: "cartograph" ~ "Cartographer", "hydrolog" ~
+    "Hydrologist") or ends in "*" ("hse*" ~ "HSEQ Advisor"); "node" still does not match "Nodes"."""
+    def alt(p: str) -> str:
+        star = p.strip().endswith("*")
+        ws = [w for w in re.split(r"[\s/\-–]+", p.strip().rstrip("*")) if w]
+        last = re.escape(ws[-1]) + (r"\w*" if star or len(ws[-1]) >= 6 else "")
+        return "(?:" + GAP.join([re.escape(w) for w in ws[:-1]] + [last]) + ")"
+    alts = [alt(p) for p in phrases if p.strip()]
     return re.compile(r"\b(" + "|".join(alts) + r")\b", re.I) if alts else None
 
 
@@ -141,12 +150,15 @@ def record_routes(slug: str, short: list[dict[str, Any]]) -> None:
     record_many(slug, short)
 
 
-def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
+def triage(slug: str, day: str | None, max_n: int, rejudge_days: int = 14) -> dict[str, Any]:
     import sources
     readers = {n: (m.detail, getattr(m, "DETAIL_DELAY", (0.8, 1.8))) for n, m in sources.REGISTRY.items() if sources.has(n, "detail")}
     from blocklist import with_blocklist
     targets = with_blocklist(slug, read_json(cand_dir(slug) / "targets.json"))
-    jobs = read_json(run_dir(slug, day) / "jobs.json")["new_jobs"]
+    jobs = read_json(run_dir(slug, day) / "jobs.json", {"new_jobs": []})["new_jobs"]
+    if rejudge_days:                                            # targets changed: recent ads rejected under the old ones
+        have = {j["key"] for j in jobs}
+        jobs += [j for j in rejudge_candidates(slug, targets, rejudge_days) if j["key"] not in have]
     known = descriptions(slug, [j["key"] for j in jobs])        # fetched on an earlier day: no second request
     for j in jobs:
         j["description"] = j.get("description") or known.get(j["key"], "")
@@ -221,8 +233,10 @@ def triage(slug: str, day: str | None, max_n: int) -> dict[str, Any]:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("slug"); ap.add_argument("--date"); ap.add_argument("--max", type=int, default=40)
+    ap.add_argument("--rejudge", type=int, default=14, metavar="DAYS",
+                    help="also judge ads seen in the last DAYS days that were rejected under older targets (0: off)")
     a = ap.parse_args()
-    r = triage(a.slug, a.date, a.max)
+    r = triage(a.slug, a.date, a.max, a.rejudge)
     reasons: dict[str, int] = {}
     for x in r["rejected"]:
         k = x["reason"].split(" (")[0].split(" '")[0]

@@ -79,6 +79,8 @@ def request(slug: str, typ: str, files: list[str], description: str) -> str:
             raise SystemExit(f"File not found (relative to candidate folder): {f}")
     n = len([g for g in load_all(slug) if g["type"] == typ]) + 1
     gid = f"{typ}-{n:02d}"
+    for old in [g for g in load_all(slug) if g["type"] == typ and g["status"] == "pending"]:
+        old.update(status="rejected", rejected={"note": f"superseded by {gid}", "date": now_iso()}); write(old)
     save_json(adir(slug) / f"{now_iso()[:10]}-{gid}.json",
               {"id": gid, "type": typ, "status": "pending", "requested": now_iso(), "description": description,
                "files": {f: sha(base / f) for f in files}, "harness_version": HARNESS_VERSION, "signed_by": None})

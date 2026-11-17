@@ -528,37 +528,51 @@ const SPONSOR_TIP = {exact: "This company is on the visa sponsor lists (same nam
   possible: "This company might be on the visa sponsor lists: a listed name starts the same, so it may be a look-alike. Only you see this."};
 const hasSponsor = a => !!SPONSOR_TIP[a.sponsor_match];
 const sponsorBadge = a => hasSponsor(a) ? `<button class="sp ${a.sponsor_match}" draggable="false" data-sp="${esc(SPONSOR_TIP[a.sponsor_match] + (a.sponsor_name ? " Listed as: " + a.sponsor_name + "." : ""))}" title="${esc(SPONSOR_TIP[a.sponsor_match])}" aria-label="${esc(SPONSOR_TIP[a.sponsor_match])}">${a.sponsor_match === "possible" ? icon.passportq : icon.passport}</button>` : "";
+/* How worth contacting an employer is (0 to 100): average score of its ads (half), number of ads (a third; full marks from 5, so a busy
+   employer or agency cannot bury a better one), sponsor lists (a fifth). Without sponsor data the other two share the weight.
+   The best score is shown, not ranked on. Same formula as company_priority() in scripts/panel.py. */
+const SPONSOR_PTS = {exact: 100, likely: 70, possible: 35};
+const priorityOf = (ads, avg, sponsor, withSp) => { const qty = Math.min(ads, 5) / 5 * 100, a = avg ?? 0;
+  return Math.round(withSp ? a * 0.5 + qty * 0.3 + (SPONSOR_PTS[sponsor] || 0) * 0.2 : a * 0.65 + qty * 0.35); };
 function companiesView() {
-  const q = S.q.toLowerCase(), sort = ["value", "fit", "sponsor"].includes(S.csort) ? S.csort : "value";
-  const rank = {exact: 0, likely: 1, possible: 2};
+  const q = S.q.toLowerCase(), sort = ["priority", "best", "ads", "sponsor"].includes(S.csort) ? S.csort : "priority";
+  const rank = {exact: 0, likely: 1, possible: 2}, withSp = D.companies.some(g => g.sponsor);
   /* the same filters as the board, applied to each company's qualifying ads, then counted again */
   let rows = D.companies.map(g => {
     const js = g.jobs.filter(j => (!S.city || j.city === S.city) && (!S.plat || j.platform === S.plat)
       && (!S.track || j.track === S.track) && (j.fit ?? 0) >= S.min);
     if (!js.length) return null;
     const best = js.reduce((b, j) => j.fit != null && (b == null || j.fit > b.fit) ? j : b, null);
-    return {...g, ads: js.length, best: best?.fit ?? null, best_url: best?.url || "", titles: [...new Set(js.map(j => j.title))].slice(0, 4),
-      cities: [...new Set(js.map(j => j.city).filter(Boolean))], last: js.reduce((m, j) => j.seen > m ? j.seen : m, "")};
+    const fs = js.map(j => j.fit).filter(f => f != null), avg = fs.length ? Math.round(fs.reduce((x, y) => x + y, 0) / fs.length) : null;
+    return {...g, ads: js.length, best: best?.fit ?? null, avg, priority: priorityOf(js.length, avg, g.sponsor, withSp), best_url: best?.url || "",
+      titles: [...new Set(js.map(j => j.title))].slice(0, 4), cities: [...new Set(js.map(j => j.city).filter(Boolean))],
+      last: js.reduce((m, j) => j.seen > m ? j.seen : m, "")};
   }).filter(g => g && (!q || (g.company + " " + g.titles.join(" ")).toLowerCase().includes(q)) && (!S.noagency || !g.agency));
-  if (sort === "value") rows.sort((a, b) => b.ads - a.ads || (b.best ?? 0) - (a.best ?? 0) || (rank[a.sponsor] ?? 3) - (rank[b.sponsor] ?? 3));
-  else if (sort === "fit") rows = rows.filter(g => g.best != null).sort((a, b) => b.best - a.best || b.ads - a.ads);
-  else rows = rows.filter(g => g.sponsor).sort((a, b) => rank[a.sponsor] - rank[b.sponsor] || b.ads - a.ads || (b.best ?? 0) - (a.best ?? 0));
+  const tie = (a, b) => (b.best ?? 0) - (a.best ?? 0) || b.ads - a.ads;
+  if (sort === "priority") rows.sort((a, b) => b.priority - a.priority || tie(a, b));
+  else if (sort === "best") rows = rows.filter(g => g.best != null).sort((a, b) => b.best - a.best || b.ads - a.ads);
+  else if (sort === "ads") rows.sort((a, b) => b.ads - a.ads || b.priority - a.priority);
+  else rows = rows.filter(g => g.sponsor).sort((a, b) => rank[a.sponsor] - rank[b.sponsor] || b.priority - a.priority);
   const seg = (v, l) => `<button class="chip" data-csort="${v}" aria-pressed="${sort === v}">${l}</button>`;
   const li = c => "https://www.linkedin.com/search/results/people/?keywords=" + encodeURIComponent(c + " talent acquisition");
+  const pill = (v, tip) => v != null ? `<span class="score num ${scoreCls(v)}" title="${esc(tip)}" style="width:34px;height:30px;display:inline-grid">${v}</span>` : "—";
+  const why = g => `Priority ${g.priority}: average score ${g.avg ?? 0} (50%), ${g.ads} ad${g.ads === 1 ? "" : "s"} (30%, full marks from 5)` + (withSp ? `, sponsor lists ${g.sponsor || "not listed"} (20%).` : ".");
   $("#main").innerHTML = `<div class="page"><section class="panel"><h2>Companies to contact</h2>
-    <p style="margin:0;color:var(--muted);font-size:13px">Only ads that passed your rules in the last 60 days count, and the filters above (city, source, track, minimum score) apply here too. Order: most qualifying ads, then best score, then whether the employer is on a sponsor list.</p>
-    <div class="actions">${seg("value", "By value")}${seg("fit", "Score only")}${seg("sponsor", "Sponsors only")}
+    <p style="margin:0;color:var(--muted);font-size:13px">Only ads that passed your rules in the last 60 days count, and the filters above (city, source, track, minimum score) apply here too. <b>Priority</b> (0 to 100) mixes the average score of the company's ads, how many there are${withSp ? " and whether it is on a sponsor list" : ""}. The best score is shown but does not decide the order.</p>
+    <div class="actions">${seg("priority", "By priority")}${seg("best", "Best score")}${seg("ads", "Most ads")}${seg("sponsor", "Sponsors only")}
       <label class="field" style="margin-left:auto"><input type="checkbox" id="noagency" ${S.noagency ? "checked" : ""}> Hide recruitment agencies</label></div>
-    <div class="scroll"><table><thead><tr><th>Company</th><th class="r">Qualifying ads</th><th class="r">Best score</th><th>Sponsor lists (for you only)</th><th>Roles</th><th></th></tr></thead><tbody>
+    <div class="scroll"><table><thead><tr><th>Company</th><th class="r">Priority</th><th class="r">Best</th><th class="r">Average</th><th class="r">Ads</th>${withSp ? "<th>Sponsor lists (for you only)</th>" : ""}<th>Roles</th><th></th></tr></thead><tbody>
     ${rows.slice(0, 60).map(g => `<tr><td><b>${esc(g.company)}</b>${g.agency ? ` <span class="tag">Agency</span>` : ""}<br><small style="color:var(--muted)">${esc(g.cities.join(", ") || "—")} · seen ${fmt(g.last)}</small></td>
-      <td class="r num"><b>${g.ads}</b></td>
-      <td class="r">${g.best != null ? `<span class="score num ${scoreCls(g.best)}" style="width:34px;height:30px;display:inline-grid">${g.best}</span>` : "—"}</td>
-      <td>${g.sponsor ? `<b>${SPONSOR[g.sponsor]}</b><br><small style="color:var(--muted)">${esc(g.sponsor_name)}</small>` : `<span style="color:var(--muted)">Not listed</span>`}</td>
+      <td class="r"><b class="num" title="${esc(why(g))}" style="display:inline-grid;height:30px;align-items:center">${g.priority}</b></td>
+      <td class="r">${pill(g.best, "Best score among its ads")}</td>
+      <td class="r">${pill(g.avg, "Average score of its ads")}</td>
+      <td class="r num"><span style="display:inline-grid;height:30px;align-items:center">${g.ads}</span></td>
+      ${withSp ? `<td>${g.sponsor ? `<b>${SPONSOR[g.sponsor]}</b><br><small style="color:var(--muted)">${esc(g.sponsor_name)}</small>` : `<span style="color:var(--muted)">Not listed</span>`}</td>` : ""}
       <td style="max-width:300px">${esc(g.titles.join(" · "))}</td>
       <td><div class="actions" style="flex-wrap:nowrap"><a class="btn" href="${li(g.company)}" target="_blank" rel="noopener">Find a contact ${icon.ext}</a>${g.best_url ? `<a class="btn" href="${esc(g.best_url)}" target="_blank" rel="noopener">Best ad</a>` : ""}</div></td></tr>`).join("")
-      || `<tr><td colspan="6" style="color:var(--muted)">No company has qualifying ads with these filters.</td></tr>`}
+      || `<tr><td colspan="${withSp ? 8 : 7}" style="color:var(--muted)">No company has qualifying ads with these filters.</td></tr>`}
     </tbody></table></div>
-    <p style="margin:0;font-size:12px;color:var(--muted)">"Sponsor lists" matches the name against the Home Affairs lists (2023 and 2025). Not being listed does not mean the employer does not sponsor. Never goes in a CV or letter.</p></section></div>`;
+    ${withSp ? `<p style="margin:0;font-size:12px;color:var(--muted)">"Sponsor lists" matches the name against the Home Affairs lists (2023 and 2025). Not being listed does not mean the employer does not sponsor. Never goes in a CV or letter.</p>` : ""}</section></div>`;
   $("#keys").innerHTML = "";
 }
 
