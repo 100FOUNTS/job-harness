@@ -86,6 +86,26 @@ def settled(slug: str, targets: dict[str, Any]) -> set[str]:
         return {r["key"] for r in rows if not r["reason"].startswith(TRANSIENT)}
 
 
+def rejudge_candidates(slug: str, targets: dict[str, Any], days: int) -> list[dict[str, Any]]:
+    """Ads last seen in the last `days` days, rejected under other targets (any reason but a hard requirement, a twin or
+    a blocked employer), rebuilt as triage input. Judged again, they are recorded under today's targets: once only."""
+    from datetime import date, timedelta
+    since = (date.today() - timedelta(days=days)).isoformat()
+    keep = ("requirement excluded", "twin ad", "company excluded")
+    with connect(slug) as con:
+        rows = con.execute("SELECT * FROM jobs WHERE verdict='rejected' AND judged_with IS NOT ? AND last_seen >= ?",
+                           (targets_hash(targets), since)).fetchall()
+    out = []
+    for r in rows:
+        if (r["reason"] or "").startswith(keep):
+            continue
+        j = {f: r[f] or "" for f in FIELDS} | {"key": r["key"], "id": r["key"].split(":", 1)[1],
+                                               "description": r["description"] or ""}
+        j["tracks"], j["bullets"] = json.loads(r["tracks"] or "[]"), json.loads(r["bullets"] or "[]")
+        out.append(j)
+    return out
+
+
 def descriptions(slug: str, keys: Iterable[str]) -> dict[str, str]:
     keys = list(keys)
     with connect(slug) as con:

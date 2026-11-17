@@ -21,6 +21,28 @@ LABEL = {"submitted": "✅ Submitted", "dry-run": "🧪 Filled, not sent (dry-ru
          "offer": "🎉 Offer", "hired": "🏁 Hired", "rejected": "✖️ Rejected", "no-response": "🔇 No response", "withdrawn": "↩️ Withdrawn"}
 
 
+def login_streak(slug: str, day: str) -> int:
+    """Days in a row, up to `day`, on which the scripted apply stopped because the SEEK session was gone."""
+    from datetime import date, timedelta
+    d, n = date.fromisoformat(day), 0
+    while n < 60:
+        p = cand_dir(slug) / "data" / d.isoformat() / "apply.json"
+        res = read_json(p, {"results": []})["results"] if p.exists() else None
+        if not res or not any(r.get("outcome") == "needs-login" for r in res):
+            return n
+        n, d = n + 1, d - timedelta(days=1)
+    return n
+
+
+def login_alert(slug: str, day: str) -> str:
+    n = login_streak(slug, day)
+    if not n:
+        return ""
+    when = "today" if n == 1 else f"{n} days in a row"
+    return (f"🚨 SEEK session lost ({when}): nothing was sent. Run `job apply {slug} login seek`, log in to SEEK, "
+            "then close that window.")
+
+
 def build(slug: str, day: str) -> str:
     st = load_state(slug)
     apps = [a for a in load(slug) if a["date"] == day or a.get("submitted") == day
@@ -30,6 +52,8 @@ def build(slug: str, day: str) -> str:
     lines = [f"# Daily report: {slug}, {day}", "",
              f"**Mode:** {st['mode']}  ·  **New jobs found:** {len(jobs['new_jobs'])}  ·  **Shortlisted:** {len(sl['shortlist'])}"
              f"  ·  **Pre-filter rejected:** {len(sl['rejected'])}", ""]
+    if (alert := login_alert(slug, day)):
+        lines[2:2] = [f"## {alert}", ""]
     order = ["offer", "interview", "submitted", "applied", "dry-run", "manual-review", "prepared", "closed", "rejected",
              "failed", "skipped", "shortlisted"]
     for s in order:
@@ -74,7 +98,7 @@ def main() -> None:
         apps = [x for x in load(a.slug) if x["date"] == day]
         msg = f"{sum(x['status'] == 'submitted' for x in apps)} sent · {sum(x['status'] == 'dry-run' for x in apps)} dry-run · " \
               f"{sum(x['status'] == 'manual-review' for x in apps)} need you"
-        osutil.notify(f"Job harness: {a.slug}", msg)
+        osutil.notify(f"Job harness: {a.slug}", login_alert(a.slug, day) or msg)
 
 
 if __name__ == "__main__":

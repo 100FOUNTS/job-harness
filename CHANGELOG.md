@@ -13,6 +13,11 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 - Years-of-experience answers: a role that only shares one word with the person's profession ("Environmental Health Officer" for an Environmental Engineer) no longer claims the whole career. If the asked work appears in any of the person's CVs, the answer is at least 1 year (never 0, never sent to review); only work found in no CV is left for the person.
 
 ### Added
+- Triage judges again the ads seen in the last 14 days that were rejected under older targets (`job triage <slug> --rejudge DAYS`, 0 = off): widening a track now reaches ads already in `jobs.db`, once. Hard requirements, twins and blocked employers stay rejected.
+- Title phrases: the last word matches as a stem when it has 6+ letters ("cartograph" ~ Cartographer, "hydrolog" ~ Hydrologist) or ends in `*` ("hse*" ~ HSEQ, SHEQ...). Short words stay whole ("node" does not match "Nodes").
+- Daily report and notification: when the scripted apply stops because the SEEK session is gone, it is the first line, with how many days in a row (`job apply <slug> login seek` fixes it). Results are kept in `data/<date>/apply.json`.
+- `job apply` only tries ads applied for on SEEK's own form; ads whose route is the employer's site stay for the person instead of ending as `manual-review`.
+- `job gate request` marks the previous pending request of the same type as superseded, so only one is left to sign.
 - `candidates/<slug>/seek_cvs.json` (`{"<track>": "<file saved on SEEK>"}`): one resumé per area is saved once on SEEK; `job apply` selects the track's file and uploads only the tailored letter, so SEEK's default resumé never changes (an upload always becomes the default). A track missing from the file is left for the person.
 
 ### Changed

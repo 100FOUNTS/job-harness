@@ -530,6 +530,7 @@ class TestSeekSavedResumes(unittest.TestCase):
                 unittest.mock.patch.object(apply, "set_status", side_effect=lambda *a, **k: statuses.append(a[2])), \
                 unittest.mock.patch.object(apply, "quota", return_value={}), \
                 unittest.mock.patch.object(apply, "saved_cvs", return_value=saved), \
+                unittest.mock.patch.object(apply, "apply_routes", return_value={}), \
                 unittest.mock.patch("subprocess.run", side_effect=run):
             apply.apply("x", True)
         return calls, statuses
@@ -546,3 +547,37 @@ class TestSeekSavedResumes(unittest.TestCase):
     def test_without_the_file_the_job_cv_is_uploaded(self):
         calls, _ = self.run_apply(None, "gis")
         self.assertEqual(calls[0][-1], "seek:1")
+
+
+class TestReleaseFiveOh(Base):
+    def test_new_request_supersedes_the_pending_one(self):
+        from gates import load_all, request
+        first = request("ana", "go-live", ["intake.json"], "first")
+        second = request("ana", "go-live", ["intake.json"], "second")
+        st = {g["id"]: g["status"] for g in load_all("ana")}
+        self.assertEqual((st[first], st[second]), ("rejected", "pending"))
+
+    def test_lost_seek_session_is_reported_with_its_streak(self):
+        from report import login_alert, login_streak
+        for day in ("2026-01-01", "2026-01-02", "2026-01-03"):
+            (self.d / "data" / day).mkdir(parents=True, exist_ok=True)
+            (self.d / "data" / day / "apply.json").write_text(json.dumps({"results": [{"outcome": "needs-login"}]}),
+                                                               encoding="utf-8")
+        self.assertEqual(login_streak("ana", "2026-01-03"), 3)
+        self.assertIn("3 days in a row", login_alert("ana", "2026-01-03"))
+        self.assertEqual(login_alert("ana", "2026-01-05"), "")              # no apply that day: nothing to say
+
+    def test_rejected_ads_are_judged_again_after_targets_change(self):
+        from jobdb import connect, record_seen, rejudge_candidates, targets_hash
+        from common import today
+        record_seen("ana", [{"key": "seek:1", "platform": "seek", "title": "HSEQ Advisor"},
+                            {"key": "seek:2", "platform": "seek", "title": "Env Officer"}], today())
+        with connect("ana") as con:
+            con.execute("UPDATE jobs SET verdict='rejected', reason='title does not match any target track', judged_with='old' WHERE key='seek:1'")
+            con.execute("UPDATE jobs SET verdict='rejected', reason='requirement excluded (citizen)', judged_with='old' WHERE key='seek:2'")
+        new = {"tracks": [{"id": "hse", "title_include": ["hse*"]}]}
+        got = rejudge_candidates("ana", new, 14)
+        self.assertEqual([(j["key"], j["id"]) for j in got], [("seek:1", "1")])   # hard requirements stay rejected
+        with connect("ana") as con:
+            con.execute("UPDATE jobs SET judged_with=? WHERE key='seek:1'", (targets_hash(new),))
+        self.assertEqual(rejudge_candidates("ana", new, 14), [])                  # once only

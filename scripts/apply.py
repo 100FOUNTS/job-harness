@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 import osutil
-from common import ROOT, apply_tools_dir, browser_dir, cand_dir, node_env, read_json, today
+from common import ROOT, apply_tools_dir, browser_dir, cand_dir, node_env, read_json, run_dir, save_json, today
 from gates import valid_approval
 from state import load_state
 from tracker import load, quota, set_status
@@ -46,6 +46,16 @@ def saved_cvs(slug: str) -> dict[str, str] | None:
     return read_json(cand_dir(slug) / "seek_cvs.json", None)
 
 
+def apply_routes(slug: str, keys: list[str]) -> dict[str, str]:
+    """jobs.db `apply_route` per key: 'external' ads are applied for on the employer's site, never by this script."""
+    if not keys:
+        return {}
+    from jobdb import connect
+    with connect(slug) as con:
+        rows = con.execute(f"SELECT key, apply_route FROM jobs WHERE key IN ({','.join('?' * len(keys))})", keys)
+        return {r["key"]: r["apply_route"] or "" for r in rows}
+
+
 def apply(slug: str, force_dry: bool) -> list[dict]:
     st = load_state(slug)
     live = st["mode"] in ("easy", "full") and valid_approval(slug, "go-live")[0] and not force_dry
@@ -53,6 +63,8 @@ def apply(slug: str, force_dry: bool) -> list[dict]:
     jobs = [a for a in load(slug) if a["status"] == "prepared" and a["platform"] == "seek"
             and Path(a.get("cv", "")).is_file() and Path(a.get("letter", "")).is_file()]
     saved = saved_cvs(slug)
+    route = apply_routes(slug, [a["key"] for a in jobs])
+    jobs = [a for a in jobs if route.get(a["key"]) in (None, "", "quick", "unknown")]   # employer sites: the person's
     for a in jobs:
         q = quota(slug, "seek")
         if live and (q["platform_left"] <= 0 or q["day_left"] <= 0 or q["week_left"] <= 0):
@@ -92,6 +104,7 @@ def main() -> None:
     if a.action == "login":
         login(a.slug, a.site); return
     res = apply(a.slug, a.dry)
+    save_json(run_dir(a.slug) / "apply.json", {"results": res})        # the report reads it (e.g. a lost SEEK session)
     print(json.dumps([{k: r.get(k) for k in ("company", "title", "outcome", "note")} for r in res], ensure_ascii=False, indent=2))
 
 
