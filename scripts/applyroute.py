@@ -92,7 +92,7 @@ def detect(platform: str, job_id: str) -> tuple[str, str]:
 
 def record(slug: str, key: str, route: str, ats: str = "") -> None:
     with connect(slug) as con:
-        con.execute("UPDATE jobs SET apply_route=?, apply_ats=? WHERE key=?", (route, ats, key))
+        con.execute("UPDATE jobs SET apply_route=?, apply_ats=?, easy_apply=CASE WHEN ?='quick' THEN 'True' ELSE easy_apply END WHERE key=?", (route, ats, route, key))
 
 
 def record_many(slug: str, jobs: list[dict[str, Any]]) -> None:

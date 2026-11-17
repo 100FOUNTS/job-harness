@@ -60,8 +60,28 @@ def connect(slug: str, readonly: bool = False) -> sqlite3.Connection:
     return con
 
 
+def application_fields(row: Any) -> dict[str, Any]:
+    return {"apply_route": row["apply_route"] or "", "apply_ats": row["apply_ats"] or "",
+            "easy_apply": row["apply_route"] == "quick" or str(row["easy_apply"]).lower() in ("true", "1")}
+
+
+def restore_routes(slug: str, jobs: list[dict[str, Any]]) -> None:
+    """Restore stored routes and keep portal apply flags true."""
+    with connect(slug) as con:
+        for j in jobs:
+            row = con.execute("SELECT apply_route, apply_ats, easy_apply FROM jobs WHERE key=?", (j["key"],)).fetchone()
+            fields = application_fields(row) if row else {}
+            easy = str(j.get("easy_apply", "")).lower() in ("true", "1")
+            quick = j.get("apply_route") == "quick"
+            j.update(fields)
+            j["easy_apply"] = easy or quick or fields.get("easy_apply", False)
+
+
 def targets_hash(targets: dict[str, Any]) -> str:
     return hashlib.sha1(json.dumps(targets, sort_keys=True).encode()).hexdigest()[:12]
+
+
+KEEP_TRUE = {"easy_apply": "easy_apply=CASE WHEN jobs.easy_apply='True' THEN 'True' ELSE excluded.easy_apply END"}  # a later card without the flag never clears it
 
 
 def record_seen(slug: str, jobs: Iterable[dict[str, Any]], day: str) -> None:
@@ -69,10 +89,13 @@ def record_seen(slug: str, jobs: Iterable[dict[str, Any]], day: str) -> None:
     with connect(slug) as con:
         for j in jobs:
             vals = {f: str(j.get(f, "") if j.get(f) is not None else "") for f in FIELDS}
+            vals.update({f: j[f] for f in ("apply_route", "apply_ats") if f in j})
+            if j.get("apply_route") == "quick":
+                vals["easy_apply"] = "True"
             vals |= {"tracks": json.dumps(j.get("tracks", [])), "bullets": json.dumps(j.get("bullets", []))}
             cols = ", ".join(vals)
             con.execute(f"INSERT INTO jobs (key, {cols}, first_seen, last_seen) VALUES (?, {', '.join('?' * len(vals))}, ?, ?) "
-                        f"ON CONFLICT(key) DO UPDATE SET {', '.join(f'{c}=excluded.{c}' for c in vals)}, "
+                        f"ON CONFLICT(key) DO UPDATE SET {', '.join(KEEP_TRUE.get(c, f'{c}=excluded.{c}') for c in vals)}, "
                         "first_seen=MIN(first_seen, excluded.first_seen), last_seen=MAX(last_seen, excluded.last_seen)",
                         (j["key"], *vals.values(), day, day))
             con.execute("INSERT OR IGNORE INTO sightings VALUES (?, ?)", (j["key"], day))
@@ -102,6 +125,7 @@ def rejudge_candidates(slug: str, targets: dict[str, Any], days: int) -> list[di
         j = {f: r[f] or "" for f in FIELDS} | {"key": r["key"], "id": r["key"].split(":", 1)[1],
                                                "description": r["description"] or ""}
         j["tracks"], j["bullets"] = json.loads(r["tracks"] or "[]"), json.loads(r["bullets"] or "[]")
+        j.update(application_fields(r))
         out.append(j)
     return out
 
@@ -205,7 +229,7 @@ def main() -> None:
     elif a.cmd == "show":
         with connect(a.slug, readonly=True) as con:
             row = con.execute("SELECT * FROM jobs WHERE key=?", (a.arg,)).fetchone()
-            out = dict(row) | {"sightings": [r[0] for r in con.execute("SELECT day FROM sightings WHERE key=? ORDER BY day", (a.arg,))]} if row else {}
+            out = dict(row) | application_fields(row) | {"sightings": [r[0] for r in con.execute("SELECT day FROM sightings WHERE key=? ORDER BY day", (a.arg,))]} if row else {}
     else:
         with connect(a.slug, readonly=True) as con:
             out = [dict(r) for r in con.execute(a.arg)]
