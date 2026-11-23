@@ -15,6 +15,7 @@ CV
 - Keep every role, date, employer and qualification exactly as in the master. Never add tools, projects, certificates or figures.
 - You may: rewrite the title line and summary for this role; reorder Key Skills and skill items; reorder/merge bullets within a role to put the most relevant first; use the ad's wording when it truthfully describes the same work (ATS keywords).
 - `role` is the plain job title. Employment type goes in the entry's optional `"type"` field ("Part-time", "Full-time", "Casual", "Contract", "Fixed-term", "Volunteer"), never in the role: not "Assistant Manager (part-time)" but `"role": "Assistant Manager", "type": "Part-time"`. Keep any `type` the master has; add one only if the master or intake says it.
+- No dates in `role`, `org` or headings (not "Org (freelance until Mar 2026)", not "Projects (Self-Directed Study, 2026)"): a parser reads them as the job's date range. Dates live only in `dates`; if the role changed during the job, say it in a bullet.
 - Dates: "Mon YYYY - Mon YYYY" with 3-letter months, also in education ("Expected Dec 2026"); a bare year for a finished degree stays as in the master.
 - Every figure must be in facts.json. Keep it to 2 pages (do not add bullets).
 

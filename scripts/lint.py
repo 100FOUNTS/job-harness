@@ -25,6 +25,9 @@ JSON-level warnings (`cv_json_warnings`, run by `job docs build` on the CV JSON 
   as part of the job title and misclassify the job. It belongs in the entry's optional `"type"` field.
 - education dates with full month names ("Expected December 2026"): every date in a CV is "Mon YYYY"; the
   generators shorten them anyway, but the source should say it the same way. Bare years are fine.
+- a date inside `role`, `org` or a section heading (`projects_heading`): "(freelance until Mar 2026)", "Data and AI
+  Projects (Self-Directed Study, 2026)". A parser may read it as the job's date range (Affinda did: a 3-year job
+  became 1 month, with invented gaps). Dates live only in `dates`.
 """
 from __future__ import annotations
 
@@ -125,6 +128,19 @@ EMPLOYMENT_TYPES = (r"part[\s-]?time|full[\s-]?time|casual|contract(?:or)?|temp(
 ROLE_TYPE = re.compile(rf"(?i)\(\s*(?:{EMPLOYMENT_TYPES})\b[^)]*\)|[-,|\u2013\u2014]\s*(?:{EMPLOYMENT_TYPES})\s*$")
 FULL_MONTH = re.compile(r"(?i)\b(?:january|february|march|april|june|july|august|september|sept|october|november|december)\b")
 ENTRY_SECTIONS = ("experience", "entrepreneurship", "projects", "other_employment")
+# A month name or abbreviation followed by a year ("Mar 2026", "Sept 2020"), or a bare year 1950-2099. The word
+# boundaries keep "ISO 14001" and "Spring Boot 3" out.
+_MONTHS = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+DATE_IN_TEXT = re.compile(rf"(?i)\b{_MONTHS}\.?\s+(?:19[5-9]\d|20\d\d)\b|\b(?:19[5-9]\d|20\d\d)\b")
+
+
+def date_in(text: Any) -> str | None:
+    """The first date found inside a role, org or heading, or None."""
+    if isinstance(text, str):
+        m = DATE_IN_TEXT.search(text)
+        if m:
+            return m.group(0)
+    return None
 
 
 def cv_json_warnings(cv: Any) -> list[str]:
@@ -139,6 +155,16 @@ def cv_json_warnings(cv: Any) -> list[str]:
             if isinstance(role, str) and ROLE_TYPE.search(role):
                 out.append(f"{section}: employment type inside the role {role!r}: move it to \"type\" "
                            f"(e.g. \"type\": \"Part-time\") and keep the role as the plain job title")
+            for field in ("role", "org"):
+                found = date_in(e.get(field)) if isinstance(e, dict) else None
+                if found:
+                    out.append(f"{section}: date {found!r} inside the {field} {e[field]!r}: a parser may read it as the job's date range. "
+                               f"Keep dates only in \"dates\"; if the role changed during the job, say so in a bullet or split the entry")
+    for key, value in cv.items():
+        found = date_in(value) if key.endswith("_heading") else None
+        if found:
+            out.append(f"{key}: date {found!r} inside the heading {value!r}: a parser may read it as a date range and split the "
+                       f"section. Keep dates out of headings; if it matters, say it in a bullet or the entry's \"dates\"")
     for e in cv.get("education") or []:
         when = e[2] if isinstance(e, (list, tuple)) and len(e) > 2 else None
         if isinstance(when, str) and FULL_MONTH.search(when):

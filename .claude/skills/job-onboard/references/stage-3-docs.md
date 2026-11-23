@@ -14,5 +14,6 @@ Lessons (all codified in the generators/lint)
 - Calibri/Cambria break PDF text extraction ("restora on") → Arial in docx, Helvetica in the PDF.
 - Pages ignores "space before" and hangs on unseen dialogs when unattended → PDFs come from `generar_pdf.js` (pdfkit), headless.
 - "Assistant Manager (part-time)" as a role: a parser reads "(part-time)" as part of the job title and misfiles the job's employment type (part-time as full-time, a paid job as volunteer) → plain job title in `role`, the employment type in `type`. `job docs build` warns about it.
+- A date inside `role`, `org` or a heading ("Org (freelance until Mar 2026)", "Projects (Self-Directed Study, 2026)"): a parser took it as the job's whole date range (a 3-year job became 1 month, with invented gaps) → dates live only in `dates`; describe a change of role in a bullet or split the entry. `job docs build` warns about it.
 - Education dates in long form ("Expected December 2026") next to "Mar 2022 - Jun 2024" in experience: résumé checkers penalise mixed date formats → "Expected Dec 2026". The generators shorten month names; `job docs build` warns when the JSON has them.
 - Two titles in one entry ("Assistant Manager | Shift Lead") confuse ATS → one entry per role.
