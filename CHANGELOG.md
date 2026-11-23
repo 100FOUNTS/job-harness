@@ -6,6 +6,15 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-23
+
+### Added
+- CV entries (`experience`, `entrepreneurship`, `projects`, `other_employment`) accept an optional `"type"` ("Part-time", "Full-time", "Casual", "Contract", "Fixed-term", "Volunteer"...). It is printed after the dates on the employer line: `Org, City  |  Mar 2022 - Jun 2024  |  Part-time`. Without `type` nothing changes, so a candidate who would rather not show employment types simply leaves it out. Résumé parsers (Affinda) read "(part-time)" written inside the job title as part of the title and got the employment type wrong, so the type now has its own place, in both the Word and the PDF.
+- `job docs build` (and `job lint <slug> cv.json`) warns, without failing the build, when a `role` carries an employment type such as "(part-time)", "(casual)" or "- Contract", and when an education date uses a full month name. The tailor-writer agent and the stage 3 guide now say to put the type in `type`, never in the role.
+
+### Changed
+- CV dates use 3-letter months everywhere, in the Word and the PDF: "Expected December 2026" is printed "Expected Dec 2026" and "September 2020 - March 2021" "Sep 2020 - Mar 2021", so education matches the experience dates (a résumé checker penalised the mix). A bare year for a finished degree stays a bare year.
+
 ## [0.6.0] - 2026-11-18
 
 ### Added

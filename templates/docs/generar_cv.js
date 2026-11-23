@@ -9,8 +9,8 @@ const {
 const [, , input = "cv.json", output = "Resume.docx"] = process.argv;
 const cv = JSON.parse(fs.readFileSync(input, "utf8"));
 
-// Date ranges with an ASCII hyphen: some ATS imports (Workday) drop a date joined by an en dash.
-const asciiDates = (s) => String(s ?? "").replace(/\s*[\u2010-\u2015\u2212]\s*/g, " - ");
+// Dates: ASCII hyphen and 3-letter months (see cvtext.js).
+const { cleanDates, orgLine } = require("./cvtext.js");
 
 const FONT = "Arial";
 const SIZE = 20; // 10 pt
@@ -51,7 +51,7 @@ const leadBullet = ([k, v]) => new Paragraph({
   ],
 });
 
-// Role in bold; employer and dates on the next line (no tab stops: reads the same in Word, Pages and ATS).
+// Role in bold; employer, dates and optional employment type (`type`) on the next line (no tab stops: reads the same in Word, Pages and ATS).
 const entry = (e, i) => {
   const out = [
     ...(i > 0 ? [spacer(7)] : []),
@@ -63,7 +63,7 @@ const entry = (e, i) => {
     new Paragraph({
       spacing: { after: 100 },
       keepNext: true,
-      children: [new TextRun({ text: e.dates ? `${e.org}  |  ${asciiDates(e.dates)}` : e.org, italics: true, size: SIZE, font: FONT })],
+      children: [new TextRun({ text: orgLine(e), italics: true, size: SIZE, font: FONT })],
     }),
   ];
   e.bullets.forEach((b) => out.push(bullet(b)));
@@ -104,7 +104,7 @@ cv.education.forEach(([q, inst, year], i) => children.push(...(i > 0 ? [spacer(5
   spacing: { after: 40, line: LINE },
   children: [
     new TextRun({ text: q, bold: true, size: SIZE, font: FONT }),
-    new TextRun({ text: `${inst}  |  ${asciiDates(year)}`, italics: true, size: SIZE, font: FONT, break: 1 }),
+    new TextRun({ text: `${inst}  |  ${cleanDates(year)}`, italics: true, size: SIZE, font: FONT, break: 1 }),
   ],
 })));
 
