@@ -6,6 +6,11 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-23
+
+### Added
+- `job docs build` (and `job lint <slug> cv.json`) warns, without failing the build, when a date sits inside a job's `role` or `org`, or inside a section heading such as `projects_heading`. A date is a month and year ("Mar 2026", "March 2026") or a bare year from 1950 to 2099. Résumé parsers take such a date as the job's date range: with `"org": "100 FOUNTS, Perth WA (freelance until Mar 2026)"` and `"dates": "Mar 2023 – Present"`, Affinda read a one-month job, ignored the real dates, invented two employment gaps of 14 to 15 months and credited every skill from that job with 1 month; Résumé Matcher's date-consistency score fell to 53%. A heading like "Data and AI Projects (Self-Directed Study, 2026)" made the parser split the projects into junk. The warning says to keep dates only in `dates` and, if the role changed during the job, to say so in a bullet or split the entry. The tailor-writer agent and the stage 3 guide say the same.
+
 ## [0.7.0] - 2026-11-23
 
 ### Added

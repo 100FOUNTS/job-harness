@@ -76,6 +76,54 @@ class TestEducationDateWarning(unittest.TestCase):
         self.assertEqual(cv_json_warnings({"education": [["Degree", "Example University, 2021"]]}), [])
 
 
+class TestDateOutsideDatesWarning(unittest.TestCase):
+    def entry(self, role="Engineer", org="Acme, Perth", dates="Mar 2023 - Present"):
+        return cv_json_warnings({"experience": [{"role": role, "org": org, "dates": dates, "bullets": []}]})
+
+    def test_date_in_the_org_is_flagged(self):          # the Affinda case: read as the whole date range
+        w = self.entry(org="100 FOUNTS, Perth WA (freelance until Mar 2026)")
+        self.assertEqual(len(w), 1)
+        self.assertIn("'Mar 2026'", w[0])
+        self.assertIn("job's date range", w[0])
+        self.assertIn('only in "dates"', w[0])
+        self.assertIn("bullet", w[0])
+        self.assertIn("split the entry", w[0])
+
+    def test_date_in_the_role_is_flagged(self):
+        for role in ("Site Engineer (2019)", "Engineer since March 2019", "Engineer, Sept 2020", "Analyst 2024"):
+            w = self.entry(role=role)
+            self.assertEqual(len(w), 1, role)
+            self.assertIn("inside the role", w[0])
+
+    def test_every_entry_section_is_checked(self):
+        e = {"role": "Cook", "org": "X (2021)", "bullets": []}
+        cv = {s: [e] for s in ("experience", "entrepreneurship", "projects", "other_employment")}
+        self.assertEqual(len(cv_json_warnings(cv)), 4)
+
+    def test_heading_with_a_date_is_flagged(self):
+        w = cv_json_warnings({"projects_heading": "Data and AI Projects (Self-Directed Study, 2026)"})
+        self.assertEqual(len(w), 1)
+        self.assertIn("projects_heading", w[0])
+        self.assertIn("'2026'", w[0])
+        self.assertEqual(len(cv_json_warnings({"projects_heading": "Projects, Mar 2025"})), 1)
+
+    def test_things_that_only_look_like_dates_are_fine(self):
+        for text in ("ISO 14001 Lead Auditor", "Spring Boot 3 Developer", "Plain Org, Perth",
+                     "Engineer", "Project Manager (Civil)", "Postgres 15", "Marketing Lead", "Level 1234"):
+            self.assertEqual(self.entry(role=text, org=text), [], text)
+        self.assertEqual(cv_json_warnings({"projects_heading": "Data and AI Projects"}), [])
+
+    def test_dates_field_and_other_fields_are_not_flagged(self):
+        self.assertEqual(self.entry(dates="Mar 2023 - Present"), [])
+        cv = {"experience": [{"role": "Engineer", "org": "X", "dates": "2019 - 2021", "bullets": ["Since Mar 2020 led a team."]}],
+              "summary": "Engineer since 2015.", "skills": [["Tools", "Excel 2019"]]}
+        self.assertEqual(cv_json_warnings(cv), [])
+
+    def test_the_example_candidate_cv_has_no_warnings(self):
+        cv = json.loads((ROOT / "candidates/example/docs/cv_main.json").read_text(encoding="utf-8"))
+        self.assertEqual(cv_json_warnings(cv), [])
+
+
 @unittest.skipUnless(NODE, "run `job setup` first")
 class TestRendering(unittest.TestCase):
     @classmethod
