@@ -2,6 +2,8 @@
 
   job docs <slug> build <file.json> --kind cv|letter [--out DIR] [--name First_Last_Resume]
   → <DIR>/<name>.docx and .pdf, then lint and facts verify on both (exit 1 if anything fails)
+  A CV JSON is also read for `warnings` (employment type inside `role`, full month names in education dates):
+  they are printed and returned, and never fail the build.
 
 The generators (templates/docs/*.js, docx-js) encode the layout lessons: one column, no tables,
 no header/footer, Arial (ligature fonts break the PDF text), explicit spacers (Pages ignores
@@ -18,7 +20,7 @@ from pathlib import Path
 
 from common import ROOT, cand_dir, node_env, tools_dir
 from facts import verify
-from lint import lint
+from lint import cv_json_warnings, lint
 
 GEN = {"cv": ROOT / "templates/docs/generar_cv.js", "letter": ROOT / "templates/docs/generar_carta.js"}
 
@@ -48,6 +50,12 @@ def _in_candidate(slug: str, p: Path) -> Path:
 def build(slug: str, src: Path, kind: str, out: Path | None, name: str | None) -> dict:
     need_node()
     src, out = (_in_candidate(slug, p) if p is not None else None for p in (src, out))
+    warnings = []
+    if kind == "cv":                              # warnings about the JSON itself; they do not fail the build
+        try:
+            warnings = cv_json_warnings(json.loads(src.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            pass                                  # an unreadable JSON is reported by the generator below
     out = (out or src.parent).resolve()          # the generator runs in templates/docs: paths must be absolute
     out.mkdir(parents=True, exist_ok=True)
     docx = out / f"{name or src.stem}.docx"
@@ -60,7 +68,7 @@ def build(slug: str, src: Path, kind: str, out: Path | None, name: str | None) -
     if pdf:
         checks += [lint(slug, pdf, kind), verify(slug, pdf)]
     return {"docx": str(docx), "pdf": str(pdf) if pdf else None, "ok": all(c["ok"] for c in checks),
-            "problems": [c for c in checks if not c["ok"]]}
+            "problems": [c for c in checks if not c["ok"]], "warnings": warnings}
 
 
 def main() -> None:
@@ -70,6 +78,8 @@ def main() -> None:
     p.add_argument("--out"); p.add_argument("--name")
     a = ap.parse_args()
     r = build(a.slug, Path(a.file), a.kind, Path(a.out) if a.out else None, a.name)
+    for w in r["warnings"]:
+        print(f"warning: {w}", file=sys.stderr)
     print(json.dumps(r, ensure_ascii=False, indent=2))
     sys.exit(0 if r["ok"] else 1)
 

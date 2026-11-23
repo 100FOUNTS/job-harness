@@ -18,6 +18,13 @@ Checks
 - .pdf layout, measured from word boxes (pdf.js, via scripts/pdftext.py) instead of eyeballed: a hole in the middle of a page, a
   page that is not the last one ending early, a section heading stranded at the bottom of a page, a last CV page
   with only a few lines
+
+JSON-level warnings (`cv_json_warnings`, run by `job docs build` on the CV JSON before it is built, and by
+`job lint <slug> cv.json`). They never fail a build, they are printed:
+- an employment type written inside `role` ("Assistant Manager (part-time)", "Barista - Casual"): parsers read it
+  as part of the job title and misclassify the job. It belongs in the entry's optional `"type"` field.
+- education dates with full month names ("Expected December 2026"): every date in a CV is "Mon YYYY"; the
+  generators shorten them anyway, but the source should say it the same way. Bare years are fine.
 """
 from __future__ import annotations
 
@@ -113,6 +120,32 @@ def layout_issues(path: Path, kind: str) -> list[str]:
     return issues
 
 
+EMPLOYMENT_TYPES = (r"part[\s-]?time|full[\s-]?time|casual|contract(?:or)?|temp(?:orary)?|fixed[\s-]?term|volunteer(?:ing)?|"
+                    r"intern(?:ship)?|permanent|seasonal")
+ROLE_TYPE = re.compile(rf"(?i)\(\s*(?:{EMPLOYMENT_TYPES})\b[^)]*\)|[-,|\u2013\u2014]\s*(?:{EMPLOYMENT_TYPES})\s*$")
+FULL_MONTH = re.compile(r"(?i)\b(?:january|february|march|april|june|july|august|september|sept|october|november|december)\b")
+ENTRY_SECTIONS = ("experience", "entrepreneurship", "projects", "other_employment")
+
+
+def cv_json_warnings(cv: Any) -> list[str]:
+    """Problems in the CV JSON that the generators cannot fix; warnings only, they never fail a build."""
+    if not isinstance(cv, dict):
+        return []
+    out = []
+    for section in ENTRY_SECTIONS:
+        entries = cv.get(section)
+        for e in entries if isinstance(entries, list) else []:
+            role = e.get("role") if isinstance(e, dict) else None
+            if isinstance(role, str) and ROLE_TYPE.search(role):
+                out.append(f"{section}: employment type inside the role {role!r}: move it to \"type\" "
+                           f"(e.g. \"type\": \"Part-time\") and keep the role as the plain job title")
+    for e in cv.get("education") or []:
+        when = e[2] if isinstance(e, (list, tuple)) and len(e) > 2 else None
+        if isinstance(when, str) and FULL_MONTH.search(when):
+            out.append(f"education: date {when!r} uses a full month name; write 'Mon YYYY' (e.g. 'Expected Dec 2026')")
+    return out
+
+
 def lint(slug: str, path: Path, kind: str) -> dict[str, Any]:
     rules = load_intake(slug).get("rules", {})
     text = extract_text(path)
@@ -162,6 +195,13 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("slug"); ap.add_argument("file"); ap.add_argument("--kind", choices=["cv", "letter"], default="cv")
     a = ap.parse_args()
+    if a.file.lower().endswith(".json"):                  # the CV JSON itself: warnings only
+        try:
+            warnings = cv_json_warnings(json.loads(Path(a.file).read_text(encoding="utf-8")))
+        except (OSError, ValueError) as e:
+            sys.exit(f"Can't read {a.file}: {e}")
+        print(json.dumps({"file": a.file, "ok": True, "warnings": warnings}, ensure_ascii=False, indent=2))
+        sys.exit(0)
     try:
         r = lint(a.slug, Path(a.file), a.kind)
     except RuntimeError as e:
