@@ -2,6 +2,8 @@
 
   job panel [--port 8765] [--no-open]      → http://127.0.0.1:8765/  (switch candidate in the page)
   job panel --lan                          also on your phone, over the same wifi: prints http://<this computer's IP>:8765/?t=<token>
+  job panel --set-password                 once, in your own terminal: the password for remote mode (stored as a scrypt hash, 0600)
+  job panel --remote [--port 8765]         also on your phone away from home, through a free Cloudflare quick tunnel (cloudflared)
 
 Python standard library only, bound to 127.0.0.1 (nothing outside this Mac can reach it), no accounts, no database of
 its own: it reads tracker.json, the daily packages (items.json) and jobs.db, and writes through the tracker's own
@@ -17,30 +19,57 @@ GET  /files/<slug>/<path>       a file from the candidate's package folder (CV, 
 GET  /api/data?slug=            the board data again (the page refreshes itself after adding a link)
 GET  /api/profile?slug=         the candidate's setup at a glance (candidate_profile.py), read when the Profile tab opens
 GET  /draft?slug=&key=          a follow-up draft (.md/.txt) that the tracker entry points to, as plain text
+GET  /api/visits?slug=&city=&tracks=   companies to visit in person in a city (scripts/visits.py): map pins, ranking, visit funnel
 POST /status {slug,key,status}  POST /note {slug,key,text}  POST /rescue {slug,key[,track]}  POST /open {slug,key}
+POST /visit {slug,company,city,stage[,note]}  POST /visit-details {slug,company,city[,note,contact]}
+POST /visit-address {slug,company,city[,address | lat,lon[,address]]}   (the address is geocoded, outside the write lock)
+GET  /login  POST /login {password}  POST /logout   (remote mode only)
 POST /add-link {slug,url[,text,title,company]}   a job found by hand (scripts/addlink.py): read, scored, tracked, package built
 Every POST must carry the token the page was served with, so another site open in the browser cannot post to it.
 With --lan the server listens on every interface of this computer, so EVERY request (pages, files, API) must carry the
 token: first as ?t=<token> (then an HttpOnly SameSite=Strict cookie and a redirect that drops it from the URL), compared in
 constant time; without it the answer is 403. The token is new on every run and is printed once, in the link. "Open folder"
 only works for a client on the computer itself. Anyone on the wifi who has the link can read and change the board.
+Remote mode (--remote): the server still listens on 127.0.0.1 only; cloudflared publishes it at a random
+https://<words>.trycloudflare.com address (no account, new address on every start) and the computer has to stay on, awake
+and online. A request is REMOTE when it carries a Cf-Connecting-Ip / Cf-Ray / X-Forwarded-For header or its Host is not
+127.0.0.1/localhost; requests from the computer itself behave exactly as before. Every remote request needs a session:
+GET /login (form) -> POST /login with the password (scrypt hash in ~/.config/job-harness/panel_auth.json, set with
+'job panel --set-password' in a real terminal; an AI agent cannot set it) -> a random server-side session cookie (HttpOnly,
+Secure, SameSite=Lax, 14 days) and, on every POST, the X-Panel-Token as well. A session is bound to the password it was
+created with: changing the password (job panel --set-password) ends every session. Failed logins are rate limited per client
+IP (5 per 15 minutes, then 429). Because a tunnel hides IPs there is no global lockout (that would let anyone who has the
+address lock the owner out); instead, once more than 30 logins failed in the last hour across all clients, every password
+check is serialised and takes about 2 s (at most ~1800 guesses an hour overall) while the right password still logs in.
+Concurrent password checks are bounded at all times. The counters live in memory only: restarting the panel clears all of
+them (and every session). Files under /files/ that a browser could run (.html, .svg...) are served with
+'Content-Security-Policy: sandbox', so they cannot run script or read the panel. "Open folder" is refused for remote clients.
+Anyone who has the address AND the password can read and change the whole board: keep both private.
 JOB_SUPPORT_URL (env or .claude/settings.local.json): the floating "Buy me a coffee" button. Defaults to 100 FOUNTS'
 Stripe donation link (they build the harness); point it elsewhere, or set it to "" to hide the button.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import hmac
 import http.cookies
 import json
+import math
 import mimetypes
+import os
 import re
 import secrets
+import shutil
+import signal
 import socket
 import sqlite3
 import subprocess
+import sys
 import threading
+import time
 import urllib.parse
+from collections import deque
 from datetime import date, datetime, timedelta
 from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -55,6 +84,7 @@ from tracker import OUTCOMES, PENDING, SENT, calibrate, followups, load, sent_da
 
 TOKEN = secrets.token_urlsafe(24)         # new on every run
 LAN = False                               # --lan: listening beyond 127.0.0.1, so every request needs the token
+REMOTE = False                            # --remote: published through a tunnel; remote requests need a password session
 COOKIE = "jh_panel"
 MAX_BODY = 2_000_000                      # a pasted ad is text: far less than this
 WRITE = threading.Lock()                  # the tracker file is rewritten whole: one POST at a time (a double click must not corrupt it)
@@ -523,6 +553,431 @@ def lan_ip() -> str:
         s.close()
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# Remote mode: password, sessions, login rate limit, tunnel
+# ---------------------------------------------------------------------------------------------------------------------
+SESSION_COOKIE = "jh_sess"
+SESSION_TTL = 14 * 24 * 3600              # absolute: a session never lives longer than this
+LOGIN_BODY_MAX = 4096
+LOGIN_DELAY = 0.5                         # seconds of sleep on every failed login
+SLOW_DELAY = 2.0                          # while the global failure count is exceeded: every password check waits this long, one at a time
+PW_CHECKS = 4                             # most scrypt checks running at once (each takes ~16 MiB and some tens of ms)
+PW_WAIT = 20.0                            # seconds a login may queue for a password-check slot before it is told to retry
+MIN_PASSWORD = 10
+SCRYPT = {"n": 2 ** 14, "r": 8, "p": 1, "dklen": 32}
+PROXY_HEADERS = ("Cf-Connecting-Ip", "Cf-Ray", "X-Forwarded-For")      # what a request through the tunnel carries
+TUNNEL_TIMEOUT = 40.0
+CLOUDFLARED_HELP = ("cloudflared is not installed. macOS: brew install cloudflared. Other systems: "
+                    "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/")
+
+
+def auth_file() -> Path:
+    return Path.home() / ".config" / "job-harness" / "panel_auth.json"
+
+
+PBKDF2_ITERATIONS = 600_000                # OWASP's figure for PBKDF2-HMAC-SHA256
+
+
+def hash_password(password: str, salt: bytes | None = None, algo: str | None = None) -> dict[str, Any]:
+    """scrypt when this Python has it; PBKDF2-HMAC-SHA256 otherwise (macOS's own Python 3.9 is built on LibreSSL, which
+    has no scrypt). The record says which, so a password set with one still verifies after a Python upgrade."""
+    salt = salt or os.urandom(16)
+    algo = algo or ("scrypt" if hasattr(hashlib, "scrypt") else "pbkdf2_sha256")
+    if algo == "scrypt":
+        return {"version": 1, "algo": "scrypt", **SCRYPT, "salt": salt.hex(),
+                "hash": hashlib.scrypt(password.encode("utf-8"), salt=salt, **SCRYPT).hex()}
+    return {"version": 1, "algo": "pbkdf2_sha256", "iterations": PBKDF2_ITERATIONS, "salt": salt.hex(),
+            "hash": hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PBKDF2_ITERATIONS).hex()}
+
+
+def verify_password(password: str, rec: dict[str, Any] | None) -> bool:
+    """Constant-time check against a stored record; anything malformed (or scrypt on a Python without it) is simply 'no'."""
+    try:
+        want, salt = bytes.fromhex(rec["hash"]), bytes.fromhex(rec["salt"])     # type: ignore[index]
+        if rec.get("algo", "scrypt") == "pbkdf2_sha256":                         # type: ignore[union-attr]
+            it = int(rec["iterations"])                                          # type: ignore[index]
+            if not 100_000 <= it <= 10_000_000:
+                return False
+            got = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, it)
+        else:
+            params = {k: int(rec[k]) for k in ("n", "r", "p", "dklen")}        # type: ignore[index]
+            if not (2 <= params["n"] <= 2 ** 16 and 1 <= params["r"] <= 16 and 1 <= params["p"] <= 4 and 16 <= params["dklen"] <= 64):
+                return False
+            got = hashlib.scrypt(password.encode("utf-8"), salt=salt, **params)
+    except (KeyError, ValueError, TypeError, AttributeError, OverflowError):
+        return False
+    return hmac.compare_digest(got, want)
+
+
+def load_auth() -> dict[str, Any] | None:
+    try:
+        rec = json.loads(auth_file().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return rec if isinstance(rec, dict) and rec.get("hash") and rec.get("salt") else None
+
+
+def save_auth(rec: dict[str, Any]) -> None:
+    f = auth_file()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(f.parent, 0o700)
+    tmp = f.with_name(f.name + ".tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        json.dump(rec, fh)
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, f)
+
+
+def set_password() -> int:
+    """'job panel --set-password'. Only from a person at a terminal: an AI agent (no TTY) cannot set it. The password is
+    never printed or stored, only its salted scrypt hash."""
+    if not sys.stdin.isatty():
+        print("Refusing: the panel password can only be set from an interactive terminal, by you. "
+              "Open a terminal yourself and run: job panel --set-password", file=sys.stderr)
+        return 2
+    import getpass
+    if load_auth() and input("A panel password is already set. Replace it? [y/N] ").strip().lower() not in ("y", "yes"):
+        print("Kept the existing password.")
+        return 1
+    first = getpass.getpass("New panel password (min %d characters): " % MIN_PASSWORD)
+    if len(first) < MIN_PASSWORD:
+        print(f"Too short: use at least {MIN_PASSWORD} characters (a few words together work well).", file=sys.stderr)
+        return 1
+    if getpass.getpass("Repeat it: ") != first:
+        print("The two entries differ. Nothing was saved.", file=sys.stderr)
+        return 1
+    save_auth(hash_password(first))
+    print(f"Password saved (hashed) in {auth_file()}. Now run: job panel --remote")
+    return 0
+
+
+SESSIONS: dict[str, float] = {}           # sha256(session id) -> expiry; in memory only, gone when the panel stops
+SESSION_CRED: dict[str, str] = {}         # sha256(session id) -> fingerprint of the password record it was created with
+SESSIONS_LOCK = threading.Lock()
+_AUTH_CACHE: dict[str, Any] = {"key": None, "rec": None}
+
+
+def _sid_key(sid: str) -> str:
+    return hashlib.sha256(sid.encode("utf-8")).hexdigest()
+
+
+def cred_id(rec: dict[str, Any] | None) -> str | None:
+    """Fingerprint of a stored password record (salt + hash): it changes whenever the password does."""
+    return hashlib.sha256(f"{rec['salt']}:{rec['hash']}".encode("utf-8")).hexdigest() if rec else None
+
+
+def current_auth() -> dict[str, Any] | None:
+    """load_auth() with a cache keyed on the file's identity and mtime, so a request does not re-read it every time
+    but a changed password is seen at once."""
+    f = auth_file()
+    try:
+        st = f.stat()
+        key: Any = (str(f), st.st_ino, st.st_mtime_ns, st.st_size)
+    except OSError:
+        key = (str(f), None)
+    with SESSIONS_LOCK:
+        if _AUTH_CACHE["key"] == key:
+            return _AUTH_CACHE["rec"]
+    rec = load_auth() if key[1] is not None else None
+    with SESSIONS_LOCK:
+        _AUTH_CACHE.update(key=key, rec=rec)
+    return rec
+
+
+def new_session(rec: dict[str, Any] | None = None) -> str:
+    """A new session bound to the password record `rec` (the one the login was checked against; default: the current one)."""
+    cred = cred_id(rec or current_auth())
+    if not cred:
+        raise ValueError("no password is set")
+    sid = secrets.token_urlsafe(32)
+    with SESSIONS_LOCK:
+        now = time.time()
+        for k in [k for k, exp in SESSIONS.items() if exp <= now]:
+            del SESSIONS[k]
+        for k in [k for k in SESSION_CRED if k not in SESSIONS]:
+            del SESSION_CRED[k]
+        SESSIONS[_sid_key(sid)] = now + SESSION_TTL
+        SESSION_CRED[_sid_key(sid)] = cred
+    return sid
+
+
+def session_valid(sid: str | None) -> bool:
+    if not sid:
+        return False
+    cred = cred_id(current_auth())
+    k = _sid_key(sid)
+    with SESSIONS_LOCK:
+        exp = SESSIONS.get(k)
+        if exp is None:
+            return False
+        if exp <= time.time() or not cred or not hmac.compare_digest(SESSION_CRED.get(k, ""), cred):
+            del SESSIONS[k]                                   # expired, or the password changed since the login
+            SESSION_CRED.pop(k, None)
+            return False
+        return True
+
+
+def end_session(sid: str | None) -> None:
+    if sid:
+        with SESSIONS_LOCK:
+            SESSIONS.pop(_sid_key(sid), None)
+            SESSION_CRED.pop(_sid_key(sid), None)
+
+
+class LoginGuard:
+    """Failed-login limits. Per client IP: more than `per_ip` failures in `per_ip_window` seconds -> 429. Across all clients
+    (a tunnel can hide the IP) there is no lockout, only throttling: while more than `total` failures happened in the last
+    `total_window` seconds, `throttled()` is true and the caller slows every password check down. An attempt is counted
+    BEFORE the password is checked (so a burst of parallel guesses cannot slip past) and taken back on success. In memory
+    only: restarting the panel clears everything."""
+
+    def __init__(self, per_ip: int = 5, per_ip_window: int = 900, total: int = 30, total_window: int = 3600) -> None:
+        self.per_ip, self.per_ip_window, self.total, self.total_window = per_ip, per_ip_window, total, total_window
+        self.ips: dict[str, list[tuple[float, int]]] = {}
+        self.all: list[tuple[float, int]] = []
+        self.n = 0
+        self.lock = threading.Lock()
+
+    @staticmethod
+    def _wait(rows: list[tuple[float, int]], limit: int, window: int, now: float) -> int:
+        rows[:] = [r for r in rows if r[0] > now - window]
+        return max(1, int(rows[0][0] + window - now) + 1) if len(rows) >= limit else 0
+
+    def begin(self, ip: str) -> tuple[int, int]:
+        """(seconds to wait, attempt id): wait > 0 means refused (429) and nothing is counted."""
+        with self.lock:
+            now = time.time()
+            mine = self.ips.setdefault(ip, [])
+            wait = self._wait(mine, self.per_ip, self.per_ip_window, now)
+            if wait:
+                return wait, 0
+            self.n += 1
+            mine.append((now, self.n))
+            self.all.append((now, self.n))
+            self.all[:] = [r for r in self.all if r[0] > now - self.total_window]
+            if len(self.ips) > 5000:                      # bounded memory against many spoofed addresses
+                self.ips = {k: v for k, v in self.ips.items() if v and v[-1][0] > now - self.per_ip_window}
+            return 0, self.n
+
+    def throttled(self) -> bool:
+        """True while the failures of the last hour, across all clients, exceed the total."""
+        with self.lock:
+            now = time.time()
+            self.all[:] = [r for r in self.all if r[0] > now - self.total_window]
+            return len(self.all) > self.total
+
+    def success(self, ip: str, attempt: int) -> None:
+        with self.lock:
+            self.ips[ip] = [r for r in self.ips.get(ip, []) if r[1] != attempt]
+            self.all = [r for r in self.all if r[1] != attempt]
+
+
+PW_SLOTS = threading.BoundedSemaphore(PW_CHECKS)     # password checks running at once, always
+PW_SERIAL = threading.BoundedSemaphore(1)            # ... and one at a time, each after a pause, while throttled
+
+
+def check_password(password: str, rec: dict[str, Any] | None, slow: bool) -> bool | None:
+    """verify_password under the concurrency bounds. slow (the global failure count is exceeded): one check at a time, each
+    after SLOW_DELAY, so the whole panel allows ~3600/SLOW_DELAY guesses an hour. None: no slot within PW_WAIT (busy)."""
+    serial = False
+    try:
+        if slow:
+            if not PW_SERIAL.acquire(timeout=PW_WAIT):
+                return None
+            serial = True
+            time.sleep(SLOW_DELAY)
+        if not PW_SLOTS.acquire(timeout=PW_WAIT):
+            return None
+        try:
+            return verify_password(password, rec)
+        finally:
+            PW_SLOTS.release()
+    finally:
+        if serial:
+            PW_SERIAL.release()
+
+
+LOGIN = LoginGuard()
+
+LOGIN_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Job panel: sign in</title>
+<style>
+:root { --ground: #eef1f3; --surface: #fff; --ink: #18232b; --muted: #5a6872; --line: #c9d2d8; --accent: #1f5b8f; --accent-ink: #fff; --err: #a32020; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --ground: #0f1519; --surface: #172026; --ink: #e6ecef; --muted: #9aa8b1; --line: #2c3a43; --accent: #7fb3dd; --accent-ink: #0f1519; --err: #ff9b9b; } }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--ground); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 24px; }
+h1 { margin: 0 0 4px; font-size: 20px; }
+p { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+label { display: block; font-size: 14px; margin-bottom: 6px; }
+input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); }
+button { width: 100%; margin-top: 14px; padding: 12px; font-size: 16px; font-weight: 600; border: 0; border-radius: 8px; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.err { color: var(--err); margin: 0 0 12px; }
+</style></head>
+<body><main>
+<h1>Job panel</h1>
+<p>Enter the panel password.</p>
+__ERROR__
+<form method="post" action="/login">
+<label for="p">Password</label>
+<input id="p" name="password" type="password" autocomplete="current-password" autofocus required>
+<button type="submit">Sign in</button>
+</form>
+</main></body></html>
+"""
+
+
+def login_page(error: str = "") -> bytes:
+    msg = f'<p class="err" role="alert">{error}</p>' if error else ""
+    return LOGIN_PAGE.replace("__ERROR__", msg).encode("utf-8")
+
+
+def parse_tunnel_url(line: str) -> str | None:
+    """The https://<words>.trycloudflare.com address in a line of cloudflared's output (not its api.trycloudflare.com)."""
+    for m in re.finditer(r"https://([a-z0-9][a-z0-9-]*)\.trycloudflare\.com\b", line, re.I):
+        if m.group(1).lower() != "api":
+            return m.group(0).lower()
+    return None
+
+
+class TunnelError(RuntimeError):
+    pass
+
+
+def read_tunnel_url(proc: Any, timeout: float = TUNNEL_TIMEOUT) -> str:
+    """Read cloudflared's output in a thread until its address appears (it keeps draining afterwards so the pipe never
+    fills). Raises TunnelError with the last lines when it ends or the timeout passes without one."""
+    found, box, tail = threading.Event(), {"url": None}, deque(maxlen=12)
+
+    def pump() -> None:
+        try:
+            for line in iter(proc.stdout.readline, ""):
+                line = line.rstrip()
+                if line:
+                    tail.append(line)
+                if not box["url"]:
+                    box["url"] = parse_tunnel_url(line)
+                    if box["url"]:
+                        found.set()
+        except (ValueError, OSError):
+            pass
+        found.set()                                       # the stream ended
+
+    threading.Thread(target=pump, daemon=True).start()
+    found.wait(timeout)
+    if box["url"]:
+        return box["url"]                                 # type: ignore[return-value]
+    raise TunnelError("cloudflared gave no address" + (" in %d s" % timeout if proc.poll() is None else " and stopped")
+                      + ". Its last lines:\n  " + "\n  ".join(tail))
+
+
+def stop_process(p: Any) -> None:
+    if p is not None and p.poll() is None:
+        p.terminate()
+        try:
+            p.wait(5)
+        except subprocess.TimeoutExpired:
+            p.kill()
+
+
+def start_tunnel(port: int, timeout: float = TUNNEL_TIMEOUT) -> tuple[Any, str]:
+    exe = shutil.which("cloudflared")
+    if not exe:
+        raise TunnelError(CLOUDFLARED_HELP)
+    proc = subprocess.Popen([exe, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{port}"], stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+    try:
+        return proc, read_tunnel_url(proc, timeout)
+    except BaseException:
+        stop_process(proc)
+        raise
+
+
+def keep_awake() -> Any:
+    """macOS: stop the Mac from idle-sleeping while the panel runs (best effort)."""
+    if sys.platform == "darwin" and shutil.which("caffeinate"):
+        try:
+            return subprocess.Popen(["caffeinate", "-i", "-w", str(os.getpid())], stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            return None
+    return None
+
+
+class BadInput(ValueError):
+    pass
+
+
+def text_in(body: dict[str, Any], name: str, cap: int, required: bool = False) -> str | None:
+    """A string field of a POST body: None when absent (unless required), an error for a non-string or a too long one."""
+    v = body.get(name)
+    if v is None:
+        if required:
+            raise BadInput(f"{name} is required.")
+        return None
+    if not isinstance(v, str):
+        raise BadInput(f"{name} must be text.")
+    v = v.strip()
+    if required and not v:
+        raise BadInput(f"{name} is required.")
+    if len(v) > cap:
+        raise BadInput(f"{name} is too long (at most {cap} characters).")
+    return v
+
+
+def number_in(body: dict[str, Any], name: str, lo: float, hi: float) -> float:
+    v = body.get(name)
+    if isinstance(v, bool) or not isinstance(v, (int, float, str)):
+        raise BadInput(f"{name} must be a number.")
+    try:
+        x = float(v)
+    except ValueError:
+        raise BadInput(f"{name} must be a number.") from None
+    if not math.isfinite(x) or not lo <= x <= hi:
+        raise BadInput(f"{name} must be between {lo:g} and {hi:g}.")
+    return x
+
+
+def visits_get(slug: str, q: dict[str, list[str]]) -> dict[str, Any]:
+    """GET /api/visits: the city's companies (visits.places) plus the list of cities."""
+    import visits
+    city = (q.get("city", [""])[0] or "").strip()
+    if len(city) > 80:
+        raise BadInput("city is too long (at most 80 characters).")
+    tracks = [t.strip() for t in (q.get("tracks", [""])[0] or "").split(",") if t.strip()]
+    if len(tracks) > 30 or any(len(t) > 60 for t in tracks):
+        raise BadInput("tracks is not valid.")
+    cities = visits.cities(slug)
+    city = city or (cities[0]["city"] if cities else "")
+    if not city:
+        return {"city": "", "tracks": [], "companies": [], "funnel": [], "missing": 0, "cities": cities}
+    return dict(visits.places(slug, city, tracks or None)) | {"cities": cities}
+
+
+def visits_post(path: str, slug: str, body: dict[str, Any]) -> dict[str, Any]:
+    """POST /visit, /visit-details, /visit-address. Geocoding happens here, outside WRITE (visits has its own lock)."""
+    import visits
+    company, city = text_in(body, "company", 200, True), text_in(body, "city", 80, True)
+    assert company and city
+    if path == "/visit":
+        return visits.set_stage(slug, company, city, text_in(body, "stage", 40, True), text_in(body, "note", 2000) or "")
+    if path == "/visit-details":
+        return visits.set_details(slug, company, city, note=text_in(body, "note", 2000), contact=text_in(body, "contact", 2000))
+    address = text_in(body, "address", 300)
+    if body.get("lat") is not None or body.get("lon") is not None:
+        if body.get("lat") is None or body.get("lon") is None:
+            raise BadInput("lat and lon go together.")
+        return visits.set_coords(slug, company, city, number_in(body, "lat", -90, 90), number_in(body, "lon", -180, 180), address or "")
+    if not address:
+        raise BadInput("address (or lat and lon) is required.")
+    return visits.set_address(slug, company, city, address)
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a: Any) -> None:  # quiet: also keeps the token (in the first request's URL) out of any log
         pass
@@ -549,11 +1004,94 @@ class Handler(BaseHTTPRequestHandler):
             return ""
         return c[COOKIE].value if COOKIE in c else ""
 
+    def cookie_value(self, name: str) -> str:
+        try:
+            c = http.cookies.SimpleCookie(self.headers.get("Cookie", ""))
+        except http.cookies.CookieError:
+            return ""
+        return c[name].value if name in c else ""
+
+    def is_remote(self) -> bool:
+        """--remote only: the request came through the tunnel (it carries one of Cloudflare's headers) or is addressed to
+        a host that is not this computer. Anything unclear counts as remote. Local requests are not affected by remote mode."""
+        if not REMOTE:
+            return False
+        if any(self.headers.get(h) is not None for h in PROXY_HEADERS):
+            return True
+        return self.headers.get("Host", "").split(":")[0].lower() not in ("127.0.0.1", "localhost")
+
+    def session_ok(self) -> bool:
+        return session_valid(self.cookie_value(SESSION_COOKIE))
+
+    def client_key(self) -> str:
+        return (self.headers.get("Cf-Connecting-Ip") or self.client_address[0])[:64]
+
     def local_client(self) -> bool:
+        if self.is_remote():                      # the tunnel connects from this computer: the socket says nothing here
+            return False
         return is_local_client(self.client_address[0], self.connection.getsockname()[0])
 
     def page_data(self, slug: str) -> dict[str, Any]:
-        return data(slug) | {"local": self.local_client(), "lan": LAN}
+        return data(slug) | {"local": self.local_client(), "lan": LAN, "remote": self.is_remote()}
+
+    def remote_gate(self, path: str) -> bool:
+        """--remote, remote request, GET. True when it may go on. The login form and a favicon 404 are the only open paths."""
+        if path == "/login":
+            if self.session_ok():
+                self.send(303, b"", headers={"Location": "/"})
+            else:
+                self.send(200, login_page())
+            return False
+        if path == "/favicon.ico":
+            self.send(404, b"")
+            return False
+        if not self.session_ok():
+            self.send(303, b"", headers={"Location": "/login"})
+            return False
+        return True
+
+    def post_login(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+        except ValueError:
+            length = 0
+        if length > LOGIN_BODY_MAX:
+            self.rfile.read(min(length, 65536))        # a refusal must not reset the connection before the client has sent it all
+            self.close_connection = True
+            return self.send(413, b"too large")
+        raw = self.rfile.read(length) if length > 0 else b""
+        ip = self.client_key()
+        wait, attempt = LOGIN.begin(ip)
+        if wait:
+            return self.send(429, login_page("Too many attempts. Try again later."), headers={"Retry-After": str(wait)})
+        password = urllib.parse.parse_qs(raw.decode("utf-8", "replace")).get("password", [""])[0]
+        rec = current_auth()
+        ok = check_password(password, rec, LOGIN.throttled()) if password else False
+        if ok is None:                                 # too many checks queued: not a failed guess
+            LOGIN.success(ip, attempt)
+            return self.send(429, login_page("Too many attempts. Try again later."), headers={"Retry-After": "5"})
+        if ok:
+            LOGIN.success(ip, attempt)
+            sid = new_session(rec)
+            return self.send(303, b"", headers={"Location": "/", "Set-Cookie":
+                                                f"{SESSION_COOKIE}={sid}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age={SESSION_TTL}"})
+        time.sleep(LOGIN_DELAY)
+        self.send(401, login_page("That password is not right."))
+
+    def other_method(self) -> None:
+        """PUT, DELETE and the rest are not supported; from a remote client without a session they are 401, never a hint."""
+        try:
+            n = int(self.headers.get("Content-Length", 0) or 0)
+        except ValueError:
+            n = 0
+        if 0 < n <= MAX_BODY:
+            self.rfile.read(n)                         # answer only after the body is read: no connection reset
+        self.close_connection = True
+        if self.is_remote() and not self.session_ok():
+            return self.json({"ok": False, "error": "Login required."}, 401)
+        self.send(405, b"method not allowed")
+
+    do_PUT = do_DELETE = do_PATCH = do_OPTIONS = do_HEAD = other_method
 
     def lan_gate(self, u: urllib.parse.ParseResult) -> bool:
         """--lan only. True when the request may go on. A valid ?t=<token> is turned into the cookie and a redirect to the
@@ -574,7 +1112,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         u = urllib.parse.urlparse(self.path)
-        if LAN and not self.lan_gate(u):
+        if self.is_remote():
+            if not self.remote_gate(u.path):
+                return
+        elif LAN and not self.lan_gate(u):
             return
         q = urllib.parse.parse_qs(u.query)
         cands = list_candidates()
@@ -588,7 +1129,8 @@ class Handler(BaseHTTPRequestHandler):
             f = (root / Path(*rel.parts[1:])).resolve()
             if root not in f.parents or not f.is_file():
                 return self.send(404, b"not found")
-            return self.send(200, f.read_bytes(), text_type(f))
+            return self.send(200, f.read_bytes(), text_type(f),
+                             {"Content-Security-Policy": "sandbox"} if f.suffix.lower() in ACTIVE_SUFFIXES else None)
         if slug not in cands:
             return self.send(404, b"unknown candidate")
         if u.path == "/":
@@ -601,6 +1143,13 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/profile":
             from candidate_profile import profile
             return self.json(profile(slug))
+        if u.path == "/api/visits":
+            try:
+                return self.json(visits_get(slug, q))
+            except BadInput as e:
+                return self.json({"ok": False, "error": str(e)}, 400)
+            except Exception as e:                    # never a stack trace to the page
+                return self.json({"ok": False, "error": f"Could not load the visits ({e.__class__.__name__})."}, 500)
         if u.path == "/draft":
             app = next((a for a in load(slug) if a["key"] == q.get("key", [""])[0]), None)
             f = draft_file(slug, app) if app else None
@@ -608,9 +1157,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send(404, b"not found")
 
     def do_POST(self) -> None:
+        remote = self.is_remote()
+        if remote and self.path.split("?", 1)[0] == "/login":
+            return self.post_login()
         length = int(self.headers.get("Content-Length", 0) or 0)
         raw = self.rfile.read(length) if 0 < length <= MAX_BODY else b""      # read it before any answer: a refusal must not reset the connection
-        if LAN:
+        if remote:
+            if not self.session_ok():
+                return self.json({"ok": False, "error": "Login required."}, 401)
+            allowed = token_ok(self.headers.get("X-Panel-Token"))
+        elif LAN:
             allowed = token_ok(self.cookie_token()) and token_ok(self.headers.get("X-Panel-Token"))
         else:
             allowed = token_ok(self.headers.get("X-Panel-Token")) and self.headers.get("Host", "").split(":")[0] in ("127.0.0.1", "localhost")
@@ -618,9 +1174,15 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(403, b"forbidden")
         if length > MAX_BODY:
             return self.send(413, b"too large")
+        if self.path == "/logout":
+            end_session(self.cookie_value(SESSION_COOKIE))
+            return self.send(200, b'{"ok": true}', "application/json; charset=utf-8",
+                             {"Set-Cookie": f"{SESSION_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0"})
         try:
             body = json.loads(raw or b"{}")
         except ValueError:
+            return self.send(400, b"bad request")
+        if not isinstance(body, dict):
             return self.send(400, b"bad request")
         slug, key = body.get("slug"), body.get("key")
         if slug not in list_candidates():
@@ -644,6 +1206,13 @@ class Handler(BaseHTTPRequestHandler):
                                                       str(body.get("title") or ""), str(body.get("company") or ""), lock=WRITE))
                 except Exception as e:                    # never a stack trace to the page
                     return self.json({"ok": False, "error": f"Could not add it ({e.__class__.__name__}). Try pasting the text of the ad."})
+            if self.path in ("/visit", "/visit-details", "/visit-address"):
+                try:
+                    return self.json(visits_post(self.path, slug, body))
+                except BadInput as e:
+                    return self.json({"ok": False, "error": str(e)}, 400)
+                except Exception as e:                # never a stack trace to the page
+                    return self.json({"ok": False, "error": f"Could not save it ({e.__class__.__name__})."}, 500)
             if self.path == "/open":
                 if not self.local_client():             # it would open a folder on the computer, not on the phone
                     return self.json({"ok": False, "error": "Opening the folder only works on the computer that runs the panel."}, 403)
@@ -653,6 +1222,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send(404, b"not found")
 
 
+ACTIVE_SUFFIXES = (".html", ".htm", ".xhtml", ".xht", ".svg")      # a browser runs script in these: serve them sandboxed (opaque origin)
+
+
 def text_type(f: Path) -> str:
     """Drafts and notes (.md/.txt) open in the browser as plain text instead of downloading."""
     if f.suffix.lower() in (".md", ".txt"):
@@ -660,12 +1232,77 @@ def text_type(f: Path) -> str:
     return mimetypes.guess_type(f.name)[0] or "application/octet-stream"
 
 
+def run_remote(port: int) -> None:
+    """--remote: the server on 127.0.0.1 only, published by a cloudflared quick tunnel. Everything started here is stopped
+    on the way out (Ctrl+C, SIGTERM, or the tunnel dying)."""
+    global REMOTE
+    if not load_auth():
+        sys.exit("No panel password is set. Open a terminal yourself and run: job panel --set-password   (then run this again)")
+    if not shutil.which("cloudflared"):
+        sys.exit(CLOUDFLARED_HELP)
+    srv = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    REMOTE = True
+    tunnel = awake = None
+    stop, died = threading.Event(), []
+
+    def on_term(*_: Any) -> None:
+        raise KeyboardInterrupt
+
+    try:
+        signal.signal(signal.SIGTERM, on_term)
+    except ValueError:                                    # not the main thread (tests)
+        pass
+    try:
+        print("Starting the tunnel (up to 40 s)...", flush=True)
+        try:
+            tunnel, url = start_tunnel(srv.server_port)
+        except (TunnelError, OSError) as e:
+            print(f"Could not start the tunnel: {e}", file=sys.stderr)
+            sys.exit(1)
+        awake = keep_awake()
+
+        def watch() -> None:
+            while not stop.wait(2):
+                if tunnel.poll() is not None:
+                    died.append(1)
+                    srv.shutdown()
+                    return
+
+        threading.Thread(target=watch, daemon=True).start()
+        print(f"\n  Remote panel: {url}/\n  Open it on your phone and sign in with your panel password. (Ctrl+C to stop)\n")
+        print("Warning: anyone who has this address AND the password can read and change your whole board (names, employers, "
+              "CVs, letters, tracker). Keep both private. This computer must stay on, awake and online. The address "
+              "changes every time you start remote mode, and it stops working when you stop the panel.", flush=True)
+        try:
+            srv.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        if died:
+            print("The tunnel stopped. Start remote mode again to get a new address.", file=sys.stderr)
+            sys.exit(1)
+    finally:
+        stop.set()
+        stop_process(tunnel)
+        stop_process(awake)
+        srv.server_close()
+
+
 def main() -> None:
     global LAN
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", type=int, default=8765); ap.add_argument("--no-open", action="store_true")
     ap.add_argument("--lan", action="store_true", help="also reachable from your phone on the same wifi (every request needs the link's token)")
+    ap.add_argument("--remote", action="store_true",
+                    help="reachable from your phone anywhere through a free Cloudflare quick tunnel (needs cloudflared and a password; not with --lan)")
+    ap.add_argument("--set-password", action="store_true",
+                    help="set the password for --remote (run it yourself in a terminal; it is stored hashed)")
     a = ap.parse_args()
+    if a.set_password:
+        sys.exit(set_password())
+    if a.remote and a.lan:
+        ap.error("--remote and --lan cannot be used together")
+    if a.remote:
+        return run_remote(a.port)
     LAN = a.lan
     srv = ThreadingHTTPServer(("0.0.0.0" if LAN else "127.0.0.1", a.port), Handler)
     if LAN:

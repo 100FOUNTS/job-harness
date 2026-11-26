@@ -6,6 +6,17 @@ The plugin version (in `.claude-plugin/plugin.json`, `.claude-plugin/marketplace
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-26
+
+### Added
+- **Visits: employers to visit in person.** A *Visits* tab in the panel and `job visits <slug> cities|list|locate|address|coords|set|import`. For a city named in the ads (Perth, Adelaide and 26 other Australian cities), it ranks the employers whose ads qualified in the last 60 days (number of ads, best and average score, the Companies view's priority), filters by track and hides recruitment agencies by default. It shows them on an OpenStreetMap map, one marker per building, coloured by how far the visit got. Each employer records a stage (*to visit*, *visited*, *received*, *not received*, *interview*, *offer*, *not going*) with its history, a note and a contact, in `candidates/<slug>/visits.json`. A funnel counts the visits that reached each stage. Addresses live in `candidates/<slug>/places.json`: `locate` looks names up on Nominatim (free, one request per second, a project User-Agent, matches more than 80 km from the city dropped, stored as approximate; lookups cached in `~/.cache/job-harness/` for 180 days, 14 for no match, `JOB_HARNESS_CACHE_DIR` moves it), `address` geocodes an address the person or Claude typed, `import` loads a researched list. On a phone, *Near me* sorts by distance and *Directions* opens Google Maps.
+- `/job-visits <slug> [city]`: Claude fills in missing office addresses from official sources, proposes a route by zone and records what happened at each visit.
+- **The panel away from home.** `job panel --set-password` (an interactive terminal only, so an agent cannot set it; scrypt hash, or PBKDF2-SHA256 on a Python without scrypt such as macOS's own 3.9, in `~/.config/job-harness/panel_auth.json`, mode 0600) and `job panel --remote`: the panel, still bound to 127.0.0.1, is served through a free Cloudflare quick tunnel (`cloudflared`, no account) at a new `https://….trycloudflare.com` address on every start. Requests through the tunnel need a login: sessions in memory for 14 days (HttpOnly, Secure, SameSite=Lax cookie), 5 failed logins per address per 15 minutes and 30 per hour overall, the page's token on every POST, and "open folder" refused. Requests on the computer itself work as before. On macOS the computer is kept from idle sleep while it runs. *Log out* in the header ends a phone's session.
+- `job doctor` lists `cloudflared` as optional.
+
+### Fixed
+- The daily package's `index.html` escapes every value it prints and links only http(s) ad URLs: an ad URL with a quote in it could inject script into the page. The panel also serves package HTML and SVG files with `Content-Security-Policy: sandbox`, so they cannot run script with the panel's access.
+
 ## [0.7.1] - 2026-11-23
 
 ### Added

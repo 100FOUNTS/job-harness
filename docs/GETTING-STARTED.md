@@ -85,6 +85,8 @@ Alternative: a scheduled task in the desktop app (**Scheduled** in the Code tab 
 - **The package folder.** Each day: `job-packages/<name>/<date>/` in your home folder. Open `index.html` for the list of jobs with links, or `SUMMARY.md`. Each job has its own folder with the CV and cover letter as PDFs.
 
 ## 11. Apply
+- **Walking in.** If you want to visit employers in person, open the panel's *Visits* tab, pick the city and say "/job-visits <name> <city>" so Claude finds the office addresses and proposes a route. To use the panel on your phone away from home, open the Terminal app once and type `job panel --set-password` (you choose the password; Claude never sees it, and it only works in a real terminal), install `cloudflared` (`brew install cloudflared` on a Mac) and ask Claude to "open my panel remotely". It prints an address to open on your phone. Leave the computer on while you are out.
+
 For each job you like: open the link, click Apply, upload the two PDFs from that job's folder, and mark it in the panel. The harness never submits for you unless you sign go-live.
 
 ## What to say to Claude next

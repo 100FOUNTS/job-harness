@@ -435,6 +435,19 @@ def prepare(slug: str, max_n: int, requeue: list[str] | None = None, only: bool 
     return [x for x in out if x["n"] > start]
 
 
+def esc(value: Any) -> str:
+    """Everything that reaches the package's index.html goes through this: the ads and their notes are untrusted text."""
+    return html.escape(str(value), quote=True)
+
+
+def ad_link(url: Any, label: str) -> str:
+    """A link to the ad only when it is http(s); any other scheme (javascript:, data:...) or garbage stays plain text."""
+    u = str(url or "").strip()
+    if re.match(r"https?://[^\s<>\"']+$", u, re.I):
+        return f"<a href='{esc(u)}'>{esc(label)}</a>"
+    return esc(label)
+
+
 def write_index(pkg: Path, items: list[dict[str, Any]], slug: str) -> None:
     day, L = pkg.name, labels(slug)
     cards, md = [], [f"# {L['title']} · {day} ({len(items)})", "", L["howto"], ""]
@@ -454,18 +467,18 @@ def write_index(pkg: Path, items: list[dict[str, Any]], slug: str) -> None:
             + (f"- {L['flags']}: {n['flags']}\n" if n.get("flags") else "")
             + (f"- {L['match']}: {n['coverage']}\n" if n.get("coverage") else "")
             + (f"- {L['sponsor']}: {n['sponsor']}\n" if n.get("sponsor") else "") + f"- {L['ad']}: {x['url']}\n\n{L['upload']}\n", encoding="utf-8")
-        cards.append(f"<li style='margin-bottom:14px'><b>{x['n']}. {html.escape(x['title'])}</b> — {html.escape(x['company'])}"
-                     f"<br><i>{html.escape(n['role'])}</i><br>✅ {html.escape(n['fits'])}<br>🎯 {L['odds']}: {html.escape(prob)}"
-                     f"<br>⚠️ {html.escape(n['watch'])}"
-                     + (f"<br>🚩 {L['flags']}: {html.escape(n['flags'])}" if n.get("flags") else "")
-                     + (f"<br>🔑 {L['match']}: {html.escape(n['coverage'])}" if n.get("coverage") else "")
-                     + (f"<br>🛂 {L['sponsor']}: {html.escape(n['sponsor'])}" if n.get("sponsor") else "") +
-                     f"<br>📝 {html.escape(n['how'])} · <a href='{x['url']}'>{L['open_ad']}</a> · <a href='{x['dir']}/'>{L['folder']}</a></li>")
+        cards.append(f"<li style='margin-bottom:14px'><b>{esc(x['n'])}. {esc(x['title'])}</b> — {esc(x['company'])}"
+                     f"<br><i>{esc(n['role'])}</i><br>✅ {esc(n['fits'])}<br>🎯 {esc(L['odds'])}: {esc(prob)}"
+                     f"<br>⚠️ {esc(n['watch'])}"
+                     + (f"<br>🚩 {esc(L['flags'])}: {esc(n['flags'])}" if n.get("flags") else "")
+                     + (f"<br>🔑 {esc(L['match'])}: {esc(n['coverage'])}" if n.get("coverage") else "")
+                     + (f"<br>🛂 {esc(L['sponsor'])}: {esc(n['sponsor'])}" if n.get("sponsor") else "") +
+                     f"<br>📝 {esc(n['how'])} · {ad_link(x['url'], L['open_ad'])} · <a href='{esc(x['dir'])}/'>{esc(L['folder'])}</a></li>")
     pkg.joinpath(L["summary_file"]).write_text("\n".join(md), encoding="utf-8")
     pkg.joinpath("index.html").write_text(
-        f"<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>{L['title']} {day}</title>"
-        f"<body style='font-family:system-ui;max-width:760px;margin:auto;padding:16px'><h2>{L['title']} · {day}</h2>"
-        f"<p>{html.escape(L['howto'])}</p>"
+        f"<!doctype html><meta charset='utf-8'><meta name='viewport' content='width=device-width'><title>{esc(L['title'])} {esc(day)}</title>"
+        f"<body style='font-family:system-ui;max-width:760px;margin:auto;padding:16px'><h2>{esc(L['title'])} · {esc(day)}</h2>"
+        f"<p>{esc(L['howto'])}</p>"
         f"<ol style='list-style:none;padding:0;line-height:1.45'>{''.join(cards)}</ol></body>", encoding="utf-8")
 
 
