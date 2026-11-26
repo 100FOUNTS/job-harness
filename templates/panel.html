@@ -14,6 +14,8 @@
   --urgent-bg: #fff4d6; --urgent-line: #e9c46a; --urgent-ink: #4d3800;
   --gap: #8a4b00; --have: #2f6b3a; --closed-card: #f6f8f9;
   --shadow: 0 1px 3px rgba(24,35,43,.08); --shadow-lift: 0 10px 28px rgba(24,35,43,.18);
+  --st-todo: #4a7fb0; --st-visited: #d08a00; --st-received: #2f8a43; --st-not_received: #c4483d; --st-interview: #7a52c7; --st-offer: #c9a100; --st-skip: #9aa5ad;
+  --st-ink: #ffffff; --st-ink-warm: #1d1500;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   color-scheme: light;
 }
@@ -23,6 +25,8 @@
   --accent: #7fb3dd; --accent-ink: #0f1519; --accent-soft: #1b3346; --accent-hover: #a3c9e8;
   --urgent-bg: #3a2c0f; --urgent-line: #8a6a1f; --urgent-ink: #f3d58a;
   --gap: #f0a865; --have: #8fd19e; --closed-card: #141c21;
+  --st-todo: #7fb3dd; --st-visited: #f0b24a; --st-received: #6fcf86; --st-not_received: #f07a70; --st-interview: #b99af0; --st-offer: #f5d04a; --st-skip: #6c7881;
+  --st-ink: #0f1519; --st-ink-warm: #0f1519;
   --shadow: 0 1px 3px rgba(0,0,0,.4); --shadow-lift: 0 10px 28px rgba(0,0,0,.5); color-scheme: dark } }
 :root[data-theme="dark"] {
   --ground: #0f1519; --surface: #172026; --sunken: #1d2830; --ink: #e6ecef; --muted: #9aa8b1; --faint: #74838c;
@@ -30,6 +34,8 @@
   --accent: #7fb3dd; --accent-ink: #0f1519; --accent-soft: #1b3346; --accent-hover: #a3c9e8;
   --urgent-bg: #3a2c0f; --urgent-line: #8a6a1f; --urgent-ink: #f3d58a;
   --gap: #f0a865; --have: #8fd19e; --closed-card: #141c21;
+  --st-todo: #7fb3dd; --st-visited: #f0b24a; --st-received: #6fcf86; --st-not_received: #f07a70; --st-interview: #b99af0; --st-offer: #f5d04a; --st-skip: #6c7881;
+  --st-ink: #0f1519; --st-ink-warm: #0f1519;
   --shadow: 0 1px 3px rgba(0,0,0,.4); --shadow-lift: 0 10px 28px rgba(0,0,0,.5); color-scheme: dark }
 
 * { box-sizing: border-box; }
@@ -263,6 +269,119 @@ td.r, th.r { text-align: right; }
 .help > div { background: var(--surface); border-radius: 12px; padding: 22px 26px; width: min(440px, 92vw); display: grid; grid-template-columns: auto 1fr; gap: 10px 16px; align-items: center; }
 .help h2 { grid-column: 1 / -1; margin: 0 0 4px; font-size: 17px; }
 
+/* Visits: employers to walk into, on a map and in a list. One stage palette (CSS variables, light and dark). */
+[data-s="todo"] { --c: var(--st-todo); --on: var(--st-ink); }
+[data-s="visited"] { --c: var(--st-visited); --on: var(--st-ink-warm); }
+[data-s="received"] { --c: var(--st-received); --on: var(--st-ink-warm); }
+[data-s="not_received"] { --c: var(--st-not_received); --on: var(--st-ink); }
+[data-s="interview"] { --c: var(--st-interview); --on: var(--st-ink); }
+[data-s="offer"] { --c: var(--st-offer); --on: var(--st-ink-warm); }
+[data-s="skip"] { --c: var(--st-skip); --on: var(--st-ink); }
+.vpage { padding: 14px 28px 28px; display: flex; flex-direction: column; gap: 10px; }
+.vbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.vbar select { max-width: 100%; min-height: 36px; }
+.vtracks, .vstages { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vchk { cursor: pointer; }
+.vchk input { width: 18px; height: 18px; accent-color: var(--accent); }
+.vdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c, var(--faint)); flex: none; }
+.vstages .chip { display: inline-flex; align-items: center; gap: 6px; }
+.vstages .chip .num { color: var(--muted); font-weight: 600; }
+.vfun { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.vfun li { flex: 1 1 90px; padding: 8px 12px; display: flex; flex-direction: column; position: relative; }
+.vfun li + li { border-left: 1px solid var(--line); }
+.vfun li + li::before { content: "\203A"; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); background: var(--surface); color: var(--faint); font-weight: 700; line-height: 1; padding: 2px 0; }
+.vfun b { font-size: 22px; letter-spacing: -.02em; line-height: 1.1; }
+.vfun span { font-size: 12px; color: var(--muted); }
+.vhint { margin: 0; font-size: 12px; color: var(--muted); }
+.vhint:empty { display: none; }
+.vnomap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; }
+.vsplit { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, 1fr); gap: 14px; height: calc(100vh - 270px); min-height: 480px; }
+.vsplit.nomap { grid-template-columns: minmax(0, 1fr); height: auto; }
+.vsplit.nomap .vmapwrap { display: none; }
+.vmapwrap { position: relative; isolation: isolate; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--sunken); min-height: 280px; }
+.vmap { position: absolute; inset: 0; background: var(--sunken); }
+.vmapmsg { position: absolute; left: 10px; right: 10px; top: 10px; z-index: 1000; pointer-events: none; display: flex; justify-content: center; }
+.vmapmsg:empty { display: none; }
+.vmapmsg > span { background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 12px; font-size: 13px; box-shadow: var(--shadow); }
+.vlist { overflow: auto; display: flex; flex-direction: column; gap: 8px; padding: 1px 2px 2px 1px; min-width: 0; }
+.vlist.loading { opacity: .55; }
+.vc { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); flex: none; }
+.vc.on { border-color: var(--accent); }
+.vc.skipped { opacity: .7; }
+.vhead { width: 100%; text-align: left; border: 0; background: transparent; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; border-radius: 12px; min-height: 44px; }
+.vmain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.vname { font-size: 15px; line-height: 1.25; overflow-wrap: anywhere; }
+.vsub, .vmeta { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.vmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.vmeta .tag { font-size: 11px; padding: 1px 7px; }
+.vdist { font-weight: 700; color: var(--accent); }
+.vpill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); color: var(--ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.vpill.sm { font-size: 11px; padding: 1px 7px; }
+.vbody { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+.vbody h3 { margin: 0 0 4px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.vjobs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.vjobs li { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.vjobs li:first-child { border-top: 0; }
+.vjobs a { font-weight: 600; overflow-wrap: anywhere; }
+.vjobs .tag { font-size: 11px; padding: 1px 7px; }
+.vfit { font-weight: 800; font-size: 12px; padding: 1px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.vsbtns { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 8px; }
+.vst { min-height: 44px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface); font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-align: center; line-height: 1.2; }
+.vst::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+.vst[aria-pressed="true"] { background: var(--c); border-color: var(--c); color: var(--on); }
+.vst[aria-pressed="true"]::before { background: var(--on); }
+.vst:hover { border-color: var(--c); }
+.vlbl { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.vbody textarea { min-height: 76px; }
+.vbody .input { width: 100%; min-height: 44px; }
+.vrow { display: flex; gap: 8px; }
+.vrow .input { flex: 1; min-width: 0; }
+.vrow .btn { min-height: 44px; }
+.vaerr { margin-top: 6px; padding: 8px 10px; border-radius: 8px; font-size: 13px; background: var(--urgent-bg); border: 1px solid var(--urgent-line); color: var(--urgent-ink); }
+.vmore summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; padding: 6px 0; width: fit-content; }
+.vlinks { display: flex; flex-wrap: wrap; gap: 8px; }
+.vlinks .btn { min-height: 44px; }
+.vhist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.vhist li { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; }
+.vempty { border: 1px dashed var(--line-strong); border-radius: 10px; padding: 18px 14px; text-align: center; color: var(--muted); font-size: 13px; }
+.vlist .skeleton { height: 76px; border-radius: 12px; flex: none; }
+.vlist .note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+/* map markers */
+.vmicon, .vmeicon { background: none; border: 0; }
+.vm { display: grid; place-items: center; border-radius: 50%; background: var(--c); color: var(--on); border: 2px solid var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.45); font: 800 12px/1 var(--font); cursor: pointer; }
+.vm[data-s="skip"] { opacity: .55; }
+.vm[data-s="offer"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--st-offer) 45%, transparent), 0 1px 4px rgba(0,0,0,.45); }
+.vm.sel { outline: 3px solid var(--accent); outline-offset: 2px; }
+.vme { width: 18px; height: 18px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 0 rgba(26,115,232,.55), 0 1px 4px rgba(0,0,0,.5); animation: vpulse 2s ease-out infinite; }
+@keyframes vpulse { to { box-shadow: 0 0 0 16px rgba(26,115,232,0), 0 1px 4px rgba(0,0,0,.5); } }
+.vmap .leaflet-popup-content-wrapper, .vmap .leaflet-popup-tip { background: var(--surface); color: var(--ink); }
+.vmap .leaflet-popup-content { margin: 12px 14px; font: 13px/1.4 var(--font); }
+.vmap .leaflet-container a.leaflet-popup-close-button, .vmap a.leaflet-popup-close-button { color: var(--muted); width: 32px; height: 32px; font-size: 22px; line-height: 32px; }
+.vmap.leaflet-container { font-family: var(--font); background: var(--sunken); }
+.vpop { display: flex; flex-direction: column; gap: 12px; max-height: 42vh; overflow: auto; min-width: 210px; }
+.vpop section { display: flex; flex-direction: column; gap: 6px; }
+.vpop section + section { border-top: 1px solid var(--line); padding-top: 10px; }
+.vpop b { overflow-wrap: anywhere; }
+.vpop small { color: var(--muted); }
+.vpbtns { display: flex; flex-wrap: wrap; gap: 6px; }
+.vpbtns .vst { min-height: 40px; padding: 4px 10px; font-size: 12px; }
+.vpop .btn { min-height: 40px; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .vmap .leaflet-tile-pane { filter: brightness(.78) contrast(1.05) saturate(.85); } }
+:root[data-theme="dark"] .vmap .leaflet-tile-pane { filter: brightness(.78) contrast(1.05) saturate(.85); }
+@media (max-width: 900px) {
+  .vpage { padding: 10px 14px 24px; }
+  .vsplit { display: flex; flex-direction: column; height: auto; min-height: 0; }
+  .vmapwrap { height: 45vh; min-height: 260px; flex: none; }
+  .vlist { overflow: visible; }
+  .vfun li { padding: 6px 8px; flex-basis: 60px; }
+  .vfun b { font-size: 19px; }
+  .vbar .field, .vbar select { flex: 1 1 auto; }
+  .vst, .vlinks .btn { min-height: 48px; }
+  .vsbtns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vstages { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -14px; padding: 2px 14px; }
+  .vstages .chip { flex: none; }
+}
+
 @media (max-width: 900px) {
   .top, .filters, .today, .board-wrap, .keys, .addbar { padding-left: 16px; padding-right: 16px; }
   .top { position: static; }                  /* a four-row header must not pin itself over a phone screen */
@@ -287,6 +406,7 @@ td.r, th.r { text-align: right; }
   .btn, .chip, .tab { min-height: 40px; }
   .drop-btn { width: 40px; height: 40px; }
 }
+@media (max-width: 900px) { body[data-view="visits"] .coffee { display: none; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -299,12 +419,14 @@ td.r, th.r { text-align: right; }
     <button class="tab" role="tab" id="tab-board" data-view="board">Board</button>
     <button class="tab" role="tab" id="tab-funnel" data-view="funnel">Funnel</button>
     <button class="tab" role="tab" id="tab-companies" data-view="companies">Companies</button>
+    <button class="tab" role="tab" id="tab-visits" data-view="visits">Visits</button>
     <button class="tab" role="tab" id="tab-dropped" data-view="dropped">Dropped <span class="count num" id="dropcount"></span></button>
     <button class="tab" role="tab" id="tab-profile" data-view="profile">Profile</button>
   </div>
   <label class="search"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
     <span class="sr">Search</span><input id="q" type="search" placeholder="Search company, role or keyword" autocomplete="off"><kbd>/</kbd></label>
   <button class="icon-btn" id="theme" aria-label="Switch light or dark theme"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <button class="btn" id="logout" type="button" hidden>Log out</button>
   <button class="icon-btn" id="helpbtn" aria-label="Keyboard shortcuts"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg></button>
 </header>
 
@@ -353,15 +475,17 @@ const icon = {
   passport: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.8 12.4l2.3 2.3 4.2-4.6"/></svg>',
   passportq: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9.9 9.4a2.2 2.2 0 1 1 3.3 1.9c-.8.5-1.2.9-1.2 1.8M12 16.3h.01"/></svg>',
   nope: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  pin: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  refresh: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
   x: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
 
 /* ---------- state ---------- */
 const S = {view: "board", city: "", plat: "", track: "", min: 0, q: "", focus: null, open: null, expanded: {}, tab: "resumen"};
 try { Object.assign(S, JSON.parse(localStorage.getItem("panel-v2") || "{}"), {open: null, focus: null, q: ""}); } catch (e) {}
-const HASH = {"#tablero": "board", "#embudo": "funnel", "#empresas": "companies", "#descartados": "dropped", "#perfil": "profile"};
+const HASH = {"#tablero": "board", "#embudo": "funnel", "#empresas": "companies", "#visitas": "visits", "#descartados": "dropped", "#perfil": "profile"};
 if (HASH[location.hash]) S.view = HASH[location.hash];
-const save = () => { try { localStorage.setItem("panel-v2", JSON.stringify({view: S.view, city: S.city, plat: S.plat, track: S.track, sp: S.sp, min: S.min, csort: S.csort, noagency: S.noagency, todoDay: S.todoDay})); } catch (e) {} };
+const save = () => { try { localStorage.setItem("panel-v2", JSON.stringify({view: S.view, city: S.city, plat: S.plat, track: S.track, sp: S.sp, min: S.min, csort: S.csort, noagency: S.noagency, todoDay: S.todoDay, vis: S.vis})); } catch (e) {} };
 try { const t = localStorage.getItem("panel-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
 
 const TOP_N = 15;
@@ -397,7 +521,7 @@ function filters() {
   const chip = (group, val, label) => `<button class="chip" data-f="${group}" data-v="${esc(val)}" aria-pressed="${S[group] === val}">${esc(label)}</button>`;
   $("#filters").innerHTML = `<span class="lbl">Filter</span>${chip("city", "Perth", "Perth")}${chip("city", "Adelaide", "Adelaide")}<span class="sep"></span>`
     + Object.entries(PLAT).filter(([k]) => k !== "link" || D.apps.some(a => a.platform === "link")).map(([k, v]) => chip("plat", k, v)).join("") + `<span class="sep"></span>`
-    + tracks.map(t => chip("track", t, t.length <= 2 ? t.toUpperCase() : t[0].toUpperCase() + t.slice(1))).join("")
+    + tracks.map(t => chip("track", t, t.length <= 3 ? t.toUpperCase() : t[0].toUpperCase() + t.slice(1))).join("")
     + (D.apps.some(hasSponsor) ? `<span class="sep"></span><button class="chip" data-f="sp" data-v="1" aria-pressed="${S.sp === "1"}" title="Only companies on the visa sponsor lists" style="display:inline-flex;align-items:center;gap:6px"><span style="display:inline-flex;color:var(--have)">${icon.passport}</span>Sponsor lists</button>` : "")
     + `<label class="range">Minimum score <input id="min" type="range" min="0" max="100" step="5" value="${S.min}"><output class="num" for="min">${S.min}</output></label>`;
 }
@@ -576,6 +700,398 @@ function companiesView() {
   $("#keys").innerHTML = "";
 }
 
+
+/* ---------- visits: employers to walk into, on a map and in a list ---------- */
+const VST = [["todo", "To visit", "To visit"], ["visited", "Visited", "Visited, left my CV"], ["received", "Received", "Someone received me"], ["not_received", "Not received", "Nobody received me"],
+  ["interview", "Interview", "Interview"], ["offer", "Offer", "Offer"], ["skip", "Skipped", "Not going"]];
+const VNAME = Object.fromEntries(VST.map(s => [s[0], s[1]]));
+const VRANK = {skip: 0, todo: 1, not_received: 2, visited: 3, received: 4, interview: 5, offer: 6};
+const VGLYPH = {todo: "", visited: "✓", received: "✓✓", not_received: "✕", interview: "★", offer: "★", skip: "–"};
+const VREACH = {visited: ["visited", "received", "not_received", "interview", "offer"], received: ["received", "interview", "offer"], interview: ["interview", "offer"], offer: ["offer"]};
+const LEAFLET = {css: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css", cssSri: "sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb",
+  js: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js", jsSri: "sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO"};
+const V = {slug: "", data: null, city: "", cities: [], tracks: [], loading: false, error: "", req: 0, leaflet: "idle", map: null, layer: null, markers: new Map(), meMarker: null,
+  me: null, near: false, locating: false, open: new Set(), pin: "", limit: 100, selected: "", byKey: new Map(), base: [], shown: [], bound: false};
+/* the chosen city, tracks, stage and agency toggle are remembered per candidate, in the same localStorage entry as the other filters */
+const vs = () => { const o = (S.vis = S.vis || {}); return o[D.slug] = o[D.slug] || {}; };
+const vSel = () => Array.isArray(vs().tracks) ? vs().tracks : [];
+const vHide = () => vs().agencies !== false;
+const vHasCoords = c => !!c.place && c.place.lat != null && c.place.lon != null && c.place.lat !== "" && c.place.lon !== "" && Number.isFinite(+c.place.lat) && Number.isFinite(+c.place.lon);
+const vTrackLabel = t => t.length <= 3 ? t.toUpperCase() : t[0].toUpperCase() + t.slice(1);
+const vWhen = iso => { const d = new Date(iso); return isNaN(d) ? String(iso || "") : d.toLocaleString("en-AU", {day: "numeric", month: "short", hour: "numeric", minute: "2-digit"}); };
+const vPill = (s, sm) => `<span class="vpill ${sm ? "sm" : ""}" data-s="${esc(s)}"><i class="vdot" aria-hidden="true"></i>${esc(VNAME[s] || s)}</span>`;
+const vKm = d => d < 1 ? Math.round(d * 1000) + " m" : d.toFixed(d < 10 ? 1 : 0) + " km";
+function vDist(a, b) {
+  const R = 6371, rad = x => x * Math.PI / 180, dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const vReached = (c, set) => set.includes(c.visit.stage) || (c.visit.history || []).some(h => set.includes(h.stage));
+const vTop = cs => cs.reduce((b, c) => VRANK[c.visit.stage] > VRANK[b] ? c.visit.stage : b, "skip");
+
+/* Leaflet is fetched only when the tab first opens, with Subresource Integrity. Offline: the list keeps working. */
+function loadLeaflet() {
+  if (window.L && window.L.map) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const css = document.createElement("link"), sc = document.createElement("script"), els = [css, sc];
+    let n = 0, done = false;
+    const timer = setTimeout(() => fail(), 15000);
+    const fail = () => { if (done) return; done = true; clearTimeout(timer); els.forEach(e => e.remove()); reject(new Error("map library not loaded")); };
+    const ok = () => { if (++n === 2 && !done) { done = true; clearTimeout(timer); if (window.L && window.L.map) resolve(); else { done = false; fail(); } } };
+    css.rel = "stylesheet"; css.href = LEAFLET.css; css.integrity = LEAFLET.cssSri; css.crossOrigin = "anonymous";
+    sc.src = LEAFLET.js; sc.integrity = LEAFLET.jsSri; sc.crossOrigin = "anonymous";
+    css.onload = ok; sc.onload = ok; css.onerror = fail; sc.onerror = fail;
+    document.head.append(css, sc);
+  });
+}
+function vEnsureLeaflet() {
+  if (V.leaflet === "ready") { vInitMap(); return; }
+  if (V.leaflet === "loading") return;
+  V.leaflet = "loading"; vMapState();
+  loadLeaflet().then(() => { V.leaflet = "ready"; vMapState(); if (S.view === "visits") vInitMap(); }).catch(() => { V.leaflet = "failed"; vMapState(); });
+}
+function vMapState() {
+  const sp = $("#vsplit"), m = $("#vmapmsg"), nm = $("#vnomap"); if (!sp || !m || !nm) return;
+  const failed = V.leaflet === "failed";
+  sp.classList.toggle("nomap", failed); nm.hidden = !failed; m.textContent = ""; nm.textContent = "";
+  if (V.leaflet === "loading") m.append(Object.assign(document.createElement("span"), {textContent: "Loading the map…"}));
+  if (failed) {
+    const b = Object.assign(document.createElement("button"), {type: "button", className: "btn", textContent: "Retry the map"}); b.dataset.vmapretry = "1";
+    nm.append("The map could not load (are you offline?). The list still works. ", b);
+  }
+}
+function vInitMap() {
+  const el = $("#vmap"); if (!el || V.map || !(window.L && L.map)) return;
+  V.map = L.map(el, {zoomControl: true}).setView([-25.3, 133.8], 4);
+  /* OSM's tile policy refuses requests without a Referer; the page itself sends none (Referrer-Policy: no-referrer), so the tiles ask for the origin only */
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, referrerPolicy: "strict-origin-when-cross-origin",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(V.map);
+  V.layer = L.layerGroup().addTo(V.map); V.markers = new Map(); V.meMarker = null;
+  vMarkers(true); vMeMarker();
+}
+function vDestroyMap() {
+  if (V.map) { try { V.map.remove(); } catch (e) {} }
+  V.map = null; V.layer = null; V.markers = new Map(); V.meMarker = null;
+}
+
+/* data: GET /api/visits (cities, tracks, companies with place and visit) */
+async function vLoad() {
+  const req = ++V.req; V.loading = true; V.error = ""; vStatus(); vList();
+  const q = new URLSearchParams({slug: D.slug}); if (V.city) q.set("city", V.city); if (vSel().length) q.set("tracks", vSel().join(","));
+  try {
+    const r = await fetch("/api/visits?" + q.toString());
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ("error " + r.status));
+    if (req !== V.req) return;
+    if (Array.isArray(j.cities)) V.cities = j.cities;
+    const known = V.cities.some(c => c.city === V.city);
+    if (V.cities.length && (!V.city || !known) && V.cities[0].city !== j.city) { V.city = V.cities[0].city; vs().city = V.city; save(); vCities(); return vLoad(); }
+    if (!Array.isArray(j.companies)) j.companies = [];
+    j.companies.forEach((c, i) => {
+      c.idx = i; c.jobs = c.jobs || []; c.by_track = c.by_track || {};
+      c.visit = Object.assign({stage: "todo", note: "", contact: "", history: []}, c.visit || {}); c.visit.history = c.visit.history || [];
+      if (!(c.visit.stage in VRANK)) c.visit.stage = "todo";
+      c._sv = {note: c.visit.note || "", contact: c.visit.contact || ""};
+    });
+    if (j.city) V.city = j.city;
+    if (V.city && vs().city !== V.city) { vs().city = V.city; save(); }
+    V.tracks = [...new Set([...V.tracks, ...(j.tracks || [])])];
+    V.data = j; V.slug = D.slug; V.loading = false; V.pin = ""; V.limit = 100;
+    V.byKey = new Map(j.companies.map(c => [c.key, c]));
+    vPaint(true);
+  } catch (err) {
+    if (req !== V.req) return;
+    V.loading = false; V.error = err.message || "error"; vStatus(); vList();
+  }
+}
+function vCompute() {
+  V.base = []; V.shown = []; if (!V.data) return;
+  const q = S.q.trim().toLowerCase(), hide = vHide(), st = vs().stage || "";
+  V.base = V.data.companies.filter(c => (!hide || !c.agency) && (!q || (c.company + " " + c.jobs.map(j => j.title).join(" ")).toLowerCase().includes(q)));
+  let rows = V.base.filter(c => !st || c.visit.stage === st || c.key === V.pin);
+  rows.forEach(c => { c._d = V.near && V.me && vHasCoords(c) ? vDist(V.me, {lat: +c.place.lat, lon: +c.place.lon}) : null; });
+  if (V.near && V.me) rows.sort((a, b) => (a._d ?? 1e9) - (b._d ?? 1e9));
+  else if (!st) rows = [...rows.filter(c => c.visit.stage !== "skip"), ...rows.filter(c => c.visit.stage === "skip")];
+  V.shown = rows;
+}
+
+/* paint: controls, funnel, chips, list, map */
+function vPaint(fit) { vCompute(); vCities(); vTrackChips(); vStageChips(); vFunnel(); vStatus(); vList(); vMarkers(fit); vMeMarker(); }
+function vFilterChanged(fit) { vCompute(); vStageChips(); vFunnel(); vStatus(); vList(); vMarkers(fit); }
+function vCities() {
+  const sel = $("#vcity"); if (!sel) return;
+  const list = V.cities.length ? V.cities : (V.city ? [{city: V.city, companies: V.data ? V.data.companies.length : 0}] : []);
+  sel.textContent = "";
+  if (!list.length) sel.append(Object.assign(document.createElement("option"), {textContent: V.loading ? "Loading…" : "No cities yet", value: ""}));
+  list.forEach(c => sel.append(Object.assign(document.createElement("option"), {value: c.city, textContent: c.city + " (" + c.companies + " employer" + (c.companies === 1 ? "" : "s") + ")"})));
+  sel.value = V.city; sel.disabled = !list.length;
+}
+function vTrackChips() {
+  const el = $("#vtracks"); if (!el) return;
+  const all = [...new Set([...V.tracks, ...vSel()])], sel = vSel();
+  el.hidden = !all.length;
+  el.innerHTML = all.length ? `<span style="font-size:12px;color:var(--muted)">Tracks</span>` + all.map(t => `<button class="chip" type="button" data-vtrack="${esc(t)}" aria-pressed="${sel.includes(t)}">${esc(vTrackLabel(t))}</button>`).join("") : "";
+}
+function vStageChips() {
+  const el = $("#vstages"); if (!el) return;
+  const st = vs().stage || "", n = {}; V.base.forEach(c => { n[c.visit.stage] = (n[c.visit.stage] || 0) + 1; });
+  const chip = (v, label, dot, count) => `<button class="chip" type="button" data-vst="${v}" aria-pressed="${st === v}">${dot ? `<i class="vdot" data-s="${v}" aria-hidden="true"></i>` : ""}${esc(label)} <span class="num">${count}</span></button>`;
+  el.innerHTML = chip("", "All", false, V.base.length) + VST.map(([s, short]) => chip(s, short, true, n[s] || 0)).join("");
+}
+function vFunnelCounts() {
+  /* same rule as visits.places(): skipped employers are out of EVERY step; the other four count what was REACHED (stage or history) */
+  const cs = (V.data ? V.data.companies : []).filter(c => (!vHide() || !c.agency) && c.visit.stage !== "skip");
+  return [["To visit", cs.length], ["Visited", cs.filter(c => vReached(c, VREACH.visited)).length], ["Received", cs.filter(c => vReached(c, VREACH.received)).length],
+    ["Interview", cs.filter(c => vReached(c, VREACH.interview)).length], ["Offer", cs.filter(c => vReached(c, VREACH.offer)).length]];
+}
+function vFunnel() {
+  const el = $("#vfun"); if (!el) return;
+  el.innerHTML = vFunnelCounts().map(([l, n]) => `<li><b class="num">${n}</b><span>${esc(l)}</span></li>`).join("");
+}
+function vStatus() {
+  const el = $("#vhint"); if (!el) return;
+  el.textContent = "";
+  if (V.loading) { el.textContent = "Loading employers…"; return; }
+  const miss = V.data ? V.base.filter(c => !vHasCoords(c)).length : 0;
+  if (miss) {
+    el.append(miss + (miss === 1 ? " employer has" : " employers have") + " no address yet. Type one in its card, or run ");
+    el.append(Object.assign(document.createElement("code"), {textContent: "job visits " + D.slug + " locate --city " + V.city}), ".");
+  }
+}
+
+/* list */
+function vCard(c) {
+  const v = c.visit, st = v.stage, p = c.place, coords = vHasCoords(c), open = V.open.has(c.key), i = c.idx;
+  const tracks = Object.entries(c.by_track || {}).map(([t, x]) => `<span class="tag">${esc(t)} ${esc(x.ads)}</span>`).join("");
+  const addr = [p && p.zone, p && p.address].filter(Boolean).join(" · ");
+  const sub = (addr ? esc(addr) : coords ? "On the map" : "No address yet") + (p && p.address && !coords ? " (not on the map yet)" : "")
+    + (c._d != null ? ` <span class="vdist num">${vKm(c._d)}</span>` : "");
+  let body = "";
+  if (open) {
+    const jobs = c.jobs.slice(0, 15).map(j => `<li>${/^https?:\/\//i.test(j.url || "") ? `<a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a>` : `<span>${esc(j.title)}</span>`}${j.fit != null ? `<span class="vfit num" title="Fit score">${esc(j.fit)}</span>` : ""}${j.track ? `<span class="tag">${esc(j.track)}</span>` : ""}${j.applied ? `<span class="tag on">Applied</span>` : ""}</li>`).join("");
+    const dest = coords ? (+p.lat) + "," + (+p.lon) : encodeURIComponent((p && p.address) || (c.company + ", " + V.city));
+    const hist = [...v.history].reverse().slice(0, 12).map(h => `<li><span>${esc(vWhen(h.date))}</span>${vPill(h.stage, true)}${h.note ? `<span>${esc(h.note)}</span>` : ""}</li>`).join("");
+    const form = `<form data-vaddr="${esc(c.key)}" novalidate><label class="vlbl" for="va-${i}">${coords ? "Change the address" : "Address"}</label>
+      <div class="vrow"><input class="input" id="va-${i}" name="address" autocomplete="street-address" placeholder="e.g. 140 St Georges Terrace, Perth WA" value="${esc((p && p.address) || "")}">
+      <button class="btn primary" type="submit">Find on map</button></div>${c._addrErr ? `<div class="vaerr" role="alert">${esc(c._addrErr)}</div>` : ""}</form>`;
+    body = `<div class="vbody" id="vb-${i}">
+      <div><h3>Ads (${esc(c.ads)})</h3><ul class="vjobs">${jobs || `<li>No ads.</li>`}</ul>${c.jobs.length > 15 ? `<small style="color:var(--muted)">+ ${c.jobs.length - 15} more</small>` : ""}</div>
+      <div><h3>Visit</h3><div class="vsbtns" role="group" aria-label="Visit stage for ${esc(c.company)}">${VST.map(([s, , long]) => `<button class="vst" type="button" id="vs-${i}-${s}" data-s="${s}" data-vk="${esc(c.key)}" data-vset="${s}" aria-pressed="${st === s}">${esc(long)}</button>`).join("")}</div></div>
+      <div><label class="vlbl" for="vn-${i}">Note</label><textarea id="vn-${i}" data-vnote="${esc(c.key)}" rows="3" maxlength="2000" placeholder="Who you spoke to, what they said">${esc(v.note)}</textarea></div>
+      <div><label class="vlbl" for="vc-${i}">Contact</label><input class="input" id="vc-${i}" data-vcontact="${esc(c.key)}" maxlength="2000" placeholder="Name, phone or email" value="${esc(v.contact)}"></div>
+      <div class="vlinks"><a class="btn" href="https://www.google.com/maps/dir/?api=1&amp;destination=${dest}" target="_blank" rel="noopener">${icon.ext} Directions</a></div>
+      ${coords ? `<details class="vmore"><summary>Change the address</summary>${form}</details>` : form}
+      ${hist ? `<div><h3>History</h3><ul class="vhist">${hist}</ul></div>` : ""}</div>`;
+  }
+  return `<article class="vc ${open ? "on" : ""} ${st === "skip" ? "skipped" : ""}" data-vcard="${esc(c.key)}">
+    <button class="vhead" type="button" id="vh-${i}" data-vtoggle="${esc(c.key)}" aria-expanded="${open}" ${open ? `aria-controls="vb-${i}"` : ""}>
+      <span class="vmain"><b class="vname">${esc(c.company)}</b>${c.agency ? `<span class="tag">Agency</span>` : ""}${vPill(st)}</span>
+      <span class="vsub">${sub}</span>
+      <span class="vmeta"><span class="num">${esc(c.ads)} ad${c.ads === 1 ? "" : "s"}${c.best != null ? " · best " + esc(c.best) : ""}</span>${tracks}</span>
+    </button>${body}</article>`;
+}
+function vList() {
+  const el = $("#vlist"); if (!el) return;
+  el.classList.toggle("loading", V.loading && !!V.data); el.setAttribute("aria-busy", String(V.loading));
+  if (V.error && !V.data) { el.innerHTML = `<div class="note" role="alert"><span>Could not load the employers: ${esc(V.error)}</span><button class="btn" type="button" data-vretry="1">Retry</button></div>`; return; }
+  if (!V.data) { el.innerHTML = `<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>`; return; }
+  const err = V.error ? `<div class="note" role="alert"><span>Could not refresh: ${esc(V.error)}</span><button class="btn" type="button" data-vretry="1">Retry</button></div>` : "";
+  if (!V.data.companies.length) { el.innerHTML = err + `<div class="vempty">${V.cities.length ? "No employers with qualifying ads in this city and tracks." : "No employers yet. They appear here once ads pass your rules and the ad names a city."}</div>`; return; }
+  const rows = V.shown.slice(0, V.limit);
+  el.innerHTML = err + (rows.map(vCard).join("") || `<div class="vempty">No employers match these filters.</div>`)
+    + (V.shown.length > V.limit ? `<button class="more" type="button" data-vmore="1">Show ${V.shown.length - V.limit} more</button>` : "");
+}
+function vCardNode(key) { return [...($("#vlist") ? $("#vlist").children : [])].find(n => n.dataset && n.dataset.vcard === key); }
+function vReplaceCard(c) {
+  const node = vCardNode(c.key); if (!node) return;
+  const ae = document.activeElement, id = ae && node.contains(ae) ? ae.id : "";
+  const t = document.createElement("template"); t.innerHTML = vCard(c); node.replaceWith(t.content.firstElementChild);
+  if (id) { const f = document.getElementById(id); if (f) f.focus({preventScroll: true}); }
+}
+function vAfterChange(c) { vReplaceCard(c); vStageChips(); vFunnel(); vMarkers(false); }
+
+/* map markers: one per building (same lat/lon to 4 decimals), coloured by its most advanced stage, sized by ads */
+function vIcon(g) {
+  const st = vTop(g.cs), ads = g.cs.reduce((s, c) => s + (+c.ads || 0), 0), size = Math.round(24 + Math.min(ads, 12) * 1.5), sel = g.cs.some(c => c.key === V.selected);
+  return L.divIcon({className: "vmicon", iconSize: [size, size], iconAnchor: [size / 2, size / 2], popupAnchor: [0, -size / 2],
+    html: `<div class="vm ${sel ? "sel" : ""}" data-s="${st}" style="width:${size}px;height:${size}px">${g.cs.length > 1 ? g.cs.length : VGLYPH[st]}</div>`});
+}
+function vMarkers(fit) {
+  if (!V.map || !V.layer) return;
+  const groups = new Map();
+  V.shown.filter(vHasCoords).forEach(c => {
+    const lat = +c.place.lat, lon = +c.place.lon, k = lat.toFixed(4) + "," + lon.toFixed(4);
+    if (!groups.has(k)) groups.set(k, {k, lat, lon, cs: []});
+    groups.get(k).cs.push(c);
+  });
+  for (const [k, m] of [...V.markers]) if (!groups.has(k)) { V.layer.removeLayer(m); V.markers.delete(k); }
+  for (const [k, g] of groups) {
+    let m = V.markers.get(k);
+    const title = g.cs.map(c => c.company).join(", ") + " (" + VNAME[vTop(g.cs)] + ")";
+    if (!m) {
+      m = L.marker([g.lat, g.lon], {icon: vIcon(g), title, alt: title, riseOnHover: true}); m._vg = g;
+      m.bindPopup(() => vPopupEl(m._vg), {maxWidth: 300, minWidth: 220, autoPanPadding: [20, 20]});
+      m.addTo(V.layer); V.markers.set(k, m);
+    } else {
+      m._vg = g; m.setIcon(vIcon(g)); if (m.getElement()) m.getElement().title = title;
+      if (m.isPopupOpen()) m.getPopup().update();
+    }
+  }
+  if (fit) vFit();
+}
+function vFit(pts) {
+  if (!V.map) return;
+  pts = pts || [...V.markers.values()].map(m => m.getLatLng());
+  if (pts.length) V.map.fitBounds(L.latLngBounds(pts), {padding: [32, 32], maxZoom: 16});
+}
+function vMeMarker() {
+  if (!V.map) return;
+  if (V.meMarker) { V.meMarker.remove(); V.meMarker = null; }
+  if (V.me && V.near) V.meMarker = L.marker([V.me.lat, V.me.lon], {icon: L.divIcon({className: "vmeicon", html: '<div class="vme"></div>', iconSize: [18, 18], iconAnchor: [9, 9]}),
+    interactive: false, keyboard: false, zIndexOffset: 1000}).addTo(V.map);
+}
+/* the popup is built with DOM nodes and its own listeners (Leaflet stops clicks inside a popup from reaching the page) */
+function vPopupEl(g) {
+  const root = document.createElement("div"); root.className = "vpop";
+  g.cs.forEach(c => {
+    const s = document.createElement("section"), top = document.createElement("div"), b = document.createElement("b"), tmp = document.createElement("span");
+    top.style.cssText = "display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center"; b.textContent = c.company; tmp.innerHTML = vPill(c.visit.stage, true); top.append(b, tmp.firstElementChild);
+    const sm = document.createElement("small"); sm.textContent = c.ads + " ad" + (c.ads === 1 ? "" : "s") + (c.best != null ? " · best " + c.best : "") + (c._d != null ? " · " + vKm(c._d) : "");
+    const row = document.createElement("div"); row.className = "vpbtns"; row.setAttribute("role", "group"); row.setAttribute("aria-label", "Visit stage for " + c.company);
+    VST.forEach(([id, short]) => {
+      const bt = document.createElement("button"); bt.type = "button"; bt.className = "vst"; bt.dataset.s = id; bt.textContent = short; bt.setAttribute("aria-pressed", String(c.visit.stage === id));
+      bt.addEventListener("click", () => vSetStage(c, id)); row.append(bt);
+    });
+    const more = Object.assign(document.createElement("button"), {type: "button", className: "btn", textContent: "Open in the list"});
+    more.addEventListener("click", () => vOpenCard(c.key));
+    s.append(top, sm, row, more); root.append(s);
+  });
+  return root;
+}
+function vOpenCard(key) {
+  const c = V.byKey.get(key); if (!c) return;
+  V.open.add(key); V.selected = key;
+  if (!V.shown.includes(c)) { V.pin = key; vCompute(); }
+  const idx = V.shown.indexOf(c); if (idx >= V.limit) V.limit = idx + 1;
+  vList(); vStageChips(); vMarkers(false);
+  const node = vCardNode(key); if (node) node.scrollIntoView({block: "nearest", behavior: "smooth"});
+}
+
+/* changes: optimistic, reverted with a toast when the server says no */
+async function vSetStage(c, stage) {
+  if (c.visit.stage === stage) return;
+  const before = JSON.parse(JSON.stringify(c.visit)), data = V.data, now = new Date().toISOString();
+  c.visit.stage = stage; c.visit.history = [...c.visit.history, {date: now, stage, note: ""}]; c.visit.updated = now; V.pin = c.key;
+  vAfterChange(c);
+  try {
+    const r = await post("/visit", {company: c.company, city: V.city, stage});
+    if (r.visit) { c.visit = Object.assign({}, c.visit, r.visit); c.visit.history = c.visit.history || []; }
+  } catch (err) { c.visit = before; toast("Could not save the stage: " + err.message); }
+  if (V.data === data) vAfterChange(c);
+}
+async function vSaveDetail(c, field, value) {
+  c.visit[field] = value; if (c._sv[field] === value) return;
+  try { await post("/visit-details", {company: c.company, city: V.city, [field]: value}); c._sv[field] = value; toast("Saved"); }
+  catch (err) { toast("Could not save the " + field + ": " + err.message); }
+}
+async function vSetAddress(c, form) {
+  const address = form.elements.address.value.trim(), btn = form.querySelector("button[type=submit]");
+  if (!address) { c._addrErr = "Type the street address first."; vReplaceCard(c); return; }
+  btn.disabled = true; btn.textContent = "Finding…";
+  try {
+    const r = await post("/visit-address", {company: c.company, city: V.city, address});
+    c.place = r.place || c.place; c._addrErr = "";
+    vReplaceCard(c); vStatus(); vMarkers(false);
+    if (V.map && vHasCoords(c)) V.map.setView([+c.place.lat, +c.place.lon], Math.max(V.map.getZoom(), 15));
+    toast(c.company + " is on the map.");
+  } catch (err) {
+    if (err.data && err.data.place) c.place = err.data.place;
+    c._addrErr = err.message; vReplaceCard(c); vStatus();
+    vMarkers(false);                  // a saved place without coordinates: the old marker and popup must go
+  }
+}
+function vNearBtn() {
+  const b = $("#vnear"); if (!b) return;
+  b.setAttribute("aria-pressed", String(V.near)); b.disabled = V.locating;
+  b.lastElementChild.textContent = V.locating ? " Locating…" : " Near me";
+}
+function vNearMe() {
+  if (V.near) { V.near = false; vFilterChanged(false); vMeMarker(); vNearBtn(); return; }
+  if (!navigator.geolocation) { toast("This browser cannot share its location."); return; }
+  V.locating = true; vNearBtn();
+  navigator.geolocation.getCurrentPosition(pos => {
+    V.locating = false; V.me = {lat: pos.coords.latitude, lon: pos.coords.longitude}; V.near = true;
+    vFilterChanged(false); vMeMarker(); vNearBtn();
+    if (V.map) vFit([L.latLng(V.me.lat, V.me.lon), ...V.shown.filter(c => c._d != null).slice(0, 5).map(c => L.latLng(+c.place.lat, +c.place.lon))]);
+  }, err => {
+    V.locating = false; vNearBtn();
+    toast(err.code === 1 ? "Location is blocked. Allow it in the browser to sort by distance." : "Could not get your location. Try again outdoors.");
+  }, {enableHighAccuracy: true, timeout: 15000, maximumAge: 60000});
+}
+
+/* the view */
+function visitsView() {
+  vDestroyMap();
+  if (V.slug && V.slug !== D.slug) { V.data = null; V.cities = []; V.tracks = []; V.city = ""; V.open = new Set(); }
+  if (!V.city) V.city = vs().city || "";
+  $("#keys").innerHTML = "";
+  $("#main").innerHTML = `<div class="vpage"><h2 class="sr">Companies to visit</h2>
+    <div class="vbar">
+      <label class="field">City <select id="vcity" class="input"></select></label>
+      <div class="vtracks" id="vtracks" role="group" aria-label="Tracks"></div>
+      <label class="field vchk"><input type="checkbox" id="vagency" ${vHide() ? "checked" : ""}> Hide agencies</label>
+      <button class="btn" id="vnear" type="button" aria-pressed="false" ${window.isSecureContext && navigator.geolocation ? "" : "hidden"}>${icon.pin}<span> Near me</span></button>
+      <button class="icon-btn" type="button" data-vrefresh="1" aria-label="Refresh the list" title="Refresh">${icon.refresh}</button>
+    </div>
+    <div class="vstages" id="vstages" role="group" aria-label="Filter by stage"></div>
+    <ol class="vfun" id="vfun" aria-label="Visit funnel"></ol>
+    <p class="vhint" id="vhint" role="status"></p>
+    <p class="vhint vnomap" id="vnomap" role="status" hidden></p>
+    <div class="vsplit" id="vsplit">
+      <div class="vmapwrap"><div id="vmap" class="vmap" role="region" aria-label="Map of employers"></div><div class="vmapmsg" id="vmapmsg" role="status"></div></div>
+      <div class="vlist" id="vlist" role="region" aria-label="Employers"></div>
+    </div></div>`;
+  vBind(); vNearBtn(); vCities(); vTrackChips(); vStageChips(); vFunnel();
+  if (V.data && V.slug === D.slug) vPaint(false); else vLoad();
+  vMapState(); vEnsureLeaflet();
+}
+function vBind() {
+  if (V.bound) return; V.bound = true;
+  const main = $("#main"), byKey = el => V.byKey.get(el.dataset.vk || el.dataset.vnote || el.dataset.vcontact || el.dataset.vaddr || el.dataset.vtoggle);
+  main.addEventListener("click", e => {
+    const t = e.target.closest("button"); if (!t || !main.contains(t)) return;
+    if (t.dataset.vset) { const c = byKey(t); if (c) vSetStage(c, t.dataset.vset); return; }
+    if (t.dataset.vtoggle) {
+      const k = t.dataset.vtoggle, c = V.byKey.get(k); if (!c) return;
+      if (V.open.has(k)) { V.open.delete(k); if (V.selected === k) V.selected = ""; } else { V.open.add(k); V.selected = k; }
+      vReplaceCard(c); vMarkers(false);
+      if (V.open.has(k) && V.map && vHasCoords(c)) V.map.panTo([+c.place.lat, +c.place.lon]);
+      return;
+    }
+    if (t.dataset.vtrack !== undefined) { const sel = vSel(), k = t.dataset.vtrack; vs().tracks = sel.includes(k) ? sel.filter(x => x !== k) : [...sel, k]; save(); vTrackChips(); vLoad(); return; }
+    if (t.dataset.vst !== undefined) { vs().stage = t.dataset.vst; V.pin = ""; save(); vFilterChanged(true); return; }
+    if (t.id === "vnear") { vNearMe(); return; }
+    if (t.dataset.vretry || t.dataset.vrefresh) { vLoad(); return; }
+    if (t.dataset.vmore) { V.limit += 100; vList(); return; }
+    if (t.dataset.vmapretry) { V.leaflet = "idle"; vEnsureLeaflet(); }
+  });
+  main.addEventListener("change", e => {
+    const t = e.target;
+    if (t.id === "vcity") { V.city = t.value; vs().city = V.city; save(); V.tracks = []; V.data = null; V.open = new Set(); V.selected = ""; vCompute(); vTrackChips(); vStageChips(); vFunnel(); vMarkers(false); vLoad(); return; }
+    if (t.id === "vagency") { vs().agencies = t.checked; V.pin = ""; save(); vFilterChanged(true); return; }
+    if (t.dataset.vnote !== undefined) { const c = byKey(t); if (c) vSaveDetail(c, "note", t.value); return; }
+    if (t.dataset.vcontact !== undefined) { const c = byKey(t); if (c) vSaveDetail(c, "contact", t.value); }
+  });
+  main.addEventListener("input", e => {
+    const t = e.target; if (!t.dataset || (t.dataset.vnote === undefined && t.dataset.vcontact === undefined)) return;
+    const c = byKey(t); if (c) c.visit[t.dataset.vnote !== undefined ? "note" : "contact"] = t.value;
+  });
+  main.addEventListener("submit", e => {
+    const f = e.target.closest("form[data-vaddr]"); if (!f) return;
+    e.preventDefault(); const c = V.byKey.get(f.dataset.vaddr); if (c) vSetAddress(c, f);
+  });
+}
+
 /* ---------- profile ---------- */
 const MARK = {ok: "✓", todo: "!", info: "i"};
 const APPROVAL_NAME = {"master-docs": "Master documents", "profile-changes": "Profile changes (SEEK, LinkedIn)", targets: "Targets (tracks and searches)", report: "Daily report", "go-live": "Go-live: allow sending"};
@@ -747,9 +1263,11 @@ async function drop(key) {
 }
 drop.busy = new Set();
 function render() {
+  document.body.dataset.view = S.view;
+  if (S.view !== "visits") vDestroyMap();
   header(); filters(); todayTiles();
-  if (S.view === "board") board(); else if (S.view === "funnel") funnel(); else if (S.view === "companies") companiesView(); else if (S.view === "profile") profileView(); else droppedView();
-  $("#today").hidden = S.view === "dropped" || S.view === "companies" || S.view === "profile";
+  if (S.view === "visits") visitsView(); else if (S.view === "board") board(); else if (S.view === "funnel") funnel(); else if (S.view === "companies") companiesView(); else if (S.view === "profile") profileView(); else droppedView();
+  $("#today").hidden = S.view === "dropped" || S.view === "companies" || S.view === "profile" || S.view === "visits";
   $("#addbar").hidden = S.view !== "board";
   $("#filters").hidden = S.view !== "board" && S.view !== "companies";
 }
@@ -784,7 +1302,7 @@ document.addEventListener("click", async e => {
 document.addEventListener("click", e => { const c = e.target.closest(".card"); if (c && !e.target.closest("button, a")) focusCard(c.dataset.key); });
 document.addEventListener("dblclick", e => { const c = e.target.closest(".card"); if (c && !e.target.closest("button, a")) openDetail(c.dataset.key); });
 document.addEventListener("input", e => {
-  if (e.target.id === "q") { S.q = e.target.value; if (S.view === "board") board(); else if (S.view === "dropped") droppedView(); else if (S.view === "companies") companiesView(); }
+  if (e.target.id === "q") { S.q = e.target.value; if (S.view === "board") board(); else if (S.view === "dropped") droppedView(); else if (S.view === "companies") companiesView(); else if (S.view === "visits") vFilterChanged(false); }
   if (e.target.id === "min") { S.min = +e.target.value; e.target.nextElementSibling.textContent = S.min; save(); S.view === "companies" ? companiesView() : board(); }
 });
 document.addEventListener("change", async e => {
@@ -840,7 +1358,7 @@ document.addEventListener("drop", async e => {
 /* keyboard */
 function help() {
   const rows = [["/", "Search"], ["J  K", "Next and previous card"], ["Enter", "Open details"], ["A", "Mark as applied"], ["X", "Drop the card (not interested); Undo in the toast"], ["1 to 5", "Move to To apply, Applied, Interview, Offer, Closed"],
-    ...(D.local ? [["O", "Open the package folder in Finder"]] : []), ["T  E  C  D  P", "Board, Funnel, Companies, Dropped, Profile"], ["Esc", "Close"], ["?", "This help"]];
+    ...(D.local ? [["O", "Open the package folder in Finder"]] : []), ["T  E  C  D  P  V", "Board, Funnel, Companies, Dropped, Profile, Visits"], ["Esc", "Close"], ["?", "This help"]];
   $("#help-root").innerHTML = `<div class="help" data-close-help><div role="dialog" aria-modal="true" aria-labelledby="ht"><h2 id="ht">Keyboard shortcuts</h2>${rows.map(([k, v]) => `<kbd>${k}</kbd><span>${v}</span>`).join("")}<button class="btn" data-close-help style="grid-column:1/-1;justify-self:end">Close</button></div></div>`;
   $("#help-root button").focus();
 }
@@ -854,7 +1372,7 @@ document.addEventListener("keydown", async e => {
   if (e.key === "?") { help(); return; }
   if (S.open) return;
   const k = e.key.toLowerCase();
-  if ("tecdp".includes(k) && k.length === 1) { S.view = {t: "board", e: "funnel", c: "companies", d: "dropped", p: "profile"}[k]; save(); render(); return; }
+  if ("tecdpv".includes(k) && k.length === 1) { S.view = {t: "board", e: "funnel", c: "companies", d: "dropped", p: "profile", v: "visits"}[k]; save(); render(); return; }
   if (S.view !== "board") return;
   const order = cardsInOrder(); if (!order.length) return;
   const i = order.indexOf(S.focus);
@@ -871,6 +1389,14 @@ document.addEventListener("keydown", async e => {
 if (/^https:\/\//.test(D.support_url || "")) $("#coffee-root").innerHTML = `<a class="coffee" href="${esc(D.support_url)}" target="_blank" rel="noopener" aria-label="Buy me a coffee: support 100 FOUNTS, who build this harness" title="job-harness is free. A coffee keeps it going.">
   <span class="mug" aria-hidden="true"><span class="steam"><i></i><i></i><i></i></span>☕</span><span>Buy me a coffee<small>Keep job-harness free</small></span></a>`;
 render();
+/* --remote: a phone that logged in through the tunnel can end its session */
+if (D.remote) {
+  const lo = document.getElementById("logout"); lo.hidden = false;
+  lo.addEventListener("click", async () => {
+    try { await fetch("/logout", {method: "POST", headers: {"X-Panel-Token": TOKEN}}); } catch (e) {}
+    location.href = "/login";
+  });
+}
 </script>
 </body>
 </html>

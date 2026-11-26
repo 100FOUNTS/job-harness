@@ -28,7 +28,10 @@
   job sign <slug> <id>                         human signature (your terminal, typed confirmation)
   job schedule install|uninstall|status <slug> [--hour 9 --minute 0]
   job learn log|list ...                       harness memory
+  job visits <slug> cities|list|locate|address|coords|set|import ...   employers to visit in person, per city, on a map, with a visit funnel
   job panel [--port 8765] [--lan]              local board: every application, buttons to change status (--lan: open it on your phone)
+  job panel --set-password | --remote          away from home: a password (your terminal only), then the panel through a free Cloudflare tunnel
+  job visits <slug> cities|list|locate|address|set ...   employers to visit in person, on a map, with what happened at each visit
   job addlink <slug> <url> [--text-file F]     add a job you found yourself: scored, CV + letter, onto the board
   job profile <slug>                          the candidate's setup at a glance: what is ready, what is missing (the panel's Profile tab)
   job routes <slug> [--refresh]               how the board's jobs are applied for (portal form, public ATS, employer site)
@@ -51,7 +54,7 @@ ROOT = Path(__file__).resolve().parent.parent
 S = ROOT / "scripts"
 DIRECT = {"status": "status.py", "setup": "setup.py", "doctor": "doctor.py", "new": "new_candidate.py", "discover": "discover.py",
           "triage": "triage.py", "db": "jobdb.py", "docs": "docs.py", "lint": "lint.py", "facts": "facts.py", "track": "tracker.py",
-          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "gaps": "gaps.py", "panel": "panel.py", "suggest": "suggest.py", "flags": "flags.py", "followup": "followup.py", "addlink": "addlink.py", "routes": "applyroute.py", "profile": "candidate_profile.py", "block": "blocklist.py", "inbox": "inbox.py", "targets": "targets_check.py", "nearmiss": "nearmiss.py"}
+          "report": "report.py", "prepare": "prepare.py", "apply": "apply.py", "answer": "answer.py", "cleanup": "cleanup.py", "state": "state.py", "learn": "learn.py", "schedule": "schedule.py", "sponsors": "sponsors.py", "guard": "guard.py", "coverage": "coverage.py", "gaps": "gaps.py", "panel": "panel.py", "suggest": "suggest.py", "flags": "flags.py", "followup": "followup.py", "addlink": "addlink.py", "routes": "applyroute.py", "profile": "candidate_profile.py", "block": "blocklist.py", "inbox": "inbox.py", "targets": "targets_check.py", "nearmiss": "nearmiss.py", "visits": "visits.py"}
 
 
 def run(script, args):

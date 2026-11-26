@@ -100,6 +100,7 @@ def gather() -> dict:
         "playwright (apply/)": (apply_tools_dir() / "node_modules/playwright").exists(),
         "launchd schedules": plists,
         "network: seek search": reach("https://www.seek.com.au/"),
+        "cloudflared": bool(shutil.which("cloudflared")),
         "sources": sources.info(),
     }
 
@@ -122,6 +123,8 @@ def report(r: dict) -> tuple[list[tuple[bool, str, str]], list[tuple[bool, str, 
          "install Claude Code, then run /chrome in it"),
         (r["playwright (apply/)"], "Playwright (only for SEEK Quick Apply)", "job setup --apply-tools"),
         (r["network: seek search"], "Network to SEEK", "check your internet connection"),
+        (r.get("cloudflared", False), "cloudflared (only for the panel away from home: job panel --remote)",
+         "brew install cloudflared (macOS) or https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"),
     ]
     return required, optional
 
