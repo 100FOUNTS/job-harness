@@ -53,9 +53,9 @@ class IndexHtmlTests(Base):
         self.assertNotIn("<script", page)
 
     def test_the_folder_name_cannot_break_the_href(self):
-        page = self.build(dir="x'><b onmouseover=alert(1)>")
-        self.assertNotIn("<b onmouseover", page)
-        self.assertIn("href='x&#x27;&gt;&lt;b onmouseover=alert(1)&gt;/'", page)
+        page = self.build(dir="x' onmouseover='alert(1)")             # no < > : Windows forbids them in folder names
+        self.assertNotIn("' onmouseover='", page)
+        self.assertIn("href='x&#x27; onmouseover=&#x27;alert(1)/'", page)
 
 
 if __name__ == "__main__":
