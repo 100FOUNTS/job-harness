@@ -763,7 +763,8 @@ function vMapState() {
 function vInitMap() {
   const el = $("#vmap"); if (!el || V.map || !(window.L && L.map)) return;
   V.map = L.map(el, {zoomControl: true}).setView([-25.3, 133.8], 4);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19,
+  /* OSM's tile policy refuses requests without a Referer; the page itself sends none (Referrer-Policy: no-referrer), so the tiles ask for the origin only */
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom: 19, referrerPolicy: "strict-origin-when-cross-origin",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(V.map);
   V.layer = L.layerGroup().addTo(V.map); V.markers = new Map(); V.meMarker = null;
   vMarkers(true); vMeMarker();

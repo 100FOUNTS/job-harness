@@ -130,5 +130,15 @@ class VisitsApiTests(PanelBase):
         self.v.set_stage.assert_not_called()
 
 
+class MapTilesTests(unittest.TestCase):
+    def test_osm_tiles_send_a_referer(self):
+        """The page sends no Referer (Referrer-Policy: no-referrer) and OSM answers 403 'Access blocked' without one."""
+        tpl = (Path(__file__).resolve().parent.parent / "templates" / "panel.html").read_text(encoding="utf-8")
+        i = tpl.index("L.tileLayer(")
+        call = tpl[i:tpl.index(".addTo(", i)]
+        self.assertIn('referrerPolicy: "strict-origin-when-cross-origin"', call)
+        self.assertNotIn("{s}.tile.openstreetmap", call)
+
+
 if __name__ == "__main__":
     unittest.main()
